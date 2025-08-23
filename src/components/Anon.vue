@@ -224,7 +224,8 @@
                             {{ mode === 'anonymize' ? 'Text hier eingeben/einfügen oder Dateien hierher ziehen. Verwenden Sie die obige Schaltfläche zur Dateiauswahl.' : 'Geben Sie anonymisierten Text mit Platzhaltern wie [1_person] ein' }}
                         </p>
                         <div class="flex gap-2 justify-end">
-                            <button @click="clearMarkdown" class="btn btn-ghost btn-xs">Markdown löschen</button>
+                            <button @click="clearMarkdown" class="btn btn-ghost btn-xs text-error">Markdown
+                              löschen</button>
                             <button @click="clearText" class="btn btn-ghost btn-xs text-error">Text löschen</button>
                         </div>
                     </div>
