@@ -138,8 +138,9 @@
                     </template>
                     <template v-else>
                         <div v-for="entity in entities" :key="entity.id" :id="'entity-' + entity.id"
-                             class="bg-base-100 rounded shadow-sm p-3 space-y-2 transition-colors"
-                             :class="{ 'ring ring-primary': highlightedEntityId === entity.id }">
+                             class="bg-base-100 rounded shadow-sm p-3 space-y-2 transition-colors cursor-pointer"
+                             :class="{ 'ring ring-primary': highlightedEntityId === entity.id }"
+                             @click="onEntityClick(entity)">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-2">
                                     <span class="badge badge-outline">{{ entity.id }}_{{ entity.type }}</span>
@@ -150,7 +151,7 @@
                                         <StarIcon class="w-4 h-4" />
                                     </span>
                                 </div>
-                                <button @click="removeEntity(entity.id)" class="btn btn-ghost btn-xs text-error">
+                                <button @click.stop="removeEntity(entity.id)" class="btn btn-ghost btn-xs text-error">
                                     <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
@@ -230,6 +231,12 @@
                             @dragover.prevent="handleDragOver"
                             @dragleave.prevent="handleDragLeave"
                         >
+                            <!-- Highlight overlay for placeholders in textarea -->
+                            <div
+                                v-if="activeHighlightEntityId != null"
+                                class="absolute inset-0 p-4 whitespace-pre-wrap pointer-events-none text-transparent"
+                                v-html="inputOverlayHtml"
+                            ></div>
                             <textarea 
                                 v-model="text" 
                                 @select="setTextareaSelection"
@@ -580,7 +587,9 @@ export default {
             clearingCache: false,
             // UI: highlight entity in list when navigated
             highlightedEntityId: null,
-            _highlightTimer: null
+            _highlightTimer: null,
+            // Active entity to highlight placeholders in text areas
+            activeHighlightEntityId: null
         }
     },
     mounted() {
@@ -591,6 +600,25 @@ export default {
         pdfjsLib.GlobalWorkerOptions.workerSrc = '../assets/pdf.worker.min.mjs';
     },
     computed: {
+        inputOverlayHtml() {
+            // Mirror the textarea content and highlight placeholders for the active entity
+            const escapeHtml = (s) => (s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            let content = escapeHtml(this.text || '');
+
+            if (this.activeHighlightEntityId != null) {
+                const id = this.activeHighlightEntityId;
+                // Highlight [id_type] and [id_type_suffix]
+                const re = new RegExp(`\\\[${id}_[^\\]]+\\\]`, 'g');
+                content = content.replace(re, (m) => `<mark class="bg-warning/40 rounded px-0.5 text-base-content">${m}</mark>`);
+            }
+            // Preserve newlines (whitespace-pre-wrap handles spaces and tabs well)
+            content = content.replace(/\n/g, '<br>');
+            return content;
+        },
         anonymizedText() {
             if (this.mode === 'pseudonymize') {
                 return this.pseudonymizedText();
@@ -634,6 +662,15 @@ export default {
                     anonymized = anonymized.replace(wordPattern, suffixedPlaceholder);
                 });
             });
+
+            // If an entity is selected in the list, highlight its badges in the preview
+            if (this.activeHighlightEntityId != null) {
+                anonymized = anonymized.replace(/<span class="badge badge-outline">(\d+)_([^<]+)<\/span>/g, (m, id, rest) => {
+                    return Number(id) === this.activeHighlightEntityId
+                        ? `<span class="badge badge-outline badge-warning">${id}_${rest}</span>`
+                        : m;
+                });
+            }
 
             return anonymized;
         }
@@ -829,6 +866,14 @@ export default {
                     this.highlightedEntityId = null;
                 }, 1500);
             });
+        },
+        onEntityClick(entity) {
+            // Toggle highlight if clicking the same entity again
+            if (this.activeHighlightEntityId === entity.id) {
+                this.activeHighlightEntityId = null;
+            } else {
+                this.activeHighlightEntityId = entity.id;
+            }
         },
         // Handle clicks on badges in the output preview
         onOutputClick(e) {
