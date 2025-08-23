@@ -219,24 +219,24 @@ const closePrivacyModal = () => {
         
         <!-- Footer Actions -->
         <div class="bg-base-200 border-t border-base-300 p-6">
-          <p class="py-2"> By clicking "I Agree", you confirm that you have read and understood the <a href="#" @click="openPrivacyModal" class="link link-primary">terms of service and disclaimers</a>.</p>
+          <p class="py-2"> Durch Klicken auf "Ich stimme zu" bestätigen Sie, dass Sie die <a href="#" @click="openPrivacyModal" class="link link-primary">Nutzungsbedingungen und Haftungsausschlüsse</a> gelesen und verstanden haben.</p>
             <div class="flex flex-col sm:flex-row gap-3">
                 <button
                   class="btn btn-primary flex-1"
                   @click="closeModal"
                 >
-                    I Agree - Continue to Service
+                    Ich stimme zu - Weiter zum Dienst
                 </button>
                 <button
                   class="btn btn-outline flex-1"
                   @click="exitSite"
                 >
-                    I Disagree - Exit
+                    Ich stimme nicht zu - Beenden
                 </button>
             </div>
-            
+
             <p class="text-center text-sm text-base-content/60 mt-4">
-                <span class="font-medium">Open Source:</span> You can also access the <a href="https://github.com/colin-r-carter/iusable_anonymization" class="link link-primary">source code</a> and run this application locally on your own computer.
+                <span class="font-medium">Open Source:</span> Sie können auch den <a href="https://github.com/colin-r-carter/iusable_anonymization" class="link link-primary">Quellcode</a> einsehen und diese Anwendung lokal auf Ihrem eigenen Computer ausführen.
             </p>
         </div>
     </div>
@@ -268,12 +268,12 @@ const closePrivacyModal = () => {
             
             <div class="flex flex-col items-center md:items-end">
               <div class="mb-2">
-                <button @click="openLicensesModal" class="link link-accent mr-4">Open Source Licenses</button>
-                <button @click="openPrivacyModal" class="link link-accent mr-4">Privacy Policy & Usage Guidelines</button>
+                <button @click="openLicensesModal" class="link link-accent mr-4">Open-Source-Lizenzen</button>
+                <button @click="openPrivacyModal" class="link link-accent mr-4">Datenschutzrichtlinie & Nutzungsrichtlinien</button>
               </div>
               <div class="text-neutral-content/70 text-center md:text-right">
-                <p class="mb-2"><a href="https://github.com/colin-r-carter/iusable_anonymization" class="link link-accent">Open-source software</a> made in Switzerland with ❤️</p>
-                <p>&copy; 2025 recht.intelligent GmbH. All rights reserved.</p>
+                <p class="mb-2"><a href="https://github.com/colin-r-carter/iusable_anonymization" class="link link-accent">Open-Source-Software</a> made in Switzerland with ❤️</p>
+                <p>&copy; 2025 recht.intelligent GmbH. Alle Rechte vorbehalten.</p>
               </div>
             </div>
           </div>

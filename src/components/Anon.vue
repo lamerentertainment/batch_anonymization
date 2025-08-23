@@ -3,14 +3,14 @@
         <!-- Error Banner -->
         <div v-if="initError" class="bg-error border border-error text-error-content px-4 py-3 flex items-center justify-between" role="alert">
             <span>
-                <strong class="font-bold">Error:</strong>
+                <strong class="font-bold">Fehler:</strong>
                 {{ initError }}
             </span>
             <button @click="initError = null" class="ml-4 text-error-content hover:text-error font-bold text-xl leading-none">
                 <XMarkIcon class="w-5 h-5" />
             </button>
         </div>
-        
+
         <!-- Downloading Banner -->
         <div v-if="downloading" class="bg-info border border-info text-info-content px-4 py-3" role="alert">
             <div class="flex items-center mb-2">
@@ -18,8 +18,8 @@
                 <div class="flex-1">
                     <div class="flex justify-between items-center mb-1">
                         <span>
-                            <strong class="font-bold">Downloading models...</strong>
-                            {{ downloadStatus || 'Initializing download...' }}
+                            <strong class="font-bold">Modelle werden heruntergeladen...</strong>
+                            {{ downloadStatus || 'Download wird initialisiert...' }}
                         </span>
                         <span class="text-sm font-medium">{{ Math.round(downloadProgress) }}%</span>
                     </div>
@@ -30,19 +30,19 @@
                         ></div>
                     </div>
                     <p class="text-sm mt-1">
-                        Please wait while the anonymization models are being downloaded and initialized. This only happens once.
+                        Bitte warten Sie, während die Anonymisierungsmodelle heruntergeladen und initialisiert werden. Dies geschieht nur einmal.
                     </p>
                 </div>
             </div>
         </div>
-        
+
         <!-- File Processing Banner -->
         <div v-if="fileProcessing" class="bg-warning border border-warning text-warning-content px-4 py-3 flex items-center" role="alert">
             <div class="flex items-center">
                 <ArrowPathIcon class="animate-spin -ml-1 mr-3 h-5 w-5 text-warning-content" />
                 <span>
-                    <strong class="font-bold">Processing file...</strong>
-                    Extracting text from your document.
+                    <strong class="font-bold">Datei wird verarbeitet...</strong>
+                    Text wird aus Ihrem Dokument extrahiert.
                 </span>
             </div>
         </div>
@@ -50,14 +50,14 @@
         <div class="p-4 border-b border-base-300">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
                 <h1 class="font-bold text-3xl sm:text-4xl">
-                    Local Anonymization & Pseudonymization
+                    Lokale Anonymisierung & Pseudonymisierung
                 </h1>
                 <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
                     <div class="flex items-center gap-2">
                         <button 
                             @click="openSettings"
                             class="btn btn-ghost btn-xs"
-                            title="Configure anonymization settings"
+                            title="Anonymisierungseinstellungen konfigurieren"
                         >
                             <Cog6ToothIcon class="h-5 w-5" />
                         </button>
@@ -68,31 +68,31 @@
                             :class="['btn btn-sm', selectedModel === 'quantized' ? 'btn-primary' : 'btn-outline']"
                             :disabled="downloading || loading || fileProcessing"
                         >
-                            Fast (580MB)
+                            Schnell (580MB)
                         </button>
                         <!-- <button 
                             @click="selectModel('full')" 
                             :class="['btn btn-sm', selectedModel === 'full' ? 'btn-primary' : 'btn-outline']"
                             :disabled="downloading || loading || fileProcessing"
                         >
-                            Best (1.16GB)
+                            Beste (1.16GB)
                         </button> -->
                     </div>
                     <p class="text-xs text-base-content/50 text-left sm:text-right">
-                        <label class="text-sm font-medium text-base-content/70">Model Quality:</label> 
-                        {{ selectedModel === 'quantized' ? 'Faster processing, lower accuracy' : 'Higher accuracy, more compute' }} <br>
-                        <i>New models coming soon...</i>
+                        <label class="text-sm font-medium text-base-content/70">Modellqualität:</label> 
+                        {{ selectedModel === 'quantized' ? 'Schnellere Verarbeitung, geringere Genauigkeit' : 'Höhere Genauigkeit, mehr Rechenleistung' }} <br>
+                        <i>Neue Modelle kommen bald...</i>
                     </p>
                 </div>
             </div>
             <p>
-                This tool allows you to anonymize text by detecting and replacing sensitive entities with placeholders, 
-                or pseudonymize by replacing placeholders with custom values. You can add custom entities and types in the settings, 
-                and the output will be displayed after clicking <kbd class="kbd kbd-xs">Start Anonymization</kbd>.
+                Dieses Tool ermöglicht Ihnen, Text zu anonymisieren, indem sensible Entitäten erkannt und durch Platzhalter ersetzt werden, 
+                oder zu pseudonymisieren, indem Platzhalter durch benutzerdefinierte Werte ersetzt werden. Sie können benutzerdefinierte Entitäten und Typen in den Einstellungen hinzufügen, 
+                und die Ausgabe wird nach dem Klicken auf <kbd class="kbd kbd-xs">Anonymisierung starten</kbd> angezeigt.
                 <b> 
-                    All processing is done locally in your browser, ensuring your data remains private and secure.
-                    This tool is offered without any guarantees or warranties.
-                    Use at your own risk.
+                    Die gesamte Verarbeitung erfolgt lokal in Ihrem Browser, wodurch Ihre Daten privat und sicher bleiben.
+                    Dieses Tool wird ohne Gewährleistungen oder Garantien angeboten.
+                    Die Nutzung erfolgt auf eigenes Risiko.
                 </b>
             </p>
         </div>
@@ -107,13 +107,13 @@
                             @click="mode = 'anonymize'" 
                             :class="['btn', 'flex-1', mode === 'anonymize' ? 'btn-primary' : 'btn-outline']"
                         >
-                            Anonymize
+                            Anonymisieren
                         </button>
                         <button 
                             @click="mode = 'pseudonymize'" 
                             :class="['btn', 'flex-1', mode === 'pseudonymize' ? 'btn-secondary' : 'btn-outline']"
                         >
-                            Reverse
+                            De-Anonymisieren
                         </button>
                     </div>
                     <button 
@@ -123,27 +123,27 @@
                         class="btn btn-success w-full"
                         :class="{ 'btn-disabled': downloading || loading || fileProcessing }"
                     >
-                        {{ downloading ? 'Downloading Models...' : fileProcessing ? 'Processing File...' : loading ? 'Detecting Entities...' : 'Start Anonymization' }}
+                        {{ downloading ? 'Modelle werden heruntergeladen...' : fileProcessing ? 'Datei wird verarbeitet...' : loading ? 'Entitäten werden erkannt...' : 'Anonymisierung starten' }}
                     </button>
                     <div v-if="mode === 'pseudonymize'" class="text-sm text-base-content/60">
-                        Enter text with placeholders like [1_person] and map them to real values below.
+                        Geben Sie Text mit Platzhaltern wie [1_person] ein und ordnen Sie diese unten den realen Werten zu.
                     </div>
                 </div>
 
                 <!-- Add Entity Form -->
                 <div class="p-4 border-b border-base-300 bg-base-100 space-y-3">
                     <div class="flex justify-between items-center">
-                        <p class="font-semibold">{{ mode === 'anonymize' ? 'Add New Entity' : 'Auto-Detect Placeholders' }}</p>
-                        <button @click="clearEntities" class="btn btn-ghost btn-xs text-error">Clear All</button>
+                        <p class="font-semibold">{{ mode === 'anonymize' ? 'Neue Entität hinzufügen' : 'Platzhalter automatisch erkennen' }}</p>
+                        <button @click="clearEntities" class="btn btn-ghost btn-xs text-error">Alle löschen</button>
                     </div>
                     <template v-if="mode === 'anonymize'">
-                        <input v-model="newEntityName" class="input input-bordered input-xs w-full" placeholder="Entity Text">
+                        <input v-model="newEntityName" class="input input-bordered input-xs w-full" placeholder="Entitätstext">
                         <select v-model="newEntityType" class="select select-xs select-bordered w-full">
                             <option v-for="label in availableLabels" :key="label" :value="label">
                                 {{ label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() }}
                             </option>
                         </select>
-                        <button @click="addEntity" class="btn btn-xs btn-outline w-full">Add Entity</button>
+                        <button @click="addEntity" class="btn btn-xs btn-outline w-full">Entität hinzufügen</button>
                     </template>
                 </div>
 
@@ -151,7 +151,7 @@
                 <div class="flex-1 overflow-y-auto p-4 space-y-3">
                     <template v-if="!loading && entities.length === 0">
                         <div class="text-base-content/50 text-center py-4">
-                            {{ mode === 'anonymize' ? 'No entities detected yet' : 'No placeholders found' }}
+                            {{ mode === 'anonymize' ? 'Noch keine Entitäten erkannt' : 'Keine Platzhalter gefunden' }}
                         </div>
                     </template>
                     <template v-else>
@@ -160,10 +160,10 @@
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-2">
                                     <span class="badge badge-outline">{{ entity.id }}_{{ entity.type }}</span>
-                                    <span v-if="entity.source === 'regex'" class="badge badge-xs bg-warning text-warning-content h-5 w-5"  title="Detected by custom regex">
+                                    <span v-if="entity.source === 'regex'" class="badge badge-xs bg-warning text-warning-content h-5 w-5"  title="Durch benutzerdefinierte Regex erkannt">
                                         <SigmaIcon class="w-4 h-4" />
                                     </span>
-                                    <span v-else-if="entity.source === 'ai'" class="badge badge-xs bg-info text-info-content h-5 w-5" title="Detected by AI model">
+                                    <span v-else-if="entity.source === 'ai'" class="badge badge-xs bg-info text-info-content h-5 w-5" title="Durch KI-Modell erkannt">
                                         <StarIcon class="w-4 h-4" />
                                     </span>
                                 </div>
@@ -174,10 +174,10 @@
                             <input 
                                 v-model="entity.name" 
                                 class="input input-bordered input-sm w-full"
-                                :placeholder="mode === 'anonymize' ? 'Original text...' : 'Replacement value...'"
+                                :placeholder="mode === 'anonymize' ? 'Originaltext...' : 'Ersetzungswert...'"
                             >
                             <div v-if="mode === 'pseudonymize'" class="text-xs text-base-content/50">
-                                Will replace [{{ entity.id }}_{{ entity.type }}] → {{ entity.name || 'original value' }}
+                                Ersetzt [{{ entity.id }}_{{ entity.type }}] → {{ entity.name || 'Originalwert' }}
                             </div>
                         </div>
                     </template>
@@ -185,9 +185,9 @@
                 <div class="p-4 border-t border-base-300 bg-base-100 space-y-3">
                      <template v-if="mode !== 'anonymize'">
                         <button @click="detectPlaceholders" class="btn btn-outline w-full">
-                            Clear & Detect Placeholders from Text
+                            Löschen & Platzhalter aus Text erkennen
                         </button>
-                        <p class="text-xs text-base-content/50">Automatically finds placeholders like [1_person] in your text</p>
+                        <p class="text-xs text-base-content/50">Findet automatisch Platzhalter wie [1_person] in Ihrem Text</p>
                     </template>
                 </div>
             </div>
@@ -198,14 +198,14 @@
                 <div class="flex border-b">
                     <div class="w-1/2 p-4 text-right">
                         <div class="flex justify-between items-center mb-2">
-                            <h2 class="text-lg font-semibold text-base-content">Input Text <small>({{ text?.length }})</small></h2>
+                            <h2 class="text-lg font-semibold text-base-content">Eingabetext <small>({{ text?.length }})</small></h2>
                             <button 
                                 @click="triggerFileInput"
                                 :disabled="fileProcessing"
                                 class="btn btn-sm btn-outline"
                                 :class="{ 'btn-disabled': fileProcessing }"
                             >                                
-                                    {{ fileProcessing ? 'Processing...' : 'Import File' }}
+                                    {{ fileProcessing ? 'Verarbeitung läuft...' : 'Datei importieren' }}
                             </button>
                             <input 
                                 type="file" 
@@ -221,21 +221,24 @@
                             {{ fileError }}
                         </div>
                         <p class="text-sm text-base-content/50 text-left">
-                            {{ mode === 'anonymize' ? 'Type/paste text or drag files here. Use button above for file selection.' : 'Enter anonymized text with placeholders like [1_person]' }}
+                            {{ mode === 'anonymize' ? 'Text hier eingeben/einfügen oder Dateien hierher ziehen. Verwenden Sie die obige Schaltfläche zur Dateiauswahl.' : 'Geben Sie anonymisierten Text mit Platzhaltern wie [1_person] ein' }}
                         </p>
-                        <button @click="clearText" class="btn btn-ghost btn-xs text-error">Clear Text</button>
+                        <div class="flex gap-2 justify-end">
+                            <button @click="clearMarkdown" class="btn btn-ghost btn-xs">Markdown löschen</button>
+                            <button @click="clearText" class="btn btn-ghost btn-xs text-error">Text löschen</button>
+                        </div>
                     </div>
                     <div class="w-1/2 p-4 border-l border-base-300 flex justify-between items-center">
                         <div>
                             <h2 class="text-lg font-semibold text-base-content">
-                                {{ mode === 'anonymize' ? 'Anonymized Text' : 'Restored Text' }}
+                                {{ mode === 'anonymize' ? 'Anonymisierter Text' : 'Wiederhergestellter Text' }}
                             </h2>
                             <p class="text-sm text-base-content/50">
-                                {{ mode === 'anonymize' ? 'Preview of the anonymized output' : 'Preview with placeholders replaced by real values' }}
+                                {{ mode === 'anonymize' ? 'Vorschau der anonymisierten Ausgabe' : 'Vorschau mit durch reale Werte ersetzten Platzhaltern' }}
                             </p>
                         </div>
                         <button @click="copy" class="btn btn-success btn-sm">
-                            Copy Text
+                            Text kopieren
                         </button>
                     </div>
                 </div>
@@ -258,9 +261,9 @@
                                     'w-full h-full p-4 resize-none border-0 focus:ring-0',
                                     dragOver ? 'bg-info/20' : ''
                                 ]"
-                                placeholder="Enter or paste your text here, or drag and drop a file (TXT, PDF, DOCX)..."
+                                placeholder="Geben Sie hier Ihren Text ein oder fügen Sie ihn ein, oder ziehen Sie eine Datei (TXT, PDF, DOCX) hierher..."
                             ></textarea>
-                            
+
                             <!-- Drag overlay -->
                             <div 
                                 v-if="dragOver"
@@ -268,8 +271,8 @@
                             >
                                 <div class="text-center">
                                     <ArrowUpTrayIcon class="w-12 h-12 text-info-content mx-auto mb-2" />
-                                    <p class="text-info-content font-medium">Drop your file here</p>
-                                    <p class="text-info-content/80 text-sm">TXT, PDF, DOCX supported</p>
+                                    <p class="text-info-content font-medium">Legen Sie Ihre Datei hier ab</p>
+                                    <p class="text-info-content/80 text-sm">TXT, PDF, DOCX werden unterstützt</p>
                                 </div>
                             </div>
                         </div>
@@ -291,26 +294,26 @@
         <div v-if="showSettings" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-base-100 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-base-content">Anonymization Settings</h3>
+                    <h3 class="text-lg font-semibold text-base-content">Anonymisierungseinstellungen</h3>
                     <button @click="showSettings = false" class="btn btn-ghost btn-sm">
                         <XMarkIcon class="w-5 h-5" />
                     </button>
                 </div>
-                
+
                 <div class="mb-4">
                     <p class="text-sm text-base-content/60 mb-3">
-                        Select which types of entities should be detected and anonymized. {{ selectedLabels.length }} of {{ availableLabels.length }} labels selected.
+                        Wählen Sie aus, welche Arten von Entitäten erkannt und anonymisiert werden sollen. {{ selectedLabels.length }} von {{ availableLabels.length }} Labels ausgewählt.
                     </p>
-                    
+
                     <div class="flex gap-2 mb-3">
                         <button @click="selectAllLabels" class="btn btn-sm btn-outline">
-                            Select All
+                            Alle auswählen
                         </button>
                         <button @click="deselectAllLabels" class="btn btn-sm btn-outline">
-                            Deselect All
+                            Alle abwählen
                         </button>
                         <button @click="selectCommonLabels" class="btn btn-sm btn-primary">
-                            Common Only
+                            Nur Häufige
                         </button>
                     </div>
                 </div>
@@ -1002,6 +1005,46 @@ export default {
         },
         clearText(){
             this.text = '';
+        },
+        clearMarkdown(){
+            if (!this.text) return;
+            this.text = this.stripMarkdown(this.text);
+        },
+        stripMarkdown(input) {
+            if (!input) return '';
+            let t = input;
+            // Remove fenced code blocks but keep inner text
+            t = t.replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, '').replace(/^\s*\n?/,'').replace(/\n?\s*$/,''));
+            // Remove inline code backticks
+            t = t.replace(/`([^`]*)`/g, '$1');
+            // Headers at start of line
+            t = t.replace(/^#{1,6}\s*/gm, '');
+            // Setext headers (=== or --- on their own line)
+            t = t.replace(/^\s*(=|-){2,}\s*$/gm, '');
+            // Blockquotes
+            t = t.replace(/^\s*>+\s?/gm, '');
+            // Lists (bulleted and numbered)
+            t = t.replace(/^(\s*)([-+*]|\d+\.)\s+/gm, '$1');
+            // Horizontal rules
+            t = t.replace(/^\s*([-_*]){3,}\s*$/gm, '');
+            // Emphasis and strong
+            t = t.replace(/(\*\*|__)(.*?)\1/g, '$2');
+            t = t.replace(/(\*|_)(.*?)\1/g, '$2');
+            // Strikethrough
+            t = t.replace(/~~(.*?)~~/g, '$1');
+            // Links and images -> keep label/alt text
+            t = t.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
+            t = t.replace(/\[([^\]]+)\]\([^\)]*\)/g, '$1');
+            // Tables: remove pipes and alignment lines
+            t = t.replace(/^\s*\|/gm, '');
+            t = t.replace(/\|\s*$/gm, '');
+            t = t.replace(/^\s*[-|: ]+\s*$/gm, '');
+            t = t.replace(/ \| /g, '  ');
+            // Escaped markdown characters (\* etc.) -> unescape
+            t = t.replace(/\\([\\`*_{}\[\]()#+\-.!>])/g, '$1');
+            // Trim trailing spaces produced by removals
+            t = t.replace(/[\t ]+$/gm, '');
+            return t;
         },
         triggerFileInput() {
             if (!this.fileProcessing) {
