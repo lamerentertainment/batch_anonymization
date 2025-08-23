@@ -130,15 +130,16 @@
                 </div>
 
                 <!-- Entities List -->
-                <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div ref="entityList" class="flex-1 overflow-y-auto p-4 space-y-3">
                     <template v-if="!loading && entities.length === 0">
                         <div class="text-base-content/50 text-center py-4">
                             {{ mode === 'anonymize' ? 'Noch keine Entitäten erkannt' : 'Keine Platzhalter gefunden' }}
                         </div>
                     </template>
                     <template v-else>
-                        <div v-for="entity in entities" :key="entity.id" 
-                             class="bg-base-100 rounded shadow-sm p-3 space-y-2">
+                        <div v-for="entity in entities" :key="entity.id" :id="'entity-' + entity.id"
+                             class="bg-base-100 rounded shadow-sm p-3 space-y-2 transition-colors"
+                             :class="{ 'ring ring-primary': highlightedEntityId === entity.id }">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-2">
                                     <span class="badge badge-outline">{{ entity.id }}_{{ entity.type }}</span>
@@ -232,6 +233,7 @@
                             <textarea 
                                 v-model="text" 
                                 @select="setTextareaSelection"
+                                @click="onInputClick"
                                 ref="textArea" 
                                 :class="[
                                     'w-full h-full p-4 resize-none border-0 focus:ring-0',
@@ -257,6 +259,7 @@
                         <div 
                             ref="textContainer" 
                             @mouseup="setTextSelection"
+                            @click="onOutputClick"
                             class="w-1/2 p-4 border-l border-base-300 bg-info/5"
                         >
                             <p v-html="anonymizedText" class="whitespace-pre-wrap"></p>
@@ -574,7 +577,10 @@ export default {
             // Cache management
             cacheStats: null,
             refreshingCache: false,
-            clearingCache: false
+            clearingCache: false,
+            // UI: highlight entity in list when navigated
+            highlightedEntityId: null,
+            _highlightTimer: null
         }
     },
     mounted() {
@@ -803,6 +809,58 @@ export default {
             if (start !== end) {
                 this.newEntityName = this.text.substring(start, end);
             }
+        },
+        // Scroll the entity list to a given entity and briefly highlight it
+        scrollToEntity(entityId) {
+            this.$nextTick(() => {
+                const list = this.$refs.entityList;
+                const card = document.getElementById(`entity-${entityId}`);
+                if (!list || !card) return;
+
+                const listRect = list.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                const offset = (cardRect.top - listRect.top) + list.scrollTop - 16; // 16px padding
+
+                list.scrollTo({ top: offset, behavior: 'smooth' });
+
+                this.highlightedEntityId = entityId;
+                if (this._highlightTimer) window.clearTimeout(this._highlightTimer);
+                this._highlightTimer = window.setTimeout(() => {
+                    this.highlightedEntityId = null;
+                }, 1500);
+            });
+        },
+        // Handle clicks on badges in the output preview
+        onOutputClick(e) {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (!target.classList.contains('badge') || !target.classList.contains('badge-outline')) return;
+            const text = (target.textContent || '').trim();
+            const m = text.match(/^(\d+)_([^_\s]+)(?:_.+)?$/);
+            if (!m) return;
+            const entityId = Number(m[1]);
+            if (!Number.isNaN(entityId)) this.scrollToEntity(entityId);
+        },
+        // Handle clicks inside the input textarea to detect [id_type] tokens
+        onInputClick() {
+            const ta = this.$refs.textArea;
+            if (!ta) return;
+            const value = this.text || '';
+            const pos = ta.selectionStart;
+            if (pos == null) return;
+
+            // Expand to nearest [ ... ] around cursor
+            let left = pos, right = pos;
+            while (left > 0 && value[left - 1] !== '[' && value[left - 1] !== '\n') left--;
+            while (right < value.length && value[right] !== ']' && value[right] !== '\n') right++;
+            if (value[left - 1] === '[') left--; // include '[' if we stopped before it
+            if (value[right] === ']') right++; // include ']'
+
+            const token = value.slice(left, right);
+            const m = token.match(/^\[(\d+)_([^\]_]+)(?:_[^\]]+)?\]$/);
+            if (!m) return;
+            const entityId = Number(m[1]);
+            if (!Number.isNaN(entityId)) this.scrollToEntity(entityId);
         },
         async getEntities() {
             this.loading = true;
