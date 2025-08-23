@@ -78,23 +78,8 @@
                             Beste (1.16GB)
                         </button> -->
                     </div>
-                    <p class="text-xs text-base-content/50 text-left sm:text-right">
-                        <label class="text-sm font-medium text-base-content/70">Modellqualität:</label> 
-                        {{ selectedModel === 'quantized' ? 'Schnellere Verarbeitung, geringere Genauigkeit' : 'Höhere Genauigkeit, mehr Rechenleistung' }} <br>
-                        <i>Neue Modelle kommen bald...</i>
-                    </p>
                 </div>
             </div>
-            <p>
-                Dieses Tool ermöglicht Ihnen, Text zu anonymisieren, indem sensible Entitäten erkannt und durch Platzhalter ersetzt werden, 
-                oder zu pseudonymisieren, indem Platzhalter durch benutzerdefinierte Werte ersetzt werden. Sie können benutzerdefinierte Entitäten und Typen in den Einstellungen hinzufügen, 
-                und die Ausgabe wird nach dem Klicken auf <kbd class="kbd kbd-xs">Anonymisierung starten</kbd> angezeigt.
-                <b> 
-                    Die gesamte Verarbeitung erfolgt lokal in Ihrem Browser, wodurch Ihre Daten privat und sicher bleiben.
-                    Dieses Tool wird ohne Gewährleistungen oder Garantien angeboten.
-                    Die Nutzung erfolgt auf eigenes Risiko.
-                </b>
-            </p>
         </div>
 
         <div class="flex flex-1 overflow-hidden border">
@@ -125,9 +110,6 @@
                     >
                         {{ downloading ? 'Modelle werden heruntergeladen...' : fileProcessing ? 'Datei wird verarbeitet...' : loading ? 'Entitäten werden erkannt...' : 'Anonymisierung starten' }}
                     </button>
-                    <div v-if="mode === 'pseudonymize'" class="text-sm text-base-content/60">
-                        Geben Sie Text mit Platzhaltern wie [1_person] ein und ordnen Sie diese unten den realen Werten zu.
-                    </div>
                 </div>
 
                 <!-- Add Entity Form -->
@@ -187,7 +169,6 @@
                         <button @click="detectPlaceholders" class="btn btn-outline w-full">
                             Löschen & Platzhalter aus Text erkennen
                         </button>
-                        <p class="text-xs text-base-content/50">Findet automatisch Platzhalter wie [1_person] in Ihrem Text</p>
                     </template>
                 </div>
             </div>
@@ -220,9 +201,6 @@
                         <div v-if="fileError" class="mb-2 text-sm text-error bg-error border border-error rounded p-2">
                             {{ fileError }}
                         </div>
-                        <p class="text-sm text-base-content/50 text-left">
-                            {{ mode === 'anonymize' ? 'Text hier eingeben/einfügen oder Dateien hierher ziehen. Verwenden Sie die obige Schaltfläche zur Dateiauswahl.' : 'Geben Sie anonymisierten Text mit Platzhaltern wie [1_person] ein' }}
-                        </p>
                         <div class="flex gap-2 justify-end">
                             <button @click="clearMarkdown" class="btn btn-ghost btn-xs text-error">Markdown
                               löschen</button>
@@ -234,9 +212,6 @@
                             <h2 class="text-lg font-semibold text-base-content">
                                 {{ mode === 'anonymize' ? 'Anonymisierter Text' : 'Wiederhergestellter Text' }}
                             </h2>
-                            <p class="text-sm text-base-content/50">
-                                {{ mode === 'anonymize' ? 'Vorschau der anonymisierten Ausgabe' : 'Vorschau mit durch reale Werte ersetzten Platzhaltern' }}
-                            </p>
                         </div>
                         <button @click="copy" class="btn btn-success btn-sm">
                             Text kopieren
