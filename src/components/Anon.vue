@@ -593,8 +593,8 @@ export default {
         }
     },
     mounted() {
-        // Initialize Gliner on mount
-        // this.initGliner();
+        // Initialize Gliner on mount (preload model after DOM is ready)
+        this.initGliner();
 
         // Set the worker source path
         pdfjsLib.GlobalWorkerOptions.workerSrc = '../assets/pdf.worker.min.mjs';
