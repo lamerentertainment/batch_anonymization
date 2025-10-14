@@ -683,6 +683,39 @@ export default {
             content = content.replace(/\n/g, '<br>');
             return content;
         },
+        anonymizedTextPlain() {
+            if (this.mode === 'pseudonymize') {
+                return this.pseudonymizedText();
+            }
+            let t = this.text;
+            const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+
+            this.entities.forEach(entity => {
+                if (!entity.name) return;
+                const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
+
+                if (words.length > 1) {
+                    const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                    const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+                    const sequence = words
+                        .map((_, idx) => `[${entity.id}_${entity.type}_${letters[idx] || String(idx + 1)}]`)
+                        .join(' ');
+                    t = t.replace(fullPattern, sequence);
+                } else if (words.length === 1) {
+                    const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
+                    t = t.replace(singleWordPattern, `[${entity.id}_${entity.type}]`);
+                }
+
+                words.forEach((w, idx) => {
+                    const suffix = letters[idx] || String(idx + 1);
+                    const wordPattern = new RegExp(`\\b${escapeRegex(w)}\\b`, 'gi');
+                    t = t.replace(wordPattern, `[${entity.id}_${entity.type}_${suffix}]`);
+                });
+            });
+
+            return t;
+        },
         anonymizedText() {
             if (this.mode === 'pseudonymize') {
                 return this.pseudonymizedText();
@@ -1105,8 +1138,7 @@ export default {
             this.entities = this.entities.filter(e => e.id !== id);
         },
         copy() {
-            let outputText = this.anonymizedText.replaceAll('<span class="badge badge-outline">', '[').replaceAll('</span>', ']');
-            navigator.clipboard.writeText(outputText);
+            navigator.clipboard.writeText(this.anonymizedTextPlain);
         },
         pseudonymizedText() {
             let pseudonymized = this.text;
