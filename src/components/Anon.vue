@@ -542,6 +542,7 @@
             v-if="hasGeminiKey && showPromptLibrary"
             @close="showPromptLibrary = false"
             @insert="handlePromptInsert"
+            @inferResult="handlePromptInferred"
         />
         <!-- Info Toast -->
         <div v-if="toastVisible" class="toast toast-center fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
@@ -716,6 +717,12 @@ export default {
 
         // Load entity presets list
         this.refreshPresets();
+
+        // Persist current anonymized output to localStorage so other components (e.g., PromptLibraryModal)
+        // can access it without requiring the user to press "Text kopieren".
+        try {
+            this.persistCurrentOutput();
+        } catch (_) {}
     },
     computed: {
         hasGeminiKey() {
@@ -887,6 +894,22 @@ export default {
             }
             this.toastVisible = false;
             this.toastMessage = null;
+        },
+        // Persist the live anonymized/plain output and metadata so other components can consume it
+        persistCurrentOutput() {
+            try {
+                const val = this.anonymizedTextPlain || '';
+                localStorage.setItem('anon.currentOutputText', val);
+                const entitiesCount = Array.isArray(this.entities) ? this.entities.length : 0;
+                const hasPlaceholder = /\[\d+_[^\]]+\]/.test(val || '');
+                localStorage.setItem('anon.currentEntitiesCount', String(entitiesCount));
+                localStorage.setItem('anon.currentHasPlaceholder', String(hasPlaceholder));
+                localStorage.setItem('anon.currentMode', this.mode || '');
+                // Also timestamp for reference
+                localStorage.setItem('anon.currentUpdatedAt', String(Date.now()));
+            } catch (e) {
+                console.warn('Failed to persist current anon output:', e);
+            }
         },
         async initGliner() {
             // Check if we already have a cached instance for the selected model
@@ -1267,7 +1290,25 @@ export default {
             this.entities = this.entities.filter(e => e.id !== id);
         },
         copy() {
-            navigator.clipboard.writeText(this.anonymizedTextPlain);
+            try {
+                const textToCopy = this.anonymizedTextPlain;
+                navigator.clipboard.writeText(textToCopy);
+                // Persist the last exported anonymized text for Prompt Library inference
+                try {
+                    localStorage.setItem('anon.lastExportText', textToCopy || '');
+                    localStorage.setItem('anon.lastExportAt', String(Date.now()));
+                    // Security metadata
+                    const entitiesCount = Array.isArray(this.entities) ? this.entities.length : 0;
+                    const hasPlaceholder = /\[\d+_[^\]]+\]/.test(textToCopy || '');
+                    localStorage.setItem('anon.lastExportEntitiesCount', String(entitiesCount));
+                    localStorage.setItem('anon.lastExportHasPlaceholder', String(hasPlaceholder));
+                    localStorage.setItem('anon.lastExportMode', this.mode || ''); // should be 'anonymize' when exporting
+                } catch (e) {
+                    console.warn('Failed to persist last exported text:', e);
+                }
+            } catch (e) {
+                console.error('Copy failed:', e);
+            }
         },
         pseudonymizedText() {
             let pseudonymized = this.text;
@@ -1734,6 +1775,22 @@ export default {
             try { this.showInfoToast('Prompt inserted'); } catch (_) { try { alert('Prompt inserted'); } catch (e) {} }
             this.showPromptLibrary = false;
         },
+        handlePromptInferred(responseText) {
+            try {
+                // Switch to de-anonymisieren mode and place the response in the input area
+                if (this.mode !== 'pseudonymize') {
+                    // Do not wipe response; just ensure mode is correct
+                    this.mode = 'pseudonymize';
+                }
+                this.text = responseText || '';
+                this.showInfoToast('Gemini response inserted');
+            } catch (e) {
+                console.error('Error handling inferred response:', e);
+                try { alert('Failed to insert Gemini response'); } catch (_) {}
+            } finally {
+                this.showPromptLibrary = false;
+            }
+        },
         // Gemini API key helpers
         loadGeminiKey() {
             try {
@@ -1850,10 +1907,17 @@ export default {
         value(newValue) {
             this.text = newValue;
         },
+        anonymizedTextPlain() {
+            this.persistCurrentOutput();
+        },
+        mode() {
+            this.persistCurrentOutput();
+        },
         entities: {
             handler() {
                 // Reset cycling indices when entities list changes
                 this._entityOccurrenceIndex = {};
+                this.persistCurrentOutput();
             },
             deep: false
         }
