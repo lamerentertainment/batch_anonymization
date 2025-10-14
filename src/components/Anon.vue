@@ -129,21 +129,34 @@
                     </template>
                 </div>
 
-                <!-- Presets: Save/Load Entity Lists -->
+                <!-- Presets: Save/Load Entity Lists (collapsible) -->
                 <div class="p-4 border-b border-base-300 bg-base-100 space-y-2">
-                    <p class="font-semibold">Entitäten-Liste speichern/laden</p>
-                    <div class="flex gap-2">
-                        <input v-model="presetName" class="input input-bordered input-xs flex-1" placeholder="Name der Liste">
-                        <button @click="saveEntitiesPreset" class="btn btn-xs btn-outline">Liste speichern</button>
+                    <div class="flex items-center justify-between">
+                        <p class="font-semibold">Entitäten-Listen</p>
+                        <button 
+                            class="btn btn-ghost btn-xs"
+                            @click="togglePresetMenu"
+                            :aria-expanded="showPresetMenu.toString()"
+                            :aria-controls="'entity-presets-panel'"
+                        >
+                            {{ showPresetMenu ? 'verbergen' : 'Liste speichern/laden' }}
+                        </button>
                     </div>
-                    <div class="flex gap-2 items-center">
-                        <select v-model="selectedPreset" class="select select-xs select-bordered flex-1">
-                            <option v-for="p in presets" :key="p.name" :value="p.name">
-                                {{ p.name }} ({{ p.count }})
-                            </option>
-                        </select>
-                        <button @click="loadSelectedPreset" class="btn btn-xs btn-outline" :disabled="!selectedPreset">Liste laden</button>
-                        <button @click="deleteSelectedPreset" class="btn btn-xs btn-ghost text-error" :disabled="!selectedPreset">Löschen</button>
+
+                    <div v-if="showPresetMenu" id="entity-presets-panel" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input v-model="presetName" class="input input-bordered input-xs flex-1" placeholder="Name der Liste">
+                            <button @click="saveEntitiesPreset" class="btn btn-xs btn-outline">Liste speichern</button>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <select v-model="selectedPreset" class="select select-xs select-bordered flex-1">
+                                <option v-for="p in presets" :key="p.name" :value="p.name">
+                                    {{ p.name }} ({{ p.count }})
+                                </option>
+                            </select>
+                            <button @click="loadSelectedPreset" class="btn btn-xs btn-outline" :disabled="!selectedPreset">Liste laden</button>
+                            <button @click="deleteSelectedPreset" class="btn btn-xs btn-ghost text-error" :disabled="!selectedPreset">Löschen</button>
+                        </div>
                     </div>
                 </div>
 
@@ -612,7 +625,9 @@ export default {
             // Entity presets
             presetName: '',
             selectedPreset: '',
-            presets: []
+            presets: [],
+            // UI state
+            showPresetMenu: false
         }
     },
     mounted() {
@@ -1500,6 +1515,12 @@ export default {
             } catch (e) {
                 console.warn('Failed to load entity presets:', e);
                 this.presets = [];
+            }
+        },
+        togglePresetMenu() {
+            this.showPresetMenu = !this.showPresetMenu;
+            if (this.showPresetMenu) {
+                this.refreshPresets();
             }
         },
         saveEntitiesPreset() {
