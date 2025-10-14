@@ -97,13 +97,13 @@
                 <div class="p-4 border-b border-base-300 bg-base-100 space-y-3">
                     <div class="flex gap-2">
                         <button 
-                            @click="mode = 'anonymize'" 
+                            @click="switchToAnonymize" 
                             :class="['btn', 'flex-1', mode === 'anonymize' ? 'btn-primary' : 'btn-outline']"
                         >
                             Anonymisieren
                         </button>
                         <button 
-                            @click="mode = 'pseudonymize'" 
+                            @click="switchToPseudonymize" 
                             :class="['btn', 'flex-1', mode === 'pseudonymize' ? 'btn-secondary' : 'btn-outline']"
                         >
                             De-Anonymisieren
@@ -556,6 +556,7 @@ export default {
             downloadProgress: 0,
             downloadStatus: '',
             text: this.value,
+            savedInputText: '',
             newEntityName: '',
             newEntityType: 'person',
             entities: [],
@@ -783,6 +784,28 @@ export default {
         }
     },
     methods: {
+        switchToAnonymize() {
+            try {
+                // Always restore the text that was present when leaving anonymize mode
+                this.text = this.savedInputText;
+                this.mode = 'anonymize';
+            } catch (e) {
+                console.error('Error in switchToAnonymize:', e);
+            }
+        },
+        switchToPseudonymize() {
+            try {
+                // Only save the text when transitioning from anonymize -> pseudonymize
+                if (this.mode === 'anonymize') {
+                    this.savedInputText = this.text;
+                }
+                // Clear input text when switching to de-anonymize mode
+                this.text = '';
+                this.mode = 'pseudonymize';
+            } catch (e) {
+                console.error('Error in switchToPseudonymize:', e);
+            }
+        },
         showInfoToast(message) {
             try {
                 this.toastMessage = message;
