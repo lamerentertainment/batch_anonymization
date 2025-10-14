@@ -261,6 +261,7 @@
                             {{ fileError }}
                         </div>
                         <div class="flex gap-2 justify-end">
+                            <button @click="pasteFromClipboard" class="btn btn-ghost btn-xs" title="Text aus Zwischenablage einfügen">Zwischenablage einfügen</button>
                             <button @click="clearMarkdown" class="btn btn-ghost btn-xs text-error">Markdown
                               löschen</button>
                             <button @click="clearText" class="btn btn-ghost btn-xs text-error">Text löschen</button>
@@ -1388,6 +1389,25 @@ export default {
         clearMarkdown(){
             if (!this.text) return;
             this.text = this.stripMarkdown(this.text);
+        },
+        async pasteFromClipboard() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    alert('Zwischenablagezugriff nicht verfügbar. Bitte fügen Sie mit Strg/Cmd+V ein.');
+                    return;
+                }
+                const clip = await navigator.clipboard.readText();
+                if (this.text && this.text.length > 0) {
+                    const ok = confirm('Zwischenablage einfügen und bestehenden Text ersetzen?');
+                    if (!ok) return;
+                }
+                this.text = clip || '';
+                this.$nextTick(() => {
+                    try { this.$refs.textArea && this.$refs.textArea.focus(); } catch (e) {}
+                });
+            } catch (e) {
+                alert('Konnte nicht auf die Zwischenablage zugreifen. Bitte fügen Sie den Text manuell mit Strg/Cmd+V ein.\n' + (e && (e.message || e)));
+            }
         },
         stripMarkdown(input) {
             if (!input) return '';
