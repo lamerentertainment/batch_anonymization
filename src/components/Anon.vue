@@ -150,14 +150,14 @@
                 <!-- Presets: Save/Load Entity Lists (collapsible) -->
                 <div class="p-4 border-b border-base-300 bg-base-100 space-y-2">
                     <div class="flex items-center justify-between">
-                        <p class="font-semibold">Entitäten-Listen</p>
+                        <p class="font-semibold">speichern/laden</p>
                         <button 
                             class="btn btn-ghost btn-xs"
                             @click="togglePresetMenu"
                             :aria-expanded="showPresetMenu.toString()"
                             :aria-controls="'entity-presets-panel'"
                         >
-                            {{ showPresetMenu ? 'verbergen' : 'Liste speichern/laden' }}
+                            {{ showPresetMenu ? 'Menü verbergen' : 'Menü anzeigen' }}
                         </button>
                     </div>
 
@@ -931,12 +931,44 @@ export default {
                 }, 1500);
             });
         },
+        // Scroll the output preview to the first occurrence of a given entity's badge
+        scrollOutputToFirstEntityOccurrence(entityId) {
+            const container = this.$refs.textContainer;
+            if (!container) return;
+
+            const prefix = `${entityId}_`;
+            const badges = container.querySelectorAll('span.badge');
+            let firstMatch = null;
+            for (const el of badges) {
+                const text = (el.textContent || '').trim();
+                if (text.startsWith(prefix)) {
+                    firstMatch = el;
+                    break;
+                }
+            }
+
+            if (firstMatch) {
+                // Smoothly scroll the badge into view and center it
+                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Optional: brief visual pulse to draw attention
+                firstMatch.classList.add('ring', 'ring-warning');
+                window.setTimeout(() => firstMatch.classList.remove('ring', 'ring-warning'), 800);
+            }
+        },
         onEntityClick(entity) {
             // Toggle highlight if clicking the same entity again
             if (this.activeHighlightEntityId === entity.id) {
                 this.activeHighlightEntityId = null;
             } else {
                 this.activeHighlightEntityId = entity.id;
+
+                // Only attempt to scroll when anonymized badges are visible
+                if (this.mode === 'anonymize') {
+                    this.$nextTick(() => {
+                        this.scrollOutputToFirstEntityOccurrence(entity.id);
+                    });
+                }
             }
         },
         // Handle clicks on badges in the output preview
