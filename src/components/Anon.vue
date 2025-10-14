@@ -129,6 +129,24 @@
                     </template>
                 </div>
 
+                <!-- Presets: Save/Load Entity Lists -->
+                <div class="p-4 border-b border-base-300 bg-base-100 space-y-2">
+                    <p class="font-semibold">Entitäten-Liste speichern/laden</p>
+                    <div class="flex gap-2">
+                        <input v-model="presetName" class="input input-bordered input-xs flex-1" placeholder="Name der Liste">
+                        <button @click="saveEntitiesPreset" class="btn btn-xs btn-outline">Liste speichern</button>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <select v-model="selectedPreset" class="select select-xs select-bordered flex-1">
+                            <option v-for="p in presets" :key="p.name" :value="p.name">
+                                {{ p.name }} ({{ p.count }})
+                            </option>
+                        </select>
+                        <button @click="loadSelectedPreset" class="btn btn-xs btn-outline" :disabled="!selectedPreset">Liste laden</button>
+                        <button @click="deleteSelectedPreset" class="btn btn-xs btn-ghost text-error" :disabled="!selectedPreset">Löschen</button>
+                    </div>
+                </div>
+
                 <!-- Entities List -->
                 <div ref="entityList" class="flex-1 overflow-y-auto p-4 space-y-3">
                     <template v-if="!loading && entities.length === 0">
@@ -463,6 +481,7 @@ import { Gliner } from 'gliner';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import modelCache from '../utils/modelCache.js';
+import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
@@ -589,7 +608,11 @@ export default {
             highlightedEntityId: null,
             _highlightTimer: null,
             // Active entity to highlight placeholders in text areas
-            activeHighlightEntityId: null
+            activeHighlightEntityId: null,
+            // Entity presets
+            presetName: '',
+            selectedPreset: '',
+            presets: []
         }
     },
     mounted() {
@@ -598,6 +621,9 @@ export default {
 
         // Set the worker source path
         pdfjsLib.GlobalWorkerOptions.workerSrc = '../assets/pdf.worker.min.mjs';
+
+        // Load entity presets list
+        this.refreshPresets();
     },
     computed: {
         inputOverlayHtml() {
@@ -1463,6 +1489,72 @@ export default {
         async openSettings() {
             this.showSettings = true;
             await this.refreshCacheStats();
+        },
+        // Preset management methods
+        refreshPresets() {
+            try {
+                this.presets = listEntityPresets();
+                if (!this.selectedPreset && this.presets.length > 0) {
+                    this.selectedPreset = this.presets[0].name;
+                }
+            } catch (e) {
+                console.warn('Failed to load entity presets:', e);
+                this.presets = [];
+            }
+        },
+        saveEntitiesPreset() {
+            try {
+                const name = (this.presetName || '').trim();
+                if (!name) {
+                    alert('Bitte geben Sie einen Namen für die Entitätenliste ein.');
+                    return;
+                }
+                if (!Array.isArray(this.entities) || this.entities.length === 0) {
+                    if (!confirm('Die Entitätenliste ist leer. Trotzdem speichern?')) {
+                        return;
+                    }
+                }
+                saveEntityPreset(name, this.entities, this.mode);
+                this.refreshPresets();
+                this.selectedPreset = name;
+                alert('Entitätenliste gespeichert.');
+            } catch (e) {
+                console.error('Failed to save preset:', e);
+                alert('Speichern der Entitätenliste fehlgeschlagen. Bitte versuchen Sie es erneut.');
+            }
+        },
+        loadSelectedPreset() {
+            try {
+                const name = (this.selectedPreset || '').trim();
+                if (!name) return;
+                const preset = loadEntityPreset(name);
+                if (!preset) {
+                    alert('Ausgewählte Liste nicht gefunden.');
+                    return;
+                }
+                // Apply mode from preset if available
+                if (preset.mode) this.mode = preset.mode;
+                // Replace current entities with preset entities
+                const ents = Array.isArray(preset.entities) ? preset.entities : [];
+                // Ensure objects have required shape
+                this.entities = ents.map(e => ({ id: e.id, name: e.name, type: e.type, source: e.source }));
+            } catch (e) {
+                console.error('Failed to load preset:', e);
+                alert('Laden der Entitätenliste fehlgeschlagen.');
+            }
+        },
+        deleteSelectedPreset() {
+            try {
+                const name = (this.selectedPreset || '').trim();
+                if (!name) return;
+                if (!confirm(`Möchten Sie die Liste "${name}" wirklich löschen?`)) return;
+                deleteEntityPreset(name);
+                this.refreshPresets();
+                this.selectedPreset = this.presets[0]?.name || '';
+            } catch (e) {
+                console.error('Failed to delete preset:', e);
+                alert('Löschen fehlgeschlagen.');
+            }
         }
     },
     watch: {
