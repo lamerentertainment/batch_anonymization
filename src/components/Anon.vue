@@ -63,6 +63,14 @@
                 <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
                     <div class="flex items-center gap-2">
                         <button 
+                            v-if="hasGeminiKey"
+                            @click="openPromptLibrary"
+                            class="btn btn-ghost btn-xs"
+                            title="Prompt Library öffnen"
+                        >
+                            <ListBulletIcon class="h-5 w-5" />
+                        </button>
+                        <button 
                             @click="openSettings"
                             class="btn btn-ghost btn-xs"
                             title="Anonymisierungseinstellungen konfigurieren"
@@ -494,6 +502,32 @@
                     </div>
                 </div>
                 
+                <!-- Gemini API Key Section -->
+                <div class="mt-6 border-t pt-4">
+                    <h4 class="text-md font-semibold text-base-content mb-3">Gemini API Key</h4>
+                    <p class="text-sm text-base-content/60 mb-3">
+                        Provide your Google Gemini API key. It will be stored locally in your browser only and never sent anywhere until you use features that require it.
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <input 
+                            :type="geminiKeyVisible ? 'text' : 'password'"
+                            v-model="geminiApiKey"
+                            class="input input-bordered w-full"
+                            placeholder="Enter your Gemini API key (starts with AI... orAIza...)"
+                        >
+                        <button class="btn btn-outline" type="button" @click="geminiKeyVisible = !geminiKeyVisible">
+                            {{ geminiKeyVisible ? 'Hide' : 'Show' }}
+                        </button>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button class="btn btn-sm btn-primary" type="button" @click="saveGeminiKey">Save Key</button>
+                        <button class="btn btn-sm btn-outline" type="button" @click="clearGeminiKey" :disabled="!geminiApiKey">Clear</button>
+                    </div>
+                    <div class="text-xs text-base-content/60 mt-2" v-if="geminiKeySavedAt">
+                        Saved at: {{ new Date(geminiKeySavedAt).toLocaleString() }}
+                    </div>
+                </div>
+                
                 <div class="flex justify-end gap-2 mt-6">
                     <button @click="showSettings = false" class="btn btn-outline">
                         Cancel
@@ -504,6 +538,11 @@
                 </div>
             </div>
         </div>
+        <prompt-library-modal 
+            v-if="hasGeminiKey && showPromptLibrary"
+            @close="showPromptLibrary = false"
+            @insert="handlePromptInsert"
+        />
         <!-- Info Toast -->
         <div v-if="toastVisible" class="toast toast-center fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
             <div class="alert alert-info">
@@ -519,6 +558,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
+import PromptLibraryModal from './PromptLibraryModal.vue';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
@@ -529,7 +569,8 @@ import {
     Cog6ToothIcon, 
     ExclamationTriangleIcon, 
     StarIcon, 
-    XMarkIcon 
+    XMarkIcon, 
+    ListBulletIcon
 } from '@heroicons/vue/24/outline';
 
 // Custom SigmaIcon for Σ (not in heroicons, so define as a functional component)
@@ -646,6 +687,11 @@ export default {
             cacheStats: null,
             refreshingCache: false,
             clearingCache: false,
+            // Gemini API key settings
+            geminiApiKey: '',
+            geminiKeyVisible: false,
+            geminiKeySavedAt: null,
+            geminiKeySaveStatus: null,
             // UI: highlight entity in list when navigated
             highlightedEntityId: null,
             _highlightTimer: null,
@@ -656,7 +702,9 @@ export default {
             selectedPreset: '',
             presets: [],
             // UI state
-            showPresetMenu: false
+            showPresetMenu: false,
+            // Prompt Library modal
+            showPromptLibrary: false
         }
     },
     mounted() {
@@ -670,6 +718,15 @@ export default {
         this.refreshPresets();
     },
     computed: {
+        hasGeminiKey() {
+            try {
+                const localKey = (localStorage.getItem('settings.geminiApiKey') || '').trim();
+                const stateKey = (this.geminiApiKey || '').trim();
+                return Boolean(stateKey || localKey);
+            } catch (_) {
+                return Boolean((this.geminiApiKey || '').trim());
+            }
+        },
         isUpdateState() {
             const hasText = (this.text || '').trim().length > 0;
             const hasEntities = Array.isArray(this.entities) && this.entities.length > 0;
@@ -1454,6 +1511,8 @@ export default {
             ];
         },
         applySettings() {
+            // Persist Gemini API key along with other settings
+            try { this.saveGeminiKey(); } catch (e) { console.warn('Failed to save Gemini API key on apply:', e); }
             this.showSettings = false;
             // Clear existing entities when settings change
             this.entities = [];
@@ -1663,7 +1722,56 @@ export default {
         },
         async openSettings() {
             this.showSettings = true;
+            try { this.loadGeminiKey(); } catch (e) { console.warn('Failed to load Gemini API key:', e); }
             await this.refreshCacheStats();
+        },
+        openPromptLibrary() {
+            this.showPromptLibrary = true;
+        },
+        handlePromptInsert(content) {
+            const sep = this.text && !this.text.endsWith('\n') ? '\n\n' : '';
+            this.text = (this.text || '') + sep + content;
+            try { this.showInfoToast('Prompt inserted'); } catch (_) { try { alert('Prompt inserted'); } catch (e) {} }
+            this.showPromptLibrary = false;
+        },
+        // Gemini API key helpers
+        loadGeminiKey() {
+            try {
+                const key = localStorage.getItem('settings.geminiApiKey');
+                this.geminiApiKey = key || '';
+                const ts = localStorage.getItem('settings.geminiApiKey.savedAt');
+                this.geminiKeySavedAt = ts ? Number(ts) : null;
+            } catch (e) {
+                console.warn('Error loading Gemini API key from localStorage:', e);
+            }
+        },
+        saveGeminiKey() {
+            try {
+                const trimmed = (this.geminiApiKey || '').trim();
+                if (!trimmed) {
+                    localStorage.removeItem('settings.geminiApiKey');
+                    localStorage.removeItem('settings.geminiApiKey.savedAt');
+                    this.geminiKeySavedAt = null;
+                    this.showInfoToast('Gemini API key cleared');
+                    return;
+                }
+                localStorage.setItem('settings.geminiApiKey', trimmed);
+                const ts = Date.now();
+                localStorage.setItem('settings.geminiApiKey.savedAt', String(ts));
+                this.geminiKeySavedAt = ts;
+                this.showInfoToast('Gemini API key saved');
+            } catch (e) {
+                console.error('Error saving Gemini API key:', e);
+                try { alert('Failed to save Gemini API key.'); } catch (_) {}
+            }
+        },
+        clearGeminiKey() {
+            try {
+                this.geminiApiKey = '';
+                this.saveGeminiKey();
+            } catch (e) {
+                console.warn('Error clearing Gemini API key:', e);
+            }
         },
         // Preset management methods
         refreshPresets() {
@@ -1757,7 +1865,9 @@ export default {
         ExclamationTriangleIcon,
         StarIcon,
         XMarkIcon,
-        SigmaIcon
+        SigmaIcon,
+        ListBulletIcon,
+        PromptLibraryModal
     },
 }
 </script>
