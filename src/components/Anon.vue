@@ -504,6 +504,12 @@
                 </div>
             </div>
         </div>
+        <!-- Info Toast -->
+        <div v-if="toastVisible" class="toast toast-center fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+            <div class="alert alert-info">
+                <span>{{ toastMessage }}</span>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -544,7 +550,7 @@ export default {
         },
     },
     data() {
-        return {
+        return { 
             loading: false,
             downloading: false,
             downloadProgress: 0,
@@ -624,6 +630,10 @@ export default {
                 "person", "location", "organization", "date", "phone number", 
                 "email", "address", "credit card number", "social security number"
             ],
+            // Toast for info messages
+            toastMessage: null,
+            toastVisible: false,
+            _toastTimer: null,
             // Custom regex patterns
             customRegexPatterns: [],
             newRegexPattern: '',
@@ -773,6 +783,31 @@ export default {
         }
     },
     methods: {
+        showInfoToast(message) {
+            try {
+                this.toastMessage = message;
+                this.toastVisible = true;
+                if (this._toastTimer) {
+                    clearTimeout(this._toastTimer);
+                }
+                this._toastTimer = setTimeout(() => {
+                    this.toastVisible = false;
+                    this.toastMessage = null;
+                    this._toastTimer = null;
+                }, 2000);
+            } catch (e) {
+                // As a fallback
+                try { alert(message); } catch (_) {}
+            }
+        },
+        hideToast() {
+            if (this._toastTimer) {
+                clearTimeout(this._toastTimer);
+                this._toastTimer = null;
+            }
+            this.toastVisible = false;
+            this.toastMessage = null;
+        },
         async initGliner() {
             // Check if we already have a cached instance for the selected model
             if (this.glinerInstances[this.selectedModel]) {
@@ -965,43 +1000,57 @@ export default {
             });
         },
         // Scroll the output preview to the first occurrence of a given entity's badge
-        scrollOutputToFirstEntityOccurrence(entityId) {
+        // Cycle through all occurrences of an entity's badge in the output preview
+        scrollOutputToNextEntityOccurrence(entityId) {
             const container = this.$refs.textContainer;
             if (!container) return;
 
             const prefix = `${entityId}_`;
-            const badges = container.querySelectorAll('span.badge');
-            let firstMatch = null;
-            for (const el of badges) {
-                const text = (el.textContent || '').trim();
-                if (text.startsWith(prefix)) {
-                    firstMatch = el;
-                    break;
-                }
+            const badges = Array.from(container.querySelectorAll('span.badge'))
+                .filter(el => (el.textContent || '').trim().startsWith(prefix));
+
+            if (badges.length === 0) return;
+
+            // Initialize per-entity index map
+            if (!this._entityOccurrenceIndex) this._entityOccurrenceIndex = {};
+            const current = this._entityOccurrenceIndex[entityId] ?? -1;
+            let nextIndex = current + 1;
+
+            if (nextIndex >= badges.length) {
+                // Inform user that all placeholders were clicked through, then wrap
+                this.showInfoToast('Alle Platzhalter dieser Entität wurden durchgeklickt. Zurück zum ersten.');
+                nextIndex = 0;
             }
 
-            if (firstMatch) {
-                // Smoothly scroll the badge into view and center it
-                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const targetEl = badges[nextIndex];
+            this._entityOccurrenceIndex[entityId] = nextIndex;
 
-                // Optional: brief visual pulse to draw attention
-                firstMatch.classList.add('ring', 'ring-warning');
-                window.setTimeout(() => firstMatch.classList.remove('ring', 'ring-warning'), 800);
-            }
+            // Smoothly scroll the badge into view and center it
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Brief visual pulse to draw attention
+            targetEl.classList.add('ring', 'ring-warning');
+            window.setTimeout(() => targetEl.classList.remove('ring', 'ring-warning'), 800);
         },
         onEntityClick(entity) {
+            // If switching to a different entity, reset its cycling index so we start from the first
+            if (this.activeHighlightEntityId !== entity.id) {
+                if (!this._entityOccurrenceIndex) this._entityOccurrenceIndex = {};
+                this._entityOccurrenceIndex[entity.id] = -1;
+            }
+
             // Toggle highlight if clicking the same entity again
             if (this.activeHighlightEntityId === entity.id) {
-                this.activeHighlightEntityId = null;
+                // Keep highlight active and move to next occurrence
             } else {
                 this.activeHighlightEntityId = entity.id;
+            }
 
-                // Only attempt to scroll when anonymized badges are visible
-                if (this.mode === 'anonymize') {
-                    this.$nextTick(() => {
-                        this.scrollOutputToFirstEntityOccurrence(entity.id);
-                    });
-                }
+            // Only attempt to scroll when anonymized badges are visible
+            if (this.mode === 'anonymize') {
+                this.$nextTick(() => {
+                    this.scrollOutputToNextEntityOccurrence(entity.id);
+                });
             }
         },
         // Handle clicks on badges in the output preview
@@ -1669,6 +1718,13 @@ export default {
     watch: {
         value(newValue) {
             this.text = newValue;
+        },
+        entities: {
+            handler() {
+                // Reset cycling indices when entities list changes
+                this._entityOccurrenceIndex = {};
+            },
+            deep: false
         }
     },
     components: {
