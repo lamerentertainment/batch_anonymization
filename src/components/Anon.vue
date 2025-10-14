@@ -1208,6 +1208,8 @@ export default {
             }).sort((a, b) => a.id - b.id);
         },
         clearEntities() {
+            const confirmed = window.confirm('Möchten Sie wirklich alle Entitäten löschen? Diese Aktion kann nicht rückgängig gemacht werden.');
+            if (!confirmed) return;
             this.entities = [];
         },
         clearText(){
