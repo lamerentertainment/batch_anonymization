@@ -49,9 +49,17 @@
         <!-- Header with title -->
         <div class="p-4 border-b border-base-300">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
-                <h1 class="font-bold text-3xl sm:text-4xl">
-                    Lokale Anonymisierung & Pseudonymisierung
-                </h1>
+                <div class="flex flex-col">
+                    <h1 class="font-bold text-3xl sm:text-4xl">
+                        Lokale Anonymisierung & Pseudonymisierung
+                    </h1>
+                    <p class="mt-1 text-sm text-base-content/60">
+                        Diese Anwendung basiert auf der grandiosen Vorarbeit von 
+                        <a href="https://www.recht-intelligent.ch" class="link link-hover" target="_blank" rel="noopener noreferrer">recht.intelligent</a>
+                        /
+                        <a href="https://iusable.ai" class="link link-hover" target="_blank" rel="noopener noreferrer">iusable.ai</a>
+                    </p>
+                </div>
                 <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
                     <div class="flex items-center gap-2">
                         <button 
