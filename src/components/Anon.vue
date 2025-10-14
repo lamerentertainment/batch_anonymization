@@ -1777,11 +1777,15 @@ export default {
         },
         handlePromptInferred(responseText) {
             try {
+                // If we are coming from anonymize mode, remember the user's original input text
+                if (this.mode === 'anonymize') {
+                    this.savedInputText = this.text;
+                }
                 // Switch to de-anonymisieren mode and place the response in the input area
                 if (this.mode !== 'pseudonymize') {
-                    // Do not wipe response; just ensure mode is correct
                     this.mode = 'pseudonymize';
                 }
+                // Show the LLM's response in the de-anonymize input area without affecting the saved anonymize text
                 this.text = responseText || '';
                 this.showInfoToast('Gemini response inserted');
             } catch (e) {
