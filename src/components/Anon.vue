@@ -1252,8 +1252,7 @@ export default {
                 }
                 
                 this.text = extractedText;
-                // Clear any existing entities when new file is loaded
-                this.entities = [];
+                // Do not clear existing entities when a new file is loaded to preserve the entities list per user request
             } catch (error) {
                 console.error('Error processing file:', error);
                 this.fileError = 'Error processing file. Please try again or check the file format.';
