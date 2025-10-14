@@ -105,10 +105,20 @@
                         v-if="mode === 'anonymize'" 
                         @click="getEntities" 
                         :disabled="downloading || loading || fileProcessing"
-                        class="btn btn-success w-full"
-                        :class="{ 'btn-disabled': downloading || loading || fileProcessing }"
+                        class="btn w-full"
+                        :class="[ isUpdateState ? 'btn-warning' : 'btn-success', { 'btn-disabled': downloading || loading || fileProcessing } ]"
                     >
-                        {{ downloading ? 'Modelle werden heruntergeladen...' : fileProcessing ? 'Datei wird verarbeitet...' : loading ? 'Entitäten werden erkannt...' : 'Anonymisierung starten' }}
+                        {{
+                            downloading
+                                ? 'Modelle werden heruntergeladen...'
+                                : fileProcessing
+                                    ? 'Datei wird verarbeitet...'
+                                    : loading
+                                        ? 'Entitäten werden erkannt...'
+                                        : isUpdateState
+                                            ? 'Anonymisierung aktualisieren'
+                                            : 'Anonymisierung starten'
+                        }}
                     </button>
                 </div>
 
@@ -641,6 +651,11 @@ export default {
         this.refreshPresets();
     },
     computed: {
+        isUpdateState() {
+            const hasText = (this.text || '').trim().length > 0;
+            const hasEntities = Array.isArray(this.entities) && this.entities.length > 0;
+            return this.mode === 'anonymize' && hasText && hasEntities;
+        },
         inputOverlayHtml() {
             // Mirror the textarea content and highlight placeholders for the active entity
             const escapeHtml = (s) => (s || '')
