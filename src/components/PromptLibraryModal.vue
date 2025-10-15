@@ -62,7 +62,7 @@ export default {
   name: 'PromptLibraryModal',
   emits: ['close', 'inferResult', 'toast'],
   data() {
-    return { search: '', tag: '', favoritesOnly: false, list: [], loading: false, toastVisible: false, toastMessage: '', toastDetail: '', toastType: 'info' };
+    return { search: '', tag: '', favoritesOnly: false, list: [], loading: false, toastVisible: false, toastMessage: '', toastDetail: '', toastType: 'info', toastTimer: null };
   },
   computed: {
     filtered() {
@@ -81,11 +81,22 @@ export default {
   methods: {
     showToast(msg, opts = {}) {
       try {
+        if (this.toastTimer) {
+          clearTimeout(this.toastTimer);
+          this.toastTimer = null;
+        }
         this.toastMessage = msg;
         this.toastType = opts.type || 'info';
         this.toastDetail = opts.detail || '';
         this.toastVisible = true;
-        setTimeout(() => { this.toastVisible = false; }, 2500);
+        const sticky = opts.sticky === true || opts.duration === 0;
+        if (!sticky) {
+          const ms = typeof opts.duration === 'number' ? opts.duration : 2500;
+          this.toastTimer = setTimeout(() => {
+            this.toastVisible = false;
+            this.toastTimer = null;
+          }, ms);
+        }
       } catch(_) {}
       this.$emit('toast', msg, opts);
     },
@@ -169,7 +180,7 @@ export default {
           this.showToast('Gemini API key missing. Add it in Settings.');
           return;
         }
-        this.showToast('Calling Gemini…');
+        this.showToast('Calling Gemini…', { duration: 0 });
         const responseText = await this.callGemini(promptText, apiKey);
         if (!responseText) {
           this.showToast('No response from Gemini.');
