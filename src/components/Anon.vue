@@ -1821,6 +1821,16 @@ export default {
                 // Show the LLM's response in the de-anonymize input area without affecting the saved anonymize text
                 this.text = responseText || '';
                 this.showInfoToast('Gemini response inserted');
+                
+                // New cumulative action: automatically copy the de-anonymized output to clipboard and inform the user
+                try {
+                    // Reuse the existing copy() behavior (equivalent to pressing "Text kopieren")
+                    this.copy();
+                    // Inform the user with a toast
+                    this.showInfoToast('Wiederhergestellter Text wurde in die Zwischenablage kopiert');
+                } catch (copyErr) {
+                    console.warn('Auto-copy after inference failed:', copyErr);
+                }
             } catch (e) {
                 console.error('Error handling inferred response:', e);
                 try { alert('Failed to insert Gemini response'); } catch (_) {}
