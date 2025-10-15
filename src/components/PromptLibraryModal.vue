@@ -16,10 +16,11 @@
         <div v-for="p in filtered" :key="p.id" class="card bg-base-200">
           <div class="card-body p-3 gap-2">
             <div class="flex items-center justify-between">
-              <input class="input input-ghost input-sm font-semibold" v-model="p.title" @change="save(p)" />
-              <button class="btn btn-ghost btn-xs" @click="toggleFav(p)">{{ p.favorite ? '★' : '☆' }}</button>
+              <input class="input input-ghost input-sm font-semibold w-full" v-model="p.title" @change="save(p)"/>
+              <button class="btn btn-ghost btn-xs shrink-0" @click="toggleFav(p)">{{ p.favorite ? '★' : '☆' }}</button>
             </div>
-            <textarea class="textarea textarea-bordered textarea-sm min-h-24" v-model="p.content" @change="save(p)"></textarea>
+            <textarea class="textarea textarea-bordered textarea-sm flex-1 text-[0.9em] leading-[1]" v-model="p.content"
+                      @change="save(p)"></textarea>
             <div class="flex gap-2 items-center">
               <input class="input input-bordered input-xs flex-1" placeholder="comma,separated,tags" :value="p.tags.join(',')" @change="updateTags(p, $event.target.value)" />
               <button class="btn btn-xs btn-warning" @click="inferWithGemini(p)">Infer with Gemini</button>
