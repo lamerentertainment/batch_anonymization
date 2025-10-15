@@ -47,8 +47,21 @@
         <button class="btn btn-sm btn-error ml-auto" @click="$emit('close')">Close</button>
       </div>
       <div v-if="toastVisible" class="toast toast-center fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <div :class="['alert', toastType === 'error' ? 'alert-error' : 'alert-info', toastDetail ? 'cursor-pointer' : '']" @click="onToastClick" role="button" :title="toastDetail ? 'Click to view details' : ''">
-          <span>{{ toastMessage }}<template v-if="toastDetail"> (click to view details)</template></span>
+        <div
+          :class="[
+            'alert',
+            toastType === 'error' ? 'alert-error' : 'alert-info',
+            toastDetail ? 'cursor-pointer' : '',
+            toastLoading ? 'animate-pulse' : ''
+          ]"
+          @click="onToastClick"
+          role="button"
+          :title="toastDetail ? 'Click to view details' : ''"
+        >
+          <span class="flex items-center">
+            <span v-if="toastLoading" class="loading loading-spinner loading-xs mr-2" aria-hidden="true"></span>
+            <span>{{ toastMessage }}<template v-if="toastDetail"> (click to view details)</template></span>
+          </span>
         </div>
       </div>
     </div>
@@ -62,7 +75,7 @@ export default {
   name: 'PromptLibraryModal',
   emits: ['close', 'inferResult', 'toast'],
   data() {
-    return { search: '', tag: '', favoritesOnly: false, list: [], loading: false, toastVisible: false, toastMessage: '', toastDetail: '', toastType: 'info', toastTimer: null };
+    return { search: '', tag: '', favoritesOnly: false, list: [], loading: false, toastVisible: false, toastMessage: '', toastDetail: '', toastType: 'info', toastTimer: null, toastLoading: false };
   },
   computed: {
     filtered() {
@@ -89,12 +102,15 @@ export default {
         this.toastType = opts.type || 'info';
         this.toastDetail = opts.detail || '';
         this.toastVisible = true;
+        this.toastLoading = opts.loading === true;
+
         const sticky = opts.sticky === true || opts.duration === 0;
         if (!sticky) {
           const ms = typeof opts.duration === 'number' ? opts.duration : 2500;
           this.toastTimer = setTimeout(() => {
             this.toastVisible = false;
             this.toastTimer = null;
+            this.toastLoading = false;
           }, ms);
         }
       } catch(_) {}
@@ -180,7 +196,7 @@ export default {
           this.showToast('Gemini API key missing. Add it in Settings.');
           return;
         }
-        this.showToast('Calling Gemini…', { duration: 0 });
+        this.showToast('Calling Gemini…', { duration: 0, loading: true });
         const responseText = await this.callGemini(promptText, apiKey);
         if (!responseText) {
           this.showToast('No response from Gemini.');
