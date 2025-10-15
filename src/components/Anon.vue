@@ -1293,6 +1293,19 @@ export default {
         copy() {
             try {
                 const textToCopy = this.anonymizedTextPlain;
+
+                // Security check (same logic as in PromptLibraryModal.inferWithGemini):
+                // In Anonymize mode, prevent copying if text appears not anonymized
+                if (this.mode === 'anonymize') {
+                    const entitiesCount = Array.isArray(this.entities) ? this.entities.length : 0;
+                    const hasPlaceholderByRegex = /\[\d+_[^\]]+\]/.test(textToCopy || '');
+                    if (entitiesCount <= 0 || !hasPlaceholderByRegex) {
+                        const msg = 'Kopieren blockiert: Der Text scheint nicht anonymisiert zu sein. Bitte fügen Sie Entitäten hinzu und anonymisieren Sie den Text, bevor Sie ihn kopieren.';
+                        try { this.showInfoToast(msg); } catch (_) { try { alert(msg); } catch (_) {} }
+                        return;
+                    }
+                }
+
                 navigator.clipboard.writeText(textToCopy);
                 // Persist the last exported anonymized text for Prompt Library inference
                 try {
