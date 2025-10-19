@@ -18,8 +18,8 @@
       </div>
 
       <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-auto">
-        <div v-for="p in filtered" :key="p.id" class="card bg-base-200">
-          <div class="card-body p-3 gap-2">
+        <div v-for="p in filtered" :key="p.id" class="card bg-base-200 h-80">
+          <div class="card-body p-3 gap-2 flex flex-col">
             <div class="flex items-center justify-between">
               <input class="input input-ghost input-sm font-semibold w-full" v-model="p.title" @change="save(p)"/>
               <button class="btn btn-ghost btn-xs shrink-0" @click="toggleFav(p)">{{ p.favorite ? '★' : '☆' }}</button>
