@@ -361,7 +361,6 @@
                         <!-- Output Area -->
                         <div
                             ref="outputContainer"
-                            @scroll="handleOutputScroll"
                             @mouseup="setTextSelection"
                             @click="onOutputClick"
                             class="w-1/2 h-full border-l border-base-300 bg-info/5 relative overflow-y-auto"
@@ -827,7 +826,9 @@ export default {
                 seenZones: 0,
                 isFullyReviewed: false,   // True when 100% scrolled
                 progress: 0               // Percentage 0-100
-            }
+            },
+            // Synchronized scrolling
+            _isSyncScrolling: false       // Prevent infinite scroll loops
         }
     },
     mounted() {
@@ -851,6 +852,9 @@ export default {
 
         // Add keyboard event listeners for restricted mode
         this.setupKeyboardRestrictions();
+
+        // Setup synchronized scrolling between input and output areas
+        this.setupSyncScroll();
     },
     computed: {
         hasGeminiKey() {
@@ -2320,6 +2324,52 @@ export default {
                 } catch (e) {}
                 this.showInfoToast('✓ Text review completed. You can now copy or run prompts.');
             }
+        },
+        // Synchronized Scrolling Methods
+        setupSyncScroll() {
+            this.$nextTick(() => {
+                const inputArea = this.$refs.textArea;
+                const outputContainer = this.$refs.outputContainer;
+
+                if (!inputArea || !outputContainer) {
+                    console.warn('[SyncScroll] Could not find refs for synchronized scrolling');
+                    return;
+                }
+
+                // Input area scrolls → Output container follows
+                inputArea.addEventListener('scroll', () => {
+                    if (this._isSyncScrolling) return;
+                    this._isSyncScrolling = true;
+
+                    const scrollPercentage = inputArea.scrollTop / (inputArea.scrollHeight - inputArea.clientHeight);
+                    outputContainer.scrollTop = scrollPercentage * (outputContainer.scrollHeight - outputContainer.clientHeight);
+
+                    setTimeout(() => {
+                        this._isSyncScrolling = false;
+                    }, 50);
+                });
+
+                // Output container scrolls → Input area follows
+                // Note: This also handles scroll review tracking
+                const originalOutputScroll = this.handleOutputScroll.bind(this);
+                outputContainer.addEventListener('scroll', (event) => {
+                    // First, handle scroll review tracking
+                    originalOutputScroll(event);
+
+                    // Then, sync scroll to input
+                    if (this._isSyncScrolling) return;
+                    this._isSyncScrolling = true;
+
+                    const scrollPercentage = outputContainer.scrollTop / (outputContainer.scrollHeight - outputContainer.clientHeight);
+                    inputArea.scrollTop = scrollPercentage * (inputArea.scrollHeight - inputArea.clientHeight);
+
+                    setTimeout(() => {
+                        this._isSyncScrolling = false;
+                    }, 50);
+                });
+
+                console.log('[SyncScroll] Synchronized scrolling enabled');
+            });
         }
     },
     watch: {
@@ -2328,8 +2378,9 @@ export default {
         },
         anonymizedTextPlain() {
             this.persistCurrentOutput();
-            // Trigger scroll review when output changes
-            this.initScrollReview();
+            // NOTE: We DON'T reset scroll review here when output changes
+            // (e.g., when user adds/removes entities during review).
+            // Review state persists as requested.
         },
         mode(newMode) {
             this.persistCurrentOutput();
