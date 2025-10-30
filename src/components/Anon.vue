@@ -286,7 +286,7 @@
                             :disabled="!canCopyOutput"
                             :title="getCopyButtonTitle()"
                         >
-                            <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed">
+                            <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed && isTextAnonymized">
                                 🔒 Text kopieren ({{ scrollReview.progress }}%)
                             </span>
                             <span v-else-if="!canCopyOutput">
@@ -300,7 +300,7 @@
                 </div>
 
                 <!-- Scroll Review Progress Bar (Restricted Mode) -->
-                <div v-if="scrollReview.enabled && !scrollReview.isFullyReviewed"
+                <div v-if="scrollReview.enabled && !scrollReview.isFullyReviewed && isTextAnonymized"
                      class="px-4 py-2 bg-warning/10 border-t border-b border-warning/30">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-xs font-medium text-warning-content">Review Progress:</span>
@@ -367,7 +367,7 @@
                             class="w-1/2 h-full border-l border-base-300 bg-info/5 relative overflow-y-auto"
                         >
                             <!-- Zone Visualization Overlay (Restricted Mode) -->
-                            <div v-if="scrollReview.enabled" class="absolute inset-0 pointer-events-none">
+                            <div v-if="scrollReview.enabled && isTextAnonymized" class="absolute inset-0 pointer-events-none">
                                 <div
                                     v-for="(zone, index) in scrollReview.zones"
                                     :key="'zone-' + index"
@@ -1001,6 +1001,15 @@ export default {
             }
             // In anonymize mode, always allow paste
             return true;
+        },
+        // Check if text is actually anonymized (has entities and placeholders)
+        isTextAnonymized() {
+            if (this.mode !== 'anonymize') {
+                return false;
+            }
+            const entitiesCount = Array.isArray(this.entities) ? this.entities.length : 0;
+            const hasPlaceholderByRegex = /\[\d+_[^\]]+\]/.test(this.anonymizedTextPlain || '');
+            return entitiesCount > 0 && hasPlaceholderByRegex;
         }
     },
     methods: {
