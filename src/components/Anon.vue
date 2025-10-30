@@ -284,11 +284,37 @@
                             @click="copy"
                             class="btn btn-success btn-sm"
                             :disabled="!canCopyOutput"
-                            :title="canCopyOutput ? 'Copy text to clipboard' : 'Copying disabled in Restricted Mode'"
+                            :title="getCopyButtonTitle()"
                         >
-                            {{ canCopyOutput ? 'Text kopieren' : '🔒 Text kopieren' }}
+                            <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed">
+                                🔒 Text kopieren ({{ scrollReview.progress }}%)
+                            </span>
+                            <span v-else-if="!canCopyOutput">
+                                🔒 Text kopieren
+                            </span>
+                            <span v-else>
+                                ✓ Text kopieren
+                            </span>
                         </button>
                     </div>
+                </div>
+
+                <!-- Scroll Review Progress Bar (Restricted Mode) -->
+                <div v-if="scrollReview.enabled && !scrollReview.isFullyReviewed"
+                     class="px-4 py-2 bg-warning/10 border-t border-b border-warning/30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-medium text-warning-content">Review Progress:</span>
+                        <div class="flex-1 bg-base-300 rounded-full h-2 overflow-hidden">
+                            <div
+                                class="bg-success h-2 rounded-full transition-all duration-300"
+                                :style="{width: scrollReview.progress + '%'}"
+                            ></div>
+                        </div>
+                        <span class="text-xs font-bold text-warning-content">{{ scrollReview.progress }}%</span>
+                    </div>
+                    <p class="text-xs text-warning-content">
+                        ⚠️ Bitte scrollen Sie durch den gesamten Text, um die Anonymisierung zu überprüfen
+                    </p>
                 </div>
 
                 <!-- Scrollable Content Container -->
@@ -333,13 +359,35 @@
                         </div>
 
                         <!-- Output Area -->
-                        <div 
-                            ref="textContainer" 
+                        <div
+                            ref="outputContainer"
+                            @scroll="handleOutputScroll"
                             @mouseup="setTextSelection"
                             @click="onOutputClick"
-                            class="w-1/2 p-4 border-l border-base-300 bg-info/5"
+                            class="w-1/2 border-l border-base-300 bg-info/5 relative overflow-y-auto"
                         >
-                            <p v-html="anonymizedText" class="whitespace-pre-wrap"></p>
+                            <!-- Zone Visualization Overlay (Restricted Mode) -->
+                            <div v-if="scrollReview.enabled" class="absolute inset-0 pointer-events-none">
+                                <div
+                                    v-for="(zone, index) in scrollReview.zones"
+                                    :key="'zone-' + index"
+                                    :style="{
+                                        position: 'absolute',
+                                        top: zone.start + 'px',
+                                        left: 0,
+                                        right: 0,
+                                        height: (zone.end - zone.start) + 'px',
+                                        backgroundColor: zone.seen ? 'rgba(34, 197, 94, 0.06)' : 'transparent',
+                                        transition: 'background-color 0.5s ease',
+                                        borderTop: index > 0 ? '1px dashed rgba(0,0,0,0.03)' : 'none'
+                                    }"
+                                ></div>
+                            </div>
+
+                            <!-- Actual Content -->
+                            <div ref="textContainer" class="relative z-10 p-4">
+                                <p v-html="anonymizedText" class="whitespace-pre-wrap"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -769,7 +817,17 @@ export default {
             showPromptLibrary: false,
             // Security / Restricted Mode
             isUnrestricted: false,
-            unlockPassword: ''
+            unlockPassword: '',
+            // Scroll Review (Restricted Mode feature)
+            scrollReview: {
+                enabled: false,           // Active only in Restricted Mode + Anonymize Mode
+                zones: [],                // Array of {start, end, seen}
+                zoneHeight: 100,          // 100px per zone
+                totalZones: 0,
+                seenZones: 0,
+                isFullyReviewed: false,   // True when 100% scrolled
+                progress: 0               // Percentage 0-100
+            }
         }
     },
     mounted() {
@@ -918,9 +976,21 @@ export default {
         },
         // Security: Check if copying output is allowed
         canCopyOutput() {
-            // In anonymize mode, only allow copy if unrestricted
+            // In anonymize mode, check both unrestricted status and scroll review
             if (this.mode === 'anonymize') {
-                return this.isUnrestricted;
+                // First check: Restricted Mode
+                if (!this.isUnrestricted) {
+                    // Additional check: Scroll Review (must be completed)
+                    if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
+                        return false; // Blocked until fully scrolled
+                    }
+                }
+                // If unrestricted, always allow
+                if (this.isUnrestricted) {
+                    return true;
+                }
+                // If restricted but scroll review completed or not enabled, allow
+                return !this.scrollReview.enabled || this.scrollReview.isFullyReviewed;
             }
             // In pseudonymize/reverse mode, always allow copy
             return true;
@@ -2107,6 +2177,121 @@ export default {
             securityManager.lock();
             this.isUnrestricted = false;
             this.showInfoToast('Restricted Mode activated');
+        },
+        getCopyButtonTitle() {
+            if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
+                return `Scroll through entire text first (${this.scrollReview.progress}% completed)`;
+            }
+            if (!this.canCopyOutput) {
+                return 'Copying disabled in Restricted Mode';
+            }
+            return 'Copy text to clipboard';
+        },
+        // Scroll Review Methods
+        initScrollReview() {
+            // Only enable in Restricted Mode + Anonymize Mode
+            if (this.isUnrestricted || this.mode !== 'anonymize') {
+                this.scrollReview.enabled = false;
+                this.scrollReview.isFullyReviewed = false;
+                return;
+            }
+
+            // Wait for next tick to ensure DOM is updated
+            this.$nextTick(() => {
+                const container = this.$refs.outputContainer;
+                if (!container) {
+                    this.scrollReview.enabled = false;
+                    return;
+                }
+
+                const scrollHeight = container.scrollHeight;
+                const clientHeight = container.clientHeight;
+
+                // Edge Case: Content fits on one screen (no scrolling needed)
+                if (scrollHeight <= clientHeight + 10) { // +10px tolerance
+                    this.scrollReview.isFullyReviewed = true;
+                    this.scrollReview.enabled = false;
+                    this.scrollReview.progress = 100;
+                    // Persist state
+                    try {
+                        localStorage.setItem('anon.currentScrollReviewCompleted', 'true');
+                        localStorage.setItem('anon.currentScrollReviewRequired', 'false');
+                    } catch (e) {}
+                    return;
+                }
+
+                // Create zones
+                const zoneHeight = this.scrollReview.zoneHeight;
+                const totalZones = Math.ceil(scrollHeight / zoneHeight);
+
+                this.scrollReview.zones = [];
+                for (let i = 0; i < totalZones; i++) {
+                    this.scrollReview.zones.push({
+                        start: i * zoneHeight,
+                        end: Math.min((i + 1) * zoneHeight, scrollHeight),
+                        seen: false
+                    });
+                }
+
+                // Mark first zone (currently in viewport) as seen
+                this.scrollReview.zones[0].seen = true;
+
+                this.scrollReview.totalZones = totalZones;
+                this.scrollReview.seenZones = 1;
+                this.scrollReview.enabled = true;
+                this.scrollReview.isFullyReviewed = false;
+                this.updateScrollReviewProgress();
+
+                // Persist state
+                try {
+                    localStorage.setItem('anon.currentScrollReviewRequired', 'true');
+                    localStorage.setItem('anon.currentScrollReviewCompleted', 'false');
+                } catch (e) {}
+            });
+        },
+        handleOutputScroll(event) {
+            if (!this.scrollReview.enabled || this.scrollReview.isFullyReviewed) {
+                return;
+            }
+
+            const container = event.target;
+            const scrollTop = container.scrollTop;
+            const clientHeight = container.clientHeight;
+
+            // Viewport boundaries
+            const visibleTop = scrollTop;
+            const visibleBottom = scrollTop + clientHeight;
+
+            // Mark all zones in viewport as seen
+            let updated = false;
+            this.scrollReview.zones.forEach(zone => {
+                if (!zone.seen) {
+                    // Zone is visible if it overlaps with viewport
+                    const isVisible = (zone.end >= visibleTop) && (zone.start <= visibleBottom);
+                    if (isVisible) {
+                        zone.seen = true;
+                        this.scrollReview.seenZones++;
+                        updated = true;
+                    }
+                }
+            });
+
+            if (updated) {
+                this.updateScrollReviewProgress();
+            }
+        },
+        updateScrollReviewProgress() {
+            const progress = (this.scrollReview.seenZones / this.scrollReview.totalZones) * 100;
+            this.scrollReview.progress = Math.round(progress);
+
+            if (progress >= 100) {
+                this.scrollReview.isFullyReviewed = true;
+                // Persist state
+                try {
+                    localStorage.setItem('anon.currentScrollReviewCompleted', 'true');
+                } catch (e) {}
+                this.showInfoToast('✓ Text review completed. You can now copy or run prompts.');
+            }
         }
     },
     watch: {
@@ -2115,9 +2300,30 @@ export default {
         },
         anonymizedTextPlain() {
             this.persistCurrentOutput();
+            // Trigger scroll review when output changes
+            this.initScrollReview();
         },
-        mode() {
+        mode(newMode) {
             this.persistCurrentOutput();
+            // Enable/disable scroll review based on mode
+            if (newMode === 'anonymize') {
+                this.$nextTick(() => this.initScrollReview());
+            } else {
+                this.scrollReview.enabled = false;
+                this.scrollReview.isFullyReviewed = false;
+            }
+        },
+        isUnrestricted(val) {
+            // When unlocking, disable scroll review
+            if (val) {
+                this.scrollReview.enabled = false;
+                this.scrollReview.isFullyReviewed = false;
+            } else {
+                // When locking, re-initialize scroll review if in anonymize mode
+                if (this.mode === 'anonymize') {
+                    this.$nextTick(() => this.initScrollReview());
+                }
+            }
         },
         entities: {
             handler() {

@@ -190,6 +190,23 @@ export default {
           return;
         }
 
+        // NEW: Check scroll review status (Restricted Mode feature)
+        try {
+          const reviewRequired = localStorage.getItem('anon.currentScrollReviewRequired') === 'true';
+          const reviewCompleted = localStorage.getItem('anon.currentScrollReviewCompleted') === 'true';
+
+          if (reviewRequired && !reviewCompleted) {
+            this.showToast('Please review anonymized text by scrolling through it first.', {
+              type: 'error',
+              detail: 'For safety in Restricted Mode, you must review the entire anonymized text by scrolling through it before running prompts. This ensures you have verified all entities were correctly anonymized.'
+            });
+            return;
+          }
+        } catch (e) {
+          // Non-fatal, continue if localStorage access fails
+          console.warn('Failed to check scroll review status:', e);
+        }
+
         const promptText = template.replaceAll('{{anontext}}', exported);
         const apiKey = (localStorage.getItem('settings.geminiApiKey') || '').trim();
         if (!apiKey) {
