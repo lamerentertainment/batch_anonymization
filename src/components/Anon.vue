@@ -978,19 +978,17 @@ export default {
         canCopyOutput() {
             // In anonymize mode, check both unrestricted status and scroll review
             if (this.mode === 'anonymize') {
-                // First check: Restricted Mode
-                if (!this.isUnrestricted) {
-                    // Additional check: Scroll Review (must be completed)
-                    if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
-                        return false; // Blocked until fully scrolled
-                    }
-                }
                 // If unrestricted, always allow
                 if (this.isUnrestricted) {
                     return true;
                 }
-                // If restricted but scroll review completed or not enabled, allow
-                return !this.scrollReview.enabled || this.scrollReview.isFullyReviewed;
+                // If restricted mode is active
+                // Block if scroll review is enabled AND not yet fully reviewed
+                if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
+                    return false; // Blocked until fully scrolled
+                }
+                // Otherwise allow (review completed or not required)
+                return true;
             }
             // In pseudonymize/reverse mode, always allow copy
             return true;
@@ -1420,6 +1418,11 @@ export default {
                 console.error('Error during entity detection:', e);
             } finally {
                 this.loading = false;
+
+                // Initialize scroll review after anonymization completes (Restricted Mode feature)
+                this.$nextTick(() => {
+                    this.initScrollReview();
+                });
             }
         },
         removeDuplicateEntities(entities) {
@@ -2189,8 +2192,15 @@ export default {
         },
         // Scroll Review Methods
         initScrollReview() {
+            console.log('[ScrollReview] initScrollReview called', {
+                isUnrestricted: this.isUnrestricted,
+                mode: this.mode,
+                shouldEnable: !this.isUnrestricted && this.mode === 'anonymize'
+            });
+
             // Only enable in Restricted Mode + Anonymize Mode
             if (this.isUnrestricted || this.mode !== 'anonymize') {
+                console.log('[ScrollReview] Disabled: unrestricted or not in anonymize mode');
                 this.scrollReview.enabled = false;
                 this.scrollReview.isFullyReviewed = false;
                 return;
@@ -2200,15 +2210,18 @@ export default {
             this.$nextTick(() => {
                 const container = this.$refs.outputContainer;
                 if (!container) {
+                    console.error('[ScrollReview] outputContainer ref not found!');
                     this.scrollReview.enabled = false;
                     return;
                 }
 
                 const scrollHeight = container.scrollHeight;
                 const clientHeight = container.clientHeight;
+                console.log('[ScrollReview] Container dimensions:', { scrollHeight, clientHeight });
 
                 // Edge Case: Content fits on one screen (no scrolling needed)
                 if (scrollHeight <= clientHeight + 10) { // +10px tolerance
+                    console.log('[ScrollReview] Content fits on one screen - auto-completing');
                     this.scrollReview.isFullyReviewed = true;
                     this.scrollReview.enabled = false;
                     this.scrollReview.progress = 100;
@@ -2241,6 +2254,12 @@ export default {
                 this.scrollReview.enabled = true;
                 this.scrollReview.isFullyReviewed = false;
                 this.updateScrollReviewProgress();
+
+                console.log('[ScrollReview] Enabled!', {
+                    totalZones,
+                    seenZones: 1,
+                    progress: this.scrollReview.progress
+                });
 
                 // Persist state
                 try {
