@@ -318,11 +318,11 @@
                 </div>
 
                 <!-- Scrollable Content Container -->
-                <div class="flex-1 overflow-y-auto">
-                    <div class="flex min-h-full">
+                <div class="flex-1 overflow-hidden">
+                    <div class="flex h-full">
                         <!-- Input Area with Drag and Drop -->
-                        <div 
-                            class="w-1/2 relative"
+                        <div
+                            class="w-1/2 h-full relative"
                             @drop.prevent="handleFileDrop"
                             @dragover.prevent="handleDragOver"
                             @dragleave.prevent="handleDragLeave"
@@ -364,7 +364,7 @@
                             @scroll="handleOutputScroll"
                             @mouseup="setTextSelection"
                             @click="onOutputClick"
-                            class="w-1/2 border-l border-base-300 bg-info/5 relative overflow-y-auto"
+                            class="w-1/2 h-full border-l border-base-300 bg-info/5 relative overflow-y-auto"
                         >
                             <!-- Zone Visualization Overlay (Restricted Mode) -->
                             <div v-if="scrollReview.enabled" class="absolute inset-0 pointer-events-none">
