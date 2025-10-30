@@ -778,8 +778,9 @@ export default {
             fileError: null, // File validation error
             showSettings: false, // Settings modal visibility
             selectedLabels: [ // Default selected labels (common ones)
-                "person", "location", "organization", "date", "phone number", 
-                "email", "address", "credit card number", "social security number"
+                "person", "organization", "phone number",
+                "email", "address", "credit card number", "social security number",
+                "iban"
             ],
             // Toast for info messages
             toastMessage: null,
@@ -1773,8 +1774,6 @@ export default {
             ];
         },
         applySettings() {
-            // Persist Gemini API key along with other settings
-            try { this.saveGeminiKey(); } catch (e) { console.warn('Failed to save Gemini API key on apply:', e); }
             this.showSettings = false;
             // Clear existing entities when settings change
             this.entities = [];
