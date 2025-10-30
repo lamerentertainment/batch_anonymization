@@ -261,7 +261,14 @@
                             {{ fileError }}
                         </div>
                         <div class="flex gap-2 justify-end">
-                            <button @click="pasteFromClipboard" class="btn btn-ghost btn-xs" title="Text aus Zwischenablage einfügen">Zwischenablage einfügen</button>
+                            <button
+                                @click="pasteFromClipboard"
+                                class="btn btn-ghost btn-xs"
+                                :disabled="!canPasteInput"
+                                :title="canPasteInput ? 'Text aus Zwischenablage einfügen' : 'Pasting disabled in Restricted Mode'"
+                            >
+                                {{ canPasteInput ? 'Zwischenablage einfügen' : '🔒 Zwischenablage einfügen' }}
+                            </button>
                             <button @click="clearMarkdown" class="btn btn-ghost btn-xs text-error">Markdown
                               löschen</button>
                             <button @click="clearText" class="btn btn-ghost btn-xs text-error">Text löschen</button>
@@ -273,8 +280,13 @@
                                 {{ mode === 'anonymize' ? 'Anonymisierter Text' : 'Wiederhergestellter Text' }}
                             </h2>
                         </div>
-                        <button @click="copy" class="btn btn-success btn-sm">
-                            Text kopieren
+                        <button
+                            @click="copy"
+                            class="btn btn-success btn-sm"
+                            :disabled="!canCopyOutput"
+                            :title="canCopyOutput ? 'Copy text to clipboard' : 'Copying disabled in Restricted Mode'"
+                        >
+                            {{ canCopyOutput ? 'Text kopieren' : '🔒 Text kopieren' }}
                         </button>
                     </div>
                 </div>
@@ -528,7 +540,54 @@
                         Saved at: {{ new Date(geminiKeySavedAt).toLocaleString() }}
                     </div>
                 </div>
-                
+
+                <!-- Security Settings Section -->
+                <div class="mt-6 border-t pt-4">
+                    <h4 class="text-md font-semibold text-base-content mb-3">🔒 Security Settings</h4>
+
+                    <!-- Status Badge -->
+                    <div class="alert mb-3" :class="isUnrestricted ? 'alert-success' : 'alert-warning'">
+                        <span>
+                            {{ isUnrestricted ? '🔓 Unrestricted Mode Active' : '🔒 Restricted Mode Active' }}
+                        </span>
+                    </div>
+
+                    <!-- Restricted Mode Info -->
+                    <div v-if="!isUnrestricted" class="text-sm text-base-content/60 mb-3">
+                        <p class="font-medium mb-1">Restricted mode prevents:</p>
+                        <ul class="list-disc ml-5">
+                            <li>Copying anonymized text in Anonymize mode</li>
+                            <li>Pasting text in Reverse mode</li>
+                        </ul>
+                        <p class="mt-2 text-xs italic">This is a low-level security feature for honest, non-technical users.</p>
+                    </div>
+
+                    <!-- Unlock/Lock Controls -->
+                    <div v-if="!isUnrestricted" class="form-control">
+                        <label class="label">
+                            <span class="label-text">Enter Master Password to Unlock</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <input
+                                v-model="unlockPassword"
+                                type="password"
+                                class="input input-bordered input-sm flex-1"
+                                placeholder="Master Password"
+                                @keyup.enter="unlockMode"
+                            />
+                            <button @click="unlockMode" class="btn btn-sm btn-success" :disabled="!unlockPassword">
+                                Unlock
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-else class="flex gap-2">
+                        <button @click="lockMode" class="btn btn-sm btn-warning w-full">
+                            🔒 Lock Mode (Activate Restrictions)
+                        </button>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-2 mt-6">
                     <button @click="showSettings = false" class="btn btn-outline">
                         Cancel
@@ -561,6 +620,7 @@ import mammoth from 'mammoth';
 import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 import PromptLibraryModal from './PromptLibraryModal.vue';
+import securityManager from '../utils/securityManager.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
@@ -706,7 +766,10 @@ export default {
             // UI state
             showPresetMenu: false,
             // Prompt Library modal
-            showPromptLibrary: false
+            showPromptLibrary: false,
+            // Security / Restricted Mode
+            isUnrestricted: false,
+            unlockPassword: ''
         }
     },
     mounted() {
@@ -724,6 +787,12 @@ export default {
         try {
             this.persistCurrentOutput();
         } catch (_) {}
+
+        // Load security state (restricted/unrestricted mode)
+        this.isUnrestricted = securityManager.isUnrestricted();
+
+        // Add keyboard event listeners for restricted mode
+        this.setupKeyboardRestrictions();
     },
     computed: {
         hasGeminiKey() {
@@ -846,6 +915,24 @@ export default {
             }
 
             return anonymized;
+        },
+        // Security: Check if copying output is allowed
+        canCopyOutput() {
+            // In anonymize mode, only allow copy if unrestricted
+            if (this.mode === 'anonymize') {
+                return this.isUnrestricted;
+            }
+            // In pseudonymize/reverse mode, always allow copy
+            return true;
+        },
+        // Security: Check if pasting input is allowed
+        canPasteInput() {
+            // In pseudonymize/reverse mode, only allow paste if unrestricted
+            if (this.mode === 'pseudonymize') {
+                return this.isUnrestricted;
+            }
+            // In anonymize mode, always allow paste
+            return true;
         }
     },
     methods: {
@@ -1291,6 +1378,12 @@ export default {
             this.entities = this.entities.filter(e => e.id !== id);
         },
         copy() {
+            // Restricted Mode: Block copying in anonymize mode
+            if (!this.canCopyOutput) {
+                this.showInfoToast('Copying disabled in Restricted Mode. Unlock in Settings to enable.');
+                return;
+            }
+
             try {
                 const textToCopy = this.anonymizedTextPlain;
 
@@ -1404,6 +1497,12 @@ export default {
             this.text = this.stripMarkdown(this.text);
         },
         async pasteFromClipboard() {
+            // Restricted Mode: Block pasting in pseudonymize/reverse mode
+            if (!this.canPasteInput) {
+                this.showInfoToast('Pasting disabled in Restricted Mode. Unlock in Settings to enable.');
+                return;
+            }
+
             try {
                 if (!navigator.clipboard || !navigator.clipboard.readText) {
                     alert('Zwischenablagezugriff nicht verfügbar. Bitte fügen Sie mit Strg/Cmd+V ein.');
@@ -1948,6 +2047,66 @@ export default {
                 console.error('Failed to delete preset:', e);
                 alert('Löschen fehlgeschlagen.');
             }
+        },
+        // Security Methods
+        setupKeyboardRestrictions() {
+            // Block Ctrl/Cmd+C in anonymize mode when restricted
+            document.addEventListener('keydown', (e) => {
+                // Check for Ctrl+C or Cmd+C
+                if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                    if (this.mode === 'anonymize' && !this.canCopyOutput) {
+                        // Only block if the user is trying to copy from the output area
+                        const selection = window.getSelection();
+                        if (selection && selection.toString()) {
+                            e.preventDefault();
+                            this.showInfoToast('Copying disabled in Restricted Mode');
+                        }
+                    }
+                }
+                // Check for Ctrl+V or Cmd+V
+                if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                    if (this.mode === 'pseudonymize' && !this.canPasteInput) {
+                        // Only block if focused on input textarea
+                        const activeElement = document.activeElement;
+                        if (activeElement && activeElement.tagName === 'TEXTAREA') {
+                            e.preventDefault();
+                            this.showInfoToast('Pasting disabled in Restricted Mode');
+                        }
+                    }
+                }
+            });
+
+            // Block paste event on textarea in pseudonymize mode when restricted
+            if (this.$refs.textArea) {
+                this.$refs.textArea.addEventListener('paste', (e) => {
+                    if (!this.canPasteInput) {
+                        e.preventDefault();
+                        this.showInfoToast('Pasting disabled in Restricted Mode');
+                    }
+                });
+            }
+        },
+        async unlockMode() {
+            if (!this.unlockPassword) {
+                this.showInfoToast('Please enter a password');
+                return;
+            }
+
+            const success = await securityManager.unlock(this.unlockPassword);
+
+            if (success) {
+                this.isUnrestricted = true;
+                this.unlockPassword = '';
+                this.showInfoToast('Unrestricted Mode activated');
+            } else {
+                this.showInfoToast('Invalid password');
+                // Don't clear password on failure to allow retry
+            }
+        },
+        lockMode() {
+            securityManager.lock();
+            this.isUnrestricted = false;
+            this.showInfoToast('Restricted Mode activated');
         }
     },
     watch: {
