@@ -1433,9 +1433,12 @@ export default {
                 this.loading = false;
 
                 // Initialize scroll review after anonymization completes (Restricted Mode feature)
-                this.$nextTick(() => {
-                    this.initScrollReview();
-                });
+                // BUT: Don't reset if review is already in progress (user adding entities during review)
+                if (!this.scrollReview.enabled || this.scrollReview.zones.length === 0) {
+                    this.$nextTick(() => {
+                        this.initScrollReview();
+                    });
+                }
             }
         },
         removeDuplicateEntities(entities) {
@@ -2336,17 +2339,25 @@ export default {
                     return;
                 }
 
+                console.log('[SyncScroll] Setting up scroll synchronization...');
+
                 // Input area scrolls → Output container follows
                 inputArea.addEventListener('scroll', () => {
                     if (this._isSyncScrolling) return;
                     this._isSyncScrolling = true;
 
-                    const scrollPercentage = inputArea.scrollTop / (inputArea.scrollHeight - inputArea.clientHeight);
-                    outputContainer.scrollTop = scrollPercentage * (outputContainer.scrollHeight - outputContainer.clientHeight);
+                    const inputScrollable = inputArea.scrollHeight - inputArea.clientHeight;
+                    if (inputScrollable > 0) {
+                        const scrollPercentage = inputArea.scrollTop / inputScrollable;
+                        const outputScrollable = outputContainer.scrollHeight - outputContainer.clientHeight;
+                        if (outputScrollable > 0) {
+                            outputContainer.scrollTop = scrollPercentage * outputScrollable;
+                        }
+                    }
 
                     setTimeout(() => {
                         this._isSyncScrolling = false;
-                    }, 50);
+                    }, 100);
                 });
 
                 // Output container scrolls → Input area follows
@@ -2356,16 +2367,22 @@ export default {
                     // First, handle scroll review tracking
                     originalOutputScroll(event);
 
-                    // Then, sync scroll to input
+                    // Then, sync scroll to input (only if not already syncing)
                     if (this._isSyncScrolling) return;
                     this._isSyncScrolling = true;
 
-                    const scrollPercentage = outputContainer.scrollTop / (outputContainer.scrollHeight - outputContainer.clientHeight);
-                    inputArea.scrollTop = scrollPercentage * (inputArea.scrollHeight - inputArea.clientHeight);
+                    const outputScrollable = outputContainer.scrollHeight - outputContainer.clientHeight;
+                    if (outputScrollable > 0) {
+                        const scrollPercentage = outputContainer.scrollTop / outputScrollable;
+                        const inputScrollable = inputArea.scrollHeight - inputArea.clientHeight;
+                        if (inputScrollable > 0) {
+                            inputArea.scrollTop = scrollPercentage * inputScrollable;
+                        }
+                    }
 
                     setTimeout(() => {
                         this._isSyncScrolling = false;
-                    }, 50);
+                    }, 100);
                 });
 
                 console.log('[SyncScroll] Synchronized scrolling enabled');
