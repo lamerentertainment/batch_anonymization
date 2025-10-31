@@ -17,6 +17,15 @@
         der anonymiserte Text eingefügt wird.
       </div>
 
+      <!-- Scroll Review Warning (Restricted Mode) -->
+      <div v-if="isInferLocked" class="mt-2 alert alert-warning py-2 px-3 text-sm">
+        <LockClosedIcon class="w-4 h-4" />
+        <span>
+          <strong>Restricted Mode:</strong> Bitte scrollen Sie durch den gesamten anonymisierten Text in der Output-Area,
+          bevor Sie Gemini-Inferenz verwenden können.
+        </span>
+      </div>
+
       <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-auto">
         <div v-for="p in filtered" :key="p.id" class="card bg-base-200 h-80">
           <div class="card-body p-3 gap-2 flex flex-col">
@@ -28,7 +37,16 @@
                       @change="save(p)"></textarea>
             <div class="flex gap-2 items-center">
               <input class="input input-bordered input-xs flex-1" placeholder="comma,separated,tags" :value="(p.tags || []).join(',')" @change="updateTags(p, $event.target.value)" />
-              <button class="btn btn-xs btn-warning" @click="inferWithGemini(p)">Infer with Gemini</button>
+              <button
+                class="btn btn-xs btn-warning gap-1"
+                :class="{ 'btn-disabled': isInferLocked }"
+                :disabled="isInferLocked"
+                @click="inferWithGemini(p)"
+                :title="isInferLocked ? 'Bitte scrollen Sie durch den anonymisierten Text in der Output-Area, bevor Sie Gemini verwenden können.' : ''"
+              >
+                <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
+                Infer with Gemini
+              </button>
               <button class="btn btn-xs btn-outline" @click="dup(p)">Duplicate</button>
               <button class="btn btn-xs btn-error" @click="del(p)">Delete</button>
             </div>
@@ -70,12 +88,30 @@
 
 <script>
 import promptCache from '../utils/promptCache.js';
+import { LockClosedIcon } from '@heroicons/vue/24/solid';
 
 export default {
   name: 'PromptLibraryModal',
+  components: {
+    LockClosedIcon
+  },
   emits: ['close', 'inferResult', 'toast'],
   data() {
-    return { search: '', tag: '', favoritesOnly: false, list: [], loading: false, toastVisible: false, toastMessage: '', toastDetail: '', toastType: 'info', toastTimer: null, toastLoading: false };
+    return {
+      search: '',
+      tag: '',
+      favoritesOnly: false,
+      list: [],
+      loading: false,
+      toastVisible: false,
+      toastMessage: '',
+      toastDetail: '',
+      toastType: 'info',
+      toastTimer: null,
+      toastLoading: false,
+      scrollReviewRequired: false,
+      scrollReviewCompleted: false
+    };
   },
   computed: {
     filtered() {
@@ -86,12 +122,36 @@ export default {
         (!tag || p.tags?.includes(tag)) &&
         (!q || p.title?.toLowerCase().includes(q) || p.content?.toLowerCase().includes(q))
       );
+    },
+    isInferLocked() {
+      return this.scrollReviewRequired && !this.scrollReviewCompleted;
     }
   },
   async mounted() {
     await this.refresh();
+    this.updateScrollReviewStatus();
+
+    // Listen for localStorage changes (scroll review updates)
+    window.addEventListener('storage', this.updateScrollReviewStatus);
+
+    // Also poll for updates since storage event doesn't fire in same window
+    this._reviewPollInterval = setInterval(this.updateScrollReviewStatus, 500);
+  },
+  beforeUnmount() {
+    window.removeEventListener('storage', this.updateScrollReviewStatus);
+    if (this._reviewPollInterval) {
+      clearInterval(this._reviewPollInterval);
+    }
   },
   methods: {
+    updateScrollReviewStatus() {
+      try {
+        this.scrollReviewRequired = localStorage.getItem('anon.currentScrollReviewRequired') === 'true';
+        this.scrollReviewCompleted = localStorage.getItem('anon.currentScrollReviewCompleted') === 'true';
+      } catch (e) {
+        console.warn('Failed to read scroll review status:', e);
+      }
+    },
     showToast(msg, opts = {}) {
       try {
         if (this.toastTimer) {
