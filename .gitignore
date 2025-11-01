@@ -33,3 +33,6 @@ public/pdf.worker.min.mjs
 # Ignore Docs from the GLiNER.js project
 DOCS
 src/assets/pdf.worker.min.mjs
+
+# unrestricted Mode Passwort Hash
+.env.local
