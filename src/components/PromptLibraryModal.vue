@@ -131,17 +131,11 @@ export default {
     await this.refresh();
     this.updateScrollReviewStatus();
 
-    // Listen for localStorage changes (scroll review updates)
-    window.addEventListener('storage', this.updateScrollReviewStatus);
-
-    // Also poll for updates since storage event doesn't fire in same window
-    this._reviewPollInterval = setInterval(this.updateScrollReviewStatus, 500);
+    // Listen for custom scroll review events from Anon.vue
+    window.addEventListener('scrollReviewStatusChanged', this.updateScrollReviewStatus);
   },
   beforeUnmount() {
-    window.removeEventListener('storage', this.updateScrollReviewStatus);
-    if (this._reviewPollInterval) {
-      clearInterval(this._reviewPollInterval);
-    }
+    window.removeEventListener('scrollReviewStatusChanged', this.updateScrollReviewStatus);
   },
   methods: {
     updateScrollReviewStatus() {

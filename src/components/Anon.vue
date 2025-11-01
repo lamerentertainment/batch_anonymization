@@ -2245,6 +2245,7 @@ export default {
                         localStorage.setItem('anon.currentScrollReviewCompleted', 'true');
                         localStorage.setItem('anon.currentScrollReviewRequired', 'false');
                     } catch (e) {}
+                    this.notifyScrollReviewStatus();
                     return;
                 }
 
@@ -2281,6 +2282,7 @@ export default {
                     localStorage.setItem('anon.currentScrollReviewRequired', 'true');
                     localStorage.setItem('anon.currentScrollReviewCompleted', 'false');
                 } catch (e) {}
+                this.notifyScrollReviewStatus();
             });
         },
         handleOutputScroll(event) {
@@ -2324,8 +2326,20 @@ export default {
                 try {
                     localStorage.setItem('anon.currentScrollReviewCompleted', 'true');
                 } catch (e) {}
+                this.notifyScrollReviewStatus();
                 this.showInfoToast('✓ Text review completed. You can now copy or run prompts.');
             }
+        },
+        // Helper method to notify other components about scroll review status changes
+        notifyScrollReviewStatus() {
+            // Dispatch custom event for PromptLibraryModal to listen
+            const event = new CustomEvent('scrollReviewStatusChanged', {
+                detail: {
+                    required: this.scrollReview.enabled,
+                    completed: this.scrollReview.isFullyReviewed
+                }
+            });
+            window.dispatchEvent(event);
         },
         // Synchronized Scrolling Methods
         setupSyncScroll() {
@@ -2406,6 +2420,7 @@ export default {
             } else {
                 this.scrollReview.enabled = false;
                 this.scrollReview.isFullyReviewed = false;
+                this.notifyScrollReviewStatus();
             }
         },
         isUnrestricted(val) {
@@ -2413,6 +2428,7 @@ export default {
             if (val) {
                 this.scrollReview.enabled = false;
                 this.scrollReview.isFullyReviewed = false;
+                this.notifyScrollReviewStatus();
             } else {
                 // When locking, re-initialize scroll review if in anonymize mode
                 if (this.mode === 'anonymize') {
