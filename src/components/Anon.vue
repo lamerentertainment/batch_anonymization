@@ -595,18 +595,19 @@
                     <!-- Status Badge -->
                     <div class="alert mb-3" :class="isUnrestricted ? 'alert-success' : 'alert-warning'">
                         <span>
-                            {{ isUnrestricted ? '🔓 Unrestricted Mode Active' : '🔒 Restricted Mode Active' }}
+                            {{ isUnrestricted ? '🔓 Uneingeschränkter Modus aktiviert' :
+                            '🔒 Eingeschränkter Modus aktiviert' }}
                         </span>
                     </div>
 
                     <!-- Restricted Mode Info -->
                     <div v-if="!isUnrestricted" class="text-sm text-base-content/60 mb-3">
-                        <p class="font-medium mb-1">Restricted mode prevents:</p>
+                        <p class="font-medium mb-1">Restricted mode verhindert:</p>
                         <ul class="list-disc ml-5">
-                            <li>Copying anonymized text in Anonymize mode</li>
-                            <li>Pasting text in Reverse mode</li>
+                            <li>Kopieren und LLM-Inferenz des anonymisierten Textes, solange dieser nicht überprüft
+                              wurde</li>
+                            <li>Einfügen von Text im De-Anonymisierungsmodus</li>
                         </ul>
-                        <p class="mt-2 text-xs italic">This is a low-level security feature for honest, non-technical users.</p>
                     </div>
 
                     <!-- Unlock/Lock Controls -->
