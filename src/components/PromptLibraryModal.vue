@@ -72,13 +72,19 @@
             toastDetail ? 'cursor-pointer' : '',
             toastLoading ? 'animate-pulse' : ''
           ]"
+          :style="{
+            maxWidth: '90vw',
+            width: '600px',
+            maxHeight: '400px',
+            overflow: 'auto'
+          }"
           @click="onToastClick"
           role="button"
           :title="toastDetail ? 'Click to view details' : ''"
         >
-          <span class="flex items-center">
-            <span v-if="toastLoading" class="loading loading-spinner loading-xs mr-2" aria-hidden="true"></span>
-            <span>{{ toastMessage }}<template v-if="toastDetail"> (click to view details)</template></span>
+          <span class="flex items-start w-full">
+            <span v-if="toastLoading" class="loading loading-spinner loading-xs mr-2 mt-1 shrink-0" aria-hidden="true"></span>
+            <span class="whitespace-pre-wrap break-words font-mono text-sm flex-1">{{ toastMessage }}<template v-if="toastDetail"> (click to view details)</template></span>
           </span>
         </div>
       </div>
