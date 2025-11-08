@@ -333,11 +333,12 @@
                                 class="absolute inset-0 p-4 whitespace-pre-wrap pointer-events-none text-transparent"
                                 v-html="inputOverlayHtml"
                             ></div>
-                            <textarea 
-                                v-model="text" 
+                            <textarea
+                                v-model="text"
                                 @select="setTextareaSelection"
                                 @click="onInputClick"
-                                ref="textArea" 
+                                @paste="handlePaste"
+                                ref="textArea"
                                 :class="[
                                     'w-full h-full p-4 resize-none border-0 focus:ring-0',
                                     dragOver ? 'bg-info/20' : ''
@@ -1486,6 +1487,48 @@ export default {
             if (!m) return;
             const entityId = Number(m[1]);
             if (!Number.isNaN(entityId)) this.scrollToEntity(entityId);
+        },
+        handlePaste(event) {
+            // Prevent default paste behavior
+            event.preventDefault();
+
+            // Get pasted text from clipboard
+            const pastedText = event.clipboardData?.getData('text') || '';
+            if (!pastedText) return;
+
+            // Remove hyphenation: only hyphens that have letters on both sides
+            // Pattern: letter - optional newline - letter
+            const hyphenationPattern = /([a-zA-ZäöüÄÖÜß])-\n?([a-zA-ZäöüÄÖÜß])/g;
+
+            // Count how many replacements we make
+            let count = 0;
+            const cleanedText = pastedText.replace(hyphenationPattern, (match, before, after) => {
+                count++;
+                return before + after;
+            });
+
+            // Get current cursor position
+            const ta = this.$refs.textArea;
+            if (!ta) return;
+
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+
+            // Insert cleaned text at cursor position
+            const currentText = this.text || '';
+            this.text = currentText.substring(0, start) + cleanedText + currentText.substring(end);
+
+            // Restore cursor position (after inserted text)
+            this.$nextTick(() => {
+                const newPos = start + cleanedText.length;
+                ta.selectionStart = ta.selectionEnd = newPos;
+                ta.focus();
+            });
+
+            // Show toast if hyphenations were removed
+            if (count > 0) {
+                this.showInfoToast(`${count} Worttrennungen entfernt`);
+            }
         },
         async getEntities() {
             this.loading = true;
