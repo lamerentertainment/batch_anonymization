@@ -119,8 +119,8 @@ class NotificationService {
     try {
       const notification = new Notification(title, {
         body: options.body || '',
-        icon: options.icon || '/favicon.ico',
-        badge: options.badge || '/favicon.ico',
+        icon: options.icon || undefined, // No default icon to avoid 404
+        badge: options.badge || undefined, // No default badge to avoid 404
         tag: options.tag || 'iusable-notification',
         requireInteraction: options.requireInteraction !== undefined ? options.requireInteraction : false,
         silent: options.silent || false,
