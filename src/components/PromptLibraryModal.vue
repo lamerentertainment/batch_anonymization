@@ -35,6 +35,26 @@
             </div>
             <textarea class="textarea textarea-bordered textarea-sm flex-1 text-[0.9em] leading-[1]" v-model="p.content"
                       @change="save(p)"></textarea>
+
+            <!-- Text block selection for {{textblock}} placeholder -->
+            <div v-if="getTextBlockInfo(p).hasGeneric" class="flex gap-2 items-center">
+              <span class="text-xs shrink-0">Text block:</span>
+              <select v-model="selectedTextBlocks[p.id]" class="select select-bordered select-xs flex-1">
+                <option value="">Select text block...</option>
+                <option v-for="tb in textBlocks" :key="tb.id" :value="tb.id">
+                  {{tb.tag}} - {{tb.description || 'No description'}}
+                </option>
+              </select>
+            </div>
+
+            <!-- Auto-inject tags display for {{textblock:'tag'}} -->
+            <div v-if="getTextBlockInfo(p).tags.length > 0" class="flex gap-1 items-center flex-wrap">
+              <span class="text-xs opacity-60">Auto-inject:</span>
+              <span v-for="tag in getTextBlockInfo(p).tags" :key="tag" class="badge badge-xs badge-outline">
+                {{tag}}
+              </span>
+            </div>
+
             <div class="flex gap-2 items-center">
               <input class="input input-bordered input-xs flex-1" placeholder="comma,separated,tags" :value="(p.tags || []).join(',')" @change="updateTags(p, $event.target.value)" />
               <button
@@ -94,6 +114,8 @@
 
 <script>
 import promptCache from '../utils/promptCache.js';
+import textBlockCache from '../utils/textBlockCache.js';
+import { parseTextBlockPlaceholders, injectTextBlocks, validateTextBlocks } from '../utils/textBlockParser.js';
 import notificationService from '../utils/notificationService.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
 
@@ -117,7 +139,10 @@ export default {
       toastTimer: null,
       toastLoading: false,
       scrollReviewRequired: false,
-      scrollReviewCompleted: false
+      scrollReviewCompleted: false,
+      // Text block integration
+      textBlocks: [],
+      selectedTextBlocks: {} // Map of promptId -> textBlockId for {{textblock}} placeholders
     };
   },
   computed: {
@@ -136,6 +161,7 @@ export default {
   },
   async mounted() {
     await this.refresh();
+    await this.refreshTextBlocks();
     this.updateScrollReviewStatus();
 
     // Listen for custom scroll review events from Anon.vue
@@ -187,6 +213,11 @@ export default {
       }
     },
     async refresh() { this.loading = true; this.list = await promptCache.list(); this.loading = false; },
+    async refreshTextBlocks() { this.textBlocks = await textBlockCache.list(); },
+    getTextBlockInfo(p) {
+      if (!p || !p.content) return { hasGeneric: false, tags: [] };
+      return parseTextBlockPlaceholders(p.content);
+    },
     async save(p) { await promptCache.update(p.id, { title: p.title, content: p.content }); await this.refresh(); },
     async toggleFav(p) { await promptCache.update(p.id, { favorite: !p.favorite }); await this.refresh(); },
     async updateTags(p, csv) { const tags = csv.split(',').map(s => s.trim()).filter(Boolean); await promptCache.update(p.id, { tags }); await this.refresh(); },
@@ -195,11 +226,51 @@ export default {
     async del(p) { if (confirm('Delete this prompt?')) { await promptCache.remove(p.id); await this.refresh(); } },
     async inferWithGemini(p) {
       try {
-        const template = (p.content || '').toString();
+        let template = (p.content || '').toString();
         if (!template.includes('{{anontext}}')) {
           this.showToast('Prompt requires {{anontext}} placeholder.');
           return;
         }
+
+        // Step 1: Parse and validate text block placeholders
+        const { hasGeneric, tags } = parseTextBlockPlaceholders(template);
+
+        // Step 2: Validate generic placeholder has selection
+        if (hasGeneric && !this.selectedTextBlocks[p.id]) {
+          this.showToast('Please select a text block for {{textblock}} placeholder.');
+          return;
+        }
+
+        // Step 3: Load required text blocks
+        const taggedBlocks = await textBlockCache.getByTags(tags);
+        const validation = validateTextBlocks(tags, taggedBlocks);
+
+        if (!validation.valid) {
+          this.showToast(`Missing text blocks: ${validation.missingTags.join(', ')}`, { type: 'error' });
+          return;
+        }
+
+        // Step 4: Get selected block for generic placeholder
+        let selectedBlock = null;
+        if (hasGeneric) {
+          selectedBlock = await textBlockCache.getById(this.selectedTextBlocks[p.id]);
+          if (!selectedBlock) {
+            this.showToast('Selected text block not found.');
+            return;
+          }
+        }
+
+        // Step 5: Inject text blocks into prompt
+        template = injectTextBlocks(template, taggedBlocks, selectedBlock);
+
+        // Step 6: Mark text blocks as used
+        if (selectedBlock) {
+          await textBlockCache.markUsed(selectedBlock.id);
+        }
+        for (const block of taggedBlocks) {
+          await textBlockCache.markUsed(block.id);
+        }
+        await this.refreshTextBlocks(); // Refresh to show updated usage counts
         // Prefer the live anonymized text currently shown in Anon.vue's output area
         this.showToast('Reading anonymized text…');
         let exported = '';

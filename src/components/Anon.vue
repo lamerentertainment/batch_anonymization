@@ -62,7 +62,7 @@
                 </div>
                 <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
                     <div class="flex items-center gap-2">
-                        <button 
+                        <button
                             v-if="hasGeminiKey"
                             @click="openPromptLibrary"
                             class="btn btn-ghost btn-xs"
@@ -70,7 +70,14 @@
                         >
                             <ListBulletIcon class="h-5 w-5" />
                         </button>
-                        <button 
+                        <button
+                            @click="openTextBlockLibrary"
+                            class="btn btn-ghost btn-xs"
+                            title="Text Block Library öffnen"
+                        >
+                            <span class="font-bold text-base">≡</span>
+                        </button>
+                        <button
                             @click="openSettings"
                             class="btn btn-ghost btn-xs"
                             title="Anonymisierungseinstellungen konfigurieren"
@@ -744,11 +751,15 @@
                 </div>
             </div>
         </div>
-        <prompt-library-modal 
+        <prompt-library-modal
             v-if="hasGeminiKey && showPromptLibrary"
             @close="showPromptLibrary = false"
             @insert="handlePromptInsert"
             @inferResult="handlePromptInferred"
+        />
+        <text-block-library-modal
+            v-if="showTextBlockLibrary"
+            @close="showTextBlockLibrary = false"
         />
         <!-- Info Toast -->
         <div v-if="toastVisible" class="toast toast-center fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
@@ -766,6 +777,7 @@ import mammoth from 'mammoth';
 import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 import PromptLibraryModal from './PromptLibraryModal.vue';
+import TextBlockLibraryModal from './TextBlockLibraryModal.vue';
 import securityManager from '../utils/securityManager.js';
 import notificationService from '../utils/notificationService.js';
 
@@ -915,6 +927,8 @@ export default {
             showPresetMenu: false,
             // Prompt Library modal
             showPromptLibrary: false,
+            // Text Block Library modal
+            showTextBlockLibrary: false,
             // Security / Restricted Mode
             isUnrestricted: false,
             unlockPassword: '',
@@ -2201,6 +2215,9 @@ export default {
         openPromptLibrary() {
             this.showPromptLibrary = true;
         },
+        openTextBlockLibrary() {
+            this.showTextBlockLibrary = true;
+        },
         handlePromptInsert(content) {
             const sep = this.text && !this.text.endsWith('\n') ? '\n\n' : '';
             this.text = (this.text || '') + sep + content;
@@ -2717,7 +2734,8 @@ export default {
         XMarkIcon,
         SigmaIcon,
         ListBulletIcon,
-        PromptLibraryModal
+        PromptLibraryModal,
+        TextBlockLibraryModal
     },
 }
 </script>
