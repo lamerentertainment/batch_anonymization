@@ -88,6 +88,7 @@
 
 <script>
 import promptCache from '../utils/promptCache.js';
+import notificationService from '../utils/notificationService.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
 
 export default {
@@ -275,6 +276,14 @@ export default {
         }
         this.showToast('Gemini response received.');
         await promptCache.update(p.id, { uses: (p.uses||0) + 1, updatedAt: Date.now() });
+
+        // Show notification when Gemini inference completes (only if window is in background)
+        try {
+          notificationService.notifyGeminiInferenceCompleteIfHidden(p.title || 'Prompt');
+        } catch (e) {
+          console.warn('Failed to show Gemini inference notification:', e);
+        }
+
         this.$emit('inferResult', responseText);
       } catch (err) {
         console.error('inferWithGemini error:', err);

@@ -588,6 +588,81 @@
                     </div>
                 </div>
 
+                <!-- Notification Settings Section -->
+                <div class="mt-6 border-t pt-4">
+                    <h4 class="text-md font-semibold text-base-content mb-3">🔔 Benachrichtigungen</h4>
+                    <p class="text-sm text-base-content/60 mb-3">
+                        Erhalten Sie Browser-Benachrichtigungen, wenn lange laufende Aufgaben abgeschlossen sind, während Sie die Anwendung im Hintergrund haben.
+                    </p>
+
+                    <!-- Permission Status -->
+                    <div class="alert mb-3" :class="notificationPermissionGranted ? 'alert-success' : 'alert-warning'">
+                        <span>
+                            {{ notificationPermissionGranted ? '✓ Berechtigung erteilt' : '⚠ Berechtigung erforderlich' }}
+                        </span>
+                    </div>
+
+                    <!-- Request Permission Button -->
+                    <div v-if="!notificationPermissionGranted" class="mb-4">
+                        <button @click="requestNotificationPermission" class="btn btn-sm btn-primary">
+                            Berechtigung anfordern
+                        </button>
+                        <p class="text-xs text-base-content/50 mt-2">
+                            Klicken Sie auf "Berechtigung anfordern", um Browser-Benachrichtigungen zu aktivieren.
+                        </p>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div class="space-y-2">
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-sm"
+                                    v-model="notificationSettings.enabled"
+                                    @change="saveNotificationSettings"
+                                >
+                                <div>
+                                    <span class="label-text font-medium">Benachrichtigungen aktivieren</span>
+                                    <p class="text-xs text-base-content/50">Master-Schalter für alle Benachrichtigungen</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control ml-6" :class="{ 'opacity-50': !notificationSettings.enabled }">
+                            <label class="label cursor-pointer justify-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-sm"
+                                    v-model="notificationSettings.entityDetection"
+                                    :disabled="!notificationSettings.enabled"
+                                    @change="saveNotificationSettings"
+                                >
+                                <div>
+                                    <span class="label-text">Entitätserkennung abgeschlossen</span>
+                                    <p class="text-xs text-base-content/50">Benachrichtigung wenn GLiNER-Analyse fertig ist</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control ml-6" :class="{ 'opacity-50': !notificationSettings.enabled }">
+                            <label class="label cursor-pointer justify-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-sm"
+                                    v-model="notificationSettings.geminiInference"
+                                    :disabled="!notificationSettings.enabled"
+                                    @change="saveNotificationSettings"
+                                >
+                                <div>
+                                    <span class="label-text">Gemini Inferenz abgeschlossen</span>
+                                    <p class="text-xs text-base-content/50">Benachrichtigung wenn Gemini-Prompt fertig ist</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Security Settings Section -->
                 <div class="mt-6 border-t pt-4">
                     <h4 class="text-md font-semibold text-base-content mb-3">🔒 Security Settings</h4>
@@ -669,6 +744,7 @@ import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 import PromptLibraryModal from './PromptLibraryModal.vue';
 import securityManager from '../utils/securityManager.js';
+import notificationService from '../utils/notificationService.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
@@ -830,7 +906,14 @@ export default {
                 progress: 0               // Percentage 0-100
             },
             // Synchronized scrolling
-            _isSyncScrolling: false       // Prevent infinite scroll loops
+            _isSyncScrolling: false,      // Prevent infinite scroll loops
+            // Notification settings
+            notificationSettings: {
+                enabled: true,
+                entityDetection: true,
+                geminiInference: true
+            },
+            notificationPermissionGranted: false
         }
     },
     mounted() {
@@ -1441,6 +1524,14 @@ export default {
                         this.initScrollReview();
                     });
                 }
+
+                // Show notification when entity detection completes (only if window is in background)
+                try {
+                    const entityCount = this.entities ? this.entities.length : 0;
+                    notificationService.notifyEntityDetectionCompleteIfHidden(entityCount);
+                } catch (e) {
+                    console.warn('Failed to show entity detection notification:', e);
+                }
             }
         },
         removeDuplicateEntities(entities) {
@@ -1985,6 +2076,7 @@ export default {
         async openSettings() {
             this.showSettings = true;
             try { this.loadGeminiKey(); } catch (e) { console.warn('Failed to load Gemini API key:', e); }
+            try { this.loadNotificationSettings(); } catch (e) { console.warn('Failed to load notification settings:', e); }
             await this.refreshCacheStats();
         },
         openPromptLibrary() {
@@ -2063,6 +2155,36 @@ export default {
                 this.saveGeminiKey();
             } catch (e) {
                 console.warn('Error clearing Gemini API key:', e);
+            }
+        },
+        // Notification settings helpers
+        loadNotificationSettings() {
+            try {
+                this.notificationSettings = notificationService.loadSettings();
+                this.notificationPermissionGranted = notificationService.checkPermission();
+            } catch (e) {
+                console.warn('Error loading notification settings:', e);
+            }
+        },
+        saveNotificationSettings() {
+            try {
+                notificationService.saveSettings(this.notificationSettings);
+                this.showInfoToast('Benachrichtigungseinstellungen gespeichert');
+            } catch (e) {
+                console.warn('Error saving notification settings:', e);
+            }
+        },
+        async requestNotificationPermission() {
+            try {
+                const granted = await notificationService.requestPermission();
+                this.notificationPermissionGranted = granted;
+                if (granted) {
+                    this.showInfoToast('Benachrichtigungsberechtigung erteilt');
+                } else {
+                    this.showInfoToast('Benachrichtigungsberechtigung verweigert');
+                }
+            } catch (e) {
+                console.warn('Error requesting notification permission:', e);
             }
         },
         // Preset management methods
