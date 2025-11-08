@@ -291,7 +291,7 @@ export default {
       }
     },
     async callGemini(text, apiKey) {
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent';
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -299,18 +299,75 @@ export default {
           'x-goog-api-key': apiKey
         },
         body: JSON.stringify({
-          contents: [ { parts: [ { text } ] } ]
+          contents: [ { parts: [ { text } ] } ],
+          generationConfig: {
+            thinkingConfig: {
+              includeThoughts: true,
+              thinkingBudget: -1  // Dynamic thinking
+            }
+          }
         })
       });
       if (!res.ok) {
         const t = await res.text().catch(() => '');
         console.warn('Gemini HTTP error', res.status, t);
-        this.showToast(`Gemini error ${res.status}`);
+        this.showToast(`Gemini error ${res.status}`, { type: 'error' });
         return '';
       }
-      const data = await res.json().catch(() => ({}));
-      const txt = data?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('\n') || '';
-      return txt.trim();
+
+      // Parse streaming response
+      let thoughtsSummary = '';
+      let finalAnswer = '';
+
+      try {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === '[' || trimmed === ']') continue;
+
+            // Remove trailing comma if present
+            const jsonStr = trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed;
+
+            try {
+              const chunk = JSON.parse(jsonStr);
+              const parts = chunk?.candidates?.[0]?.content?.parts || [];
+
+              for (const part of parts) {
+                if (!part.text) continue;
+
+                if (part.thought) {
+                  // Thought summary → update toast
+                  thoughtsSummary += part.text;
+                  this.showToast('🧠 Thinking: ' + thoughtsSummary, { duration: 0, loading: true });
+                } else {
+                  // Normal answer → accumulate (don't show yet)
+                  finalAnswer += part.text;
+                }
+              }
+            } catch (parseErr) {
+              // Skip malformed JSON lines
+              console.warn('Failed to parse chunk:', jsonStr, parseErr);
+            }
+          }
+        }
+      } catch (streamErr) {
+        console.error('Stream reading error:', streamErr);
+        this.showToast('Error reading stream', { type: 'error', detail: String(streamErr && (streamErr.stack || streamErr.message || streamErr)) });
+        return '';
+      }
+
+      return finalAnswer.trim();
     },
     async exportAll() {
       const list = await promptCache.export();
