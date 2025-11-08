@@ -354,19 +354,41 @@ export default {
 
         // Step 1: Parse and validate text block placeholders
         const { hasGeneric, tags } = parseTextBlockPlaceholders(template);
+        console.log('[PromptLibrary] inferWithGemini - hasGeneric:', hasGeneric, 'tags:', tags);
 
         // Step 2: Validate generic placeholder has selection
         if (hasGeneric && !this.selectedTextBlocks[p.id]) {
-          this.showToast('Please select a text block for {{textblock}} placeholder.');
+          this.showToast('Please select a text block for {{textblock}} placeholder.', { type: 'error' });
+          console.log('[PromptLibrary] BLOCKED: Generic textblock placeholder requires selection');
           return;
         }
 
-        // Step 3: Load required text blocks
+        // Step 3: Pre-validate that all required text blocks exist BEFORE loading
+        if (tags.length > 0) {
+          const availableTags = new Set(
+            this.textBlocks
+              .filter(tb => tb && tb.tag)
+              .map(tb => tb.tag.toLowerCase())
+          );
+
+          const missingTags = tags.filter(tag => !availableTags.has(tag.toLowerCase()));
+
+          if (missingTags.length > 0) {
+            this.showToast(`Fehlende Text Blocks: ${missingTags.join(', ')}`, { type: 'error', duration: 5000 });
+            console.log('[PromptLibrary] BLOCKED: Missing text blocks:', missingTags);
+            console.log('[PromptLibrary] Available tags:', Array.from(availableTags));
+            return;
+          }
+          console.log('[PromptLibrary] All required text blocks exist:', tags);
+        }
+
+        // Step 4: Load required text blocks
         const taggedBlocks = await textBlockCache.getByTags(tags);
         const validation = validateTextBlocks(tags, taggedBlocks);
 
         if (!validation.valid) {
           this.showToast(`Missing text blocks: ${validation.missingTags.join(', ')}`, { type: 'error' });
+          console.log('[PromptLibrary] BLOCKED: validateTextBlocks failed:', validation.missingTags);
           return;
         }
 
