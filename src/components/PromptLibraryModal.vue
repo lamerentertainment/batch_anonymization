@@ -263,14 +263,14 @@ export default {
         // Step 5: Inject text blocks into prompt
         template = injectTextBlocks(template, taggedBlocks, selectedBlock);
 
-        // Step 6: Mark text blocks as used
+        // Step 6: Mark text blocks as used (don't await to avoid blocking)
         if (selectedBlock) {
-          await textBlockCache.markUsed(selectedBlock.id);
+          textBlockCache.markUsed(selectedBlock.id).catch(e => console.warn('Failed to mark text block as used:', e));
         }
         for (const block of taggedBlocks) {
-          await textBlockCache.markUsed(block.id);
+          textBlockCache.markUsed(block.id).catch(e => console.warn('Failed to mark text block as used:', e));
         }
-        await this.refreshTextBlocks(); // Refresh to show updated usage counts
+
         // Prefer the live anonymized text currently shown in Anon.vue's output area
         this.showToast('Reading anonymized text…');
         let exported = '';
@@ -340,6 +340,8 @@ export default {
         }
 
         const promptText = template.replaceAll('{{anontext}}', exported);
+        console.log('[PromptLibrary] Final prompt length:', promptText.length);
+
         const apiKey = (localStorage.getItem('settings.geminiApiKey') || '').trim();
         if (!apiKey) {
           this.showToast('Gemini API key missing. Add it in Settings.');
@@ -347,6 +349,8 @@ export default {
         }
         this.showToast('Calling Gemini…', { duration: 0, loading: true });
         const responseText = await this.callGemini(promptText, apiKey);
+        console.log('[PromptLibrary] Gemini response length:', responseText?.length || 0);
+
         if (!responseText) {
           this.showToast('No response from Gemini.');
           return;

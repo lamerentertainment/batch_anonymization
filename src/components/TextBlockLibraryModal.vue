@@ -143,8 +143,8 @@ export default {
     },
     async save(b) {
       try {
-        // Clear previous error for this block
-        this.$delete(this.tagErrors, b.id);
+        // Clear previous error for this block (Vue 3 way)
+        delete this.tagErrors[b.id];
 
         await textBlockCache.update(b.id, {
           tag: b.tag,
@@ -155,7 +155,8 @@ export default {
         this.showToast('Saved');
       } catch (err) {
         console.error('Save error:', err);
-        this.$set(this.tagErrors, b.id, err.message || 'Save failed');
+        // Set error in Vue 3 reactive way
+        this.tagErrors[b.id] = err.message || 'Save failed';
         this.showToast(err.message || 'Save failed', { type: 'error' });
         await this.refresh(); // Refresh to revert invalid changes
       }
@@ -166,12 +167,30 @@ export default {
     },
     async createBlank() {
       try {
-        const timestamp = Date.now().toString(36);
-        await textBlockCache.create({
-          tag: `new-block-${timestamp}`,
-          description: '',
-          content: ''
-        });
+        // Try to create with simple 'new-block' tag first
+        // If it fails due to duplicate, add a small suffix
+        let tag = 'new-block';
+        let created = false;
+        let attempts = 0;
+
+        while (!created && attempts < 100) {
+          try {
+            await textBlockCache.create({
+              tag: tag,
+              description: '',
+              content: ''
+            });
+            created = true;
+          } catch (err) {
+            if (err.message && err.message.includes('already exists')) {
+              attempts++;
+              tag = `new-block-${attempts}`;
+            } else {
+              throw err;
+            }
+          }
+        }
+
         await this.refresh();
       } catch (err) {
         this.showToast(err.message || 'Create failed', { type: 'error' });
