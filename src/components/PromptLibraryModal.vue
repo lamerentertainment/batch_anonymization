@@ -47,11 +47,15 @@
               </select>
             </div>
 
-            <!-- Auto-inject tags display for {{textblock:'tag'}} -->
+            <!-- Auto-inject tags display for {{textblock:'tag'}} with validation -->
             <div v-if="getTextBlockInfo(p).tags.length > 0" class="flex gap-1 items-center flex-wrap">
               <span class="text-xs opacity-60">Auto-inject:</span>
-              <span v-for="tag in getTextBlockInfo(p).tags" :key="tag" class="badge badge-xs badge-outline">
-                {{tag}}
+              <span v-for="tag in getTextBlockInfo(p).tags" :key="tag"
+                    :class="[
+                      'badge badge-xs',
+                      getTextBlockValidation(p).availableTags.has(tag) ? 'badge-success' : 'badge-error'
+                    ]">
+                {{ getTextBlockValidation(p).availableTags.has(tag) ? '✓' : '✗' }} {{tag}}
               </span>
             </div>
 
@@ -59,10 +63,10 @@
               <input class="input input-bordered input-xs flex-1" placeholder="comma,separated,tags" :value="(p.tags || []).join(',')" @change="updateTags(p, $event.target.value)" />
               <button
                 class="btn btn-xs btn-warning gap-1"
-                :class="{ 'btn-disabled': isInferLocked }"
-                :disabled="isInferLocked"
+                :class="{ 'btn-disabled': isInferLocked || isPromptIncomplete(p) }"
+                :disabled="isInferLocked || isPromptIncomplete(p)"
                 @click="inferWithGemini(p)"
-                :title="isInferLocked ? 'Bitte scrollen Sie durch den anonymisierten Text in der Output-Area, bevor Sie Gemini verwenden können.' : ''"
+                :title="getInferButtonTitle(p)"
               >
                 <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
                 Infer with Gemini
@@ -274,6 +278,54 @@ export default {
     getTextBlockInfo(p) {
       if (!p || !p.content) return { hasGeneric: false, tags: [] };
       return parseTextBlockPlaceholders(p.content);
+    },
+    getTextBlockValidation(p) {
+      const info = this.getTextBlockInfo(p);
+      const availableTags = new Set(
+        this.textBlocks
+          .filter(tb => tb && tb.tag)
+          .map(tb => tb.tag.toLowerCase())
+      );
+
+      return {
+        availableTags: availableTags,
+        isValid: info.tags.every(tag => availableTags.has(tag.toLowerCase()))
+      };
+    },
+    isPromptIncomplete(p) {
+      const info = this.getTextBlockInfo(p);
+
+      // Check if generic {{textblock}} needs selection
+      if (info.hasGeneric && !this.selectedTextBlocks[p.id]) {
+        return true;
+      }
+
+      // Check if all tagged textblocks exist
+      const validation = this.getTextBlockValidation(p);
+      if (!validation.isValid) {
+        return true;
+      }
+
+      return false;
+    },
+    getInferButtonTitle(p) {
+      if (this.isInferLocked) {
+        return 'Bitte scrollen Sie durch den anonymisierten Text in der Output-Area, bevor Sie Gemini verwenden können.';
+      }
+
+      const info = this.getTextBlockInfo(p);
+      const validation = this.getTextBlockValidation(p);
+
+      if (info.hasGeneric && !this.selectedTextBlocks[p.id]) {
+        return 'Bitte wählen Sie einen Text Block aus dem Dropdown aus.';
+      }
+
+      if (!validation.isValid) {
+        const missingTags = info.tags.filter(tag => !validation.availableTags.has(tag.toLowerCase()));
+        return `Fehlende Text Blocks: ${missingTags.join(', ')}`;
+      }
+
+      return '';
     },
     async save(p) { await promptCache.update(p.id, { title: p.title, content: p.content }); await this.refresh(); },
     async toggleFav(p) { await promptCache.update(p.id, { favorite: !p.favorite }); await this.refresh(); },
