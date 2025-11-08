@@ -159,10 +159,19 @@ export default {
       return this.scrollReviewRequired && !this.scrollReviewCompleted;
     }
   },
+  watch: {
+    selectedTextBlocks: {
+      handler() {
+        this.saveCachedTextBlockSelections();
+      },
+      deep: true
+    }
+  },
   async mounted() {
     await this.refresh();
     await this.refreshTextBlocks();
     this.updateScrollReviewStatus();
+    this.loadCachedTextBlockSelections();
 
     // Listen for custom scroll review events from Anon.vue
     window.addEventListener('scrollReviewStatusChanged', this.updateScrollReviewStatus);
@@ -171,6 +180,39 @@ export default {
     window.removeEventListener('scrollReviewStatusChanged', this.updateScrollReviewStatus);
   },
   methods: {
+    loadCachedTextBlockSelections() {
+      try {
+        const cached = localStorage.getItem('promptLibrary.textBlockSelections');
+        if (!cached) return;
+
+        const selections = JSON.parse(cached);
+
+        // Validate that cached text blocks still exist
+        const validTextBlockIds = new Set(this.textBlocks.map(tb => tb.id));
+
+        for (const [promptId, textBlockId] of Object.entries(selections)) {
+          if (validTextBlockIds.has(textBlockId)) {
+            this.selectedTextBlocks[promptId] = textBlockId;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load cached text block selections:', e);
+      }
+    },
+    saveCachedTextBlockSelections() {
+      try {
+        // Only save non-empty selections
+        const toSave = {};
+        for (const [promptId, textBlockId] of Object.entries(this.selectedTextBlocks)) {
+          if (textBlockId) {
+            toSave[promptId] = textBlockId;
+          }
+        }
+        localStorage.setItem('promptLibrary.textBlockSelections', JSON.stringify(toSave));
+      } catch (e) {
+        console.warn('Failed to save cached text block selections:', e);
+      }
+    },
     updateScrollReviewStatus() {
       try {
         this.scrollReviewRequired = localStorage.getItem('anon.currentScrollReviewRequired') === 'true';
