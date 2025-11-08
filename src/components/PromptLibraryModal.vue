@@ -329,35 +329,51 @@ export default {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed === '[' || trimmed === ']') continue;
+          // Extract complete JSON objects by counting braces
+          let braceCount = 0;
+          let objectStart = -1;
 
-            // Remove trailing comma if present
-            const jsonStr = trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed;
+          for (let i = 0; i < buffer.length; i++) {
+            const char = buffer[i];
 
-            try {
-              const chunk = JSON.parse(jsonStr);
-              const parts = chunk?.candidates?.[0]?.content?.parts || [];
-
-              for (const part of parts) {
-                if (!part.text) continue;
-
-                if (part.thought) {
-                  // Thought summary → update toast
-                  thoughtsSummary += part.text;
-                  this.showToast('🧠 Thinking: ' + thoughtsSummary, { duration: 0, loading: true });
-                } else {
-                  // Normal answer → accumulate (don't show yet)
-                  finalAnswer += part.text;
-                }
+            if (char === '{') {
+              if (braceCount === 0) {
+                objectStart = i;
               }
-            } catch (parseErr) {
-              // Skip malformed JSON lines
-              console.warn('Failed to parse chunk:', jsonStr, parseErr);
+              braceCount++;
+            } else if (char === '}') {
+              braceCount--;
+
+              if (braceCount === 0 && objectStart !== -1) {
+                // We have a complete JSON object
+                const jsonStr = buffer.substring(objectStart, i + 1);
+
+                try {
+                  const chunk = JSON.parse(jsonStr);
+                  const parts = chunk?.candidates?.[0]?.content?.parts || [];
+
+                  for (const part of parts) {
+                    if (!part.text) continue;
+
+                    if (part.thought) {
+                      // Thought summary → update toast
+                      thoughtsSummary += part.text;
+                      this.showToast('🧠 Thinking: ' + thoughtsSummary, { duration: 0, loading: true });
+                    } else {
+                      // Normal answer → accumulate (don't show yet)
+                      finalAnswer += part.text;
+                    }
+                  }
+                } catch (parseErr) {
+                  console.warn('Failed to parse JSON object:', parseErr);
+                }
+
+                // Remove processed object from buffer
+                buffer = buffer.substring(i + 1);
+                i = -1; // Reset loop
+                objectStart = -1;
+              }
             }
           }
         }
