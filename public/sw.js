@@ -1,5 +1,5 @@
-const CACHE_NAME = 'iusable-gliner-model-cache-v1';
-const EXPECTED_URLS = [/\.onnx$/, /\.wasm$/, /\.json$/, /\.txt$/, /\.bin$/];
+const CACHE_NAME = 'iusable-gliner-model-cache-v2';
+const EXPECTED_URLS = [/\.onnx$/, /\.wasm$/, /\.json$/, /\.txt$/, /\.bin$/, /\.mjs$/];
 
 self.addEventListener('install', event => {
   self.skipWaiting();

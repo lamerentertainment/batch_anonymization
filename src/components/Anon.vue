@@ -942,9 +942,21 @@ export default {
         // Initialize Gliner on mount (preload model after DOM is ready)
         this.initGliner();
 
-        // Set the worker source path to CDN (recommended for Firebase hosting)
-        // This ensures the worker loads correctly without manual file copying
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+        // Set PDF.js worker with smart fallback: local file first (offline), then CDN
+        // Try local worker first for complete offline functionality
+        const localWorkerPath = '/pdf.worker.min.mjs';
+        const cdnWorkerPath = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+        // Check if local worker exists, otherwise fallback to CDN
+        fetch(localWorkerPath, { method: 'HEAD' })
+            .then(() => {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = localWorkerPath;
+                console.log('✅ Using local PDF.js worker (offline mode)');
+            })
+            .catch(() => {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = cdnWorkerPath;
+                console.log('⚠️ Local PDF.js worker not found, using CDN fallback (requires internet)');
+            });
 
         // Load entity presets list
         this.refreshPresets();

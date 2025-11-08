@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup": "node scripts/setup-pdf-worker.js",
+    "postinstall": "node scripts/setup-pdf-worker.js"
   },
   "dependencies": {
     "@heroicons/vue": "^2.1.5",

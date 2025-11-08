@@ -105,7 +105,11 @@ app.use(express.static('public', {
 ```
 
 #### Firebase Hosting
-For Firebase Hosting deployments, the application uses a CDN-based approach for the PDF.js worker, which is automatically configured in the code. The `firebase.json` file already includes the necessary MIME type configuration for any locally served `.mjs` files:
+For Firebase Hosting deployments, the application automatically uses intelligent fallback logic:
+- **First**: Tries to load the PDF.js worker from a local file (offline mode)
+- **Fallback**: Uses CDN if local file is not available
+
+The `firebase.json` file already includes the necessary MIME type configuration for `.mjs` files:
 
 ```json
 {
@@ -126,17 +130,26 @@ For Firebase Hosting deployments, the application uses a CDN-based approach for 
 }
 ```
 
-The PDF.js worker is loaded from the unpkg CDN by default, which ensures compatibility without manual file copying. If you need a fully offline deployment, you can:
+**For complete offline functionality (recommended for privacy/security):**
 
-1. Copy the worker file to your public directory:
+1. Run the setup script after installing dependencies:
+   ```bash
+   npm install
+   npm run setup
+   ```
+
+   The `postinstall` script automatically copies the PDF.js worker to `public/`, enabling offline mode.
+
+2. The Service Worker automatically caches the `.mjs` file for persistent offline access.
+
+**Manual setup (if npm install fails):**
    ```bash
    cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
    ```
 
-2. Update the worker path in `src/components/Anon.vue` to use the local file:
-   ```javascript
-   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-   ```
+The application will detect the local worker file and use it automatically. Check the browser console for confirmation:
+- ✅ "Using local PDF.js worker (offline mode)" - Fully offline
+- ⚠️ "Local PDF.js worker not found, using CDN fallback" - Requires internet
 
 #### Vite Development Server
 For development, the Vite config should handle this automatically, but if issues persist, you can add:

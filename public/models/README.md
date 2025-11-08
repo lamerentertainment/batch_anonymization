@@ -5,13 +5,21 @@ Then clone the Gliner Multi PII model repository from Hugging Face:
 `git clone https://huggingface.co/onnx-community/gliner_multi_pii-v1`
 
 # PDF.js Worker Configuration
-The PDF.js worker is automatically loaded from the unpkg CDN (configured in `src/components/Anon.vue`). No manual setup required!
+The application automatically detects if a local PDF.js worker is available and uses intelligent fallback:
+- **Local worker found** → Fully offline mode ✅
+- **Local worker missing** → Uses CDN fallback ⚠️ (requires internet)
 
-For offline/local deployment, you can optionally copy the worker to the public folder:
+**Setup for offline mode:**
+```bash
+npm install
+npm run setup
+```
+The `postinstall` script automatically copies the worker. No manual configuration needed!
+
+**Manual setup (if needed):**
 ```bash
 cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
 ```
-Then update the worker path in `src/components/Anon.vue` to: `/pdf.worker.min.mjs`
 
 # WASM Files Note
 The WASM file paths specified in the Anonymization component (`cpu.wasm`, `gpu.wasm`) don't exist by default in the public directory, when cloning the model from Hugging Face. The Gliner library has a CDN fallback (`https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/`) which could potentially load WASM files remotely if local paths fail.
