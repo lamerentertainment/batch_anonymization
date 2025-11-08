@@ -942,8 +942,9 @@ export default {
         // Initialize Gliner on mount (preload model after DOM is ready)
         this.initGliner();
 
-        // Set the worker source path
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '../assets/pdf.worker.min.mjs';
+        // Set the worker source path to CDN (recommended for Firebase hosting)
+        // This ensures the worker loads correctly without manual file copying
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
         // Load entity presets list
         this.refreshPresets();
