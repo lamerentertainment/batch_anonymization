@@ -612,6 +612,28 @@
                         </p>
                     </div>
 
+                    <!-- Test Notification Button (only when permission granted) -->
+                    <div v-if="notificationPermissionGranted" class="mb-4 p-3 bg-base-200 rounded">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium">Test-Benachrichtigung</span>
+                            <button @click="sendTestNotification" class="btn btn-xs btn-accent">
+                                Test senden
+                            </button>
+                        </div>
+                        <p class="text-xs text-base-content/50">
+                            Sendet sofort eine Test-Benachrichtigung, um zu prüfen ob alles funktioniert.
+                            <strong>Hinweis:</strong> Benachrichtigungen bei Tasks erscheinen nur wenn das Browser-Fenster minimiert oder im Hintergrund ist.
+                        </p>
+                        <div class="mt-2 text-xs">
+                            <strong>Debug-Info:</strong>
+                            <ul class="list-disc ml-4 mt-1 text-base-content/60">
+                                <li>Permission: {{ notificationPermissionGranted ? '✓ Erteilt' : '✗ Nicht erteilt' }}</li>
+                                <li>Benachrichtigungen: {{ notificationSettings.enabled ? '✓ Aktiviert' : '✗ Deaktiviert' }}</li>
+                                <li>Fenster sichtbar: {{ !isDocumentHidden ? '✓ Ja (Notifications werden unterdrückt)' : '✗ Nein (Notifications werden angezeigt)' }}</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- Notification Settings -->
                     <div class="space-y-2">
                         <div class="form-control">
@@ -940,6 +962,13 @@ export default {
 
         // Setup synchronized scrolling between input and output areas
         this.setupSyncScroll();
+
+        // Initialize notification settings and permission status
+        try {
+            this.loadNotificationSettings();
+        } catch (e) {
+            console.warn('Failed to initialize notification settings:', e);
+        }
     },
     computed: {
         hasGeminiKey() {
@@ -950,6 +979,9 @@ export default {
             } catch (_) {
                 return Boolean((this.geminiApiKey || '').trim());
             }
+        },
+        isDocumentHidden() {
+            return document.hidden;
         },
         isUpdateState() {
             const hasText = (this.text || '').trim().length > 0;
@@ -2185,6 +2217,27 @@ export default {
                 }
             } catch (e) {
                 console.warn('Error requesting notification permission:', e);
+            }
+        },
+        sendTestNotification() {
+            try {
+                // Send a test notification immediately (ignoring document visibility)
+                const notification = notificationService.show('Test-Benachrichtigung', {
+                    body: 'Wenn Sie diese Nachricht sehen, funktionieren Web-Benachrichtigungen korrekt! 🎉',
+                    requireInteraction: false,
+                    tag: 'test-notification'
+                });
+
+                if (notification) {
+                    this.showInfoToast('Test-Benachrichtigung gesendet');
+                    console.log('Test notification sent successfully');
+                } else {
+                    this.showInfoToast('Test-Benachrichtigung fehlgeschlagen - prüfen Sie die Browser-Konsole');
+                    console.warn('Test notification failed - check if notifications are enabled in settings');
+                }
+            } catch (e) {
+                console.error('Error sending test notification:', e);
+                this.showInfoToast('Fehler beim Senden der Test-Benachrichtigung');
             }
         },
         // Preset management methods
