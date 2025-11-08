@@ -1554,8 +1554,10 @@ export default {
                     allEntities.push(...regexEntities);
                 }
                 
-                // 3. Remove duplicates (same text and overlapping positions)
-                this.entities = this.removeDuplicateEntities(allEntities);
+                // 3. Merge existing entities with newly detected ones (cumulative update)
+                const existingEntities = [...this.entities];
+                const dedupedNewEntities = this.removeDuplicateEntities(allEntities);
+                this.entities = this.mergeEntities(existingEntities, dedupedNewEntities);
                 
             } catch (e) {
                 console.error('Error during entity detection:', e);
@@ -1590,6 +1592,34 @@ export default {
                 seen.add(key);
                 return true;
             });
+        },
+        mergeEntities(existingEntities, newEntities) {
+            // Merge existing entities with new ones (cumulative)
+            // Existing entities are preserved, new ones are added only if unique
+            const seen = new Set();
+            const merged = [];
+
+            // Step 1: Keep all existing entities
+            existingEntities.forEach(entity => {
+                const key = `${entity.name.toLowerCase()}_${entity.type}`;
+                seen.add(key);
+                merged.push(entity);
+            });
+
+            // Step 2: Add only new, unique entities
+            newEntities.forEach(entity => {
+                const key = `${entity.name.toLowerCase()}_${entity.type}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    merged.push(entity);
+                }
+            });
+
+            // Step 3: Reassign IDs for consistency (1, 2, 3, ...)
+            return merged.map((entity, index) => ({
+                ...entity,
+                id: index + 1
+            }));
         },
         addEntity() {
             if (this.newEntityName.trim()) {
