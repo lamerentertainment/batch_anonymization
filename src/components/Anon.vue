@@ -1497,8 +1497,9 @@ export default {
             if (!pastedText) return;
 
             // Remove hyphenation: only hyphens that have letters on both sides
-            // Pattern: letter - optional newline - letter
-            const hyphenationPattern = /([a-zA-ZäöüÄÖÜß])-\n?([a-zA-ZäöüÄÖÜß])/g;
+            // Pattern: letter - optional newline - lowercase letter
+            // Keep hyphens before uppercase letters (e.g. "Master-Prompt", "WC-Schüssel")
+            const hyphenationPattern = /([a-zA-ZäöüÄÖÜß])-\n?([a-zäöüß])/g;
 
             // Count how many replacements we make
             let count = 0;
