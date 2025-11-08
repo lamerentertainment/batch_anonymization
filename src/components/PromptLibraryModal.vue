@@ -53,9 +53,9 @@
               <span v-for="tag in getTextBlockInfo(p).tags" :key="tag"
                     :class="[
                       'badge badge-xs',
-                      getTextBlockValidation(p).availableTags.has(tag) ? 'badge-success' : 'badge-error'
+                      getTextBlockValidation(p).availableTags.has(tag.toLowerCase()) ? 'badge-success' : 'badge-error'
                     ]">
-                {{ getTextBlockValidation(p).availableTags.has(tag) ? '✓' : '✗' }} {{tag}}
+                {{ getTextBlockValidation(p).availableTags.has(tag.toLowerCase()) ? '✓' : '✗' }} {{tag}}
               </span>
             </div>
 
@@ -287,9 +287,18 @@ export default {
           .map(tb => tb.tag.toLowerCase())
       );
 
+      const isValid = info.tags.every(tag => availableTags.has(tag.toLowerCase()));
+
+      if (info.tags.length > 0) {
+        console.log('[PromptLibrary] Validation for prompt:', p.id);
+        console.log('  Required tags:', info.tags);
+        console.log('  Available tags:', Array.from(availableTags));
+        console.log('  Is valid:', isValid);
+      }
+
       return {
         availableTags: availableTags,
-        isValid: info.tags.every(tag => availableTags.has(tag.toLowerCase()))
+        isValid: isValid
       };
     },
     isPromptIncomplete(p) {
@@ -297,12 +306,14 @@ export default {
 
       // Check if generic {{textblock}} needs selection
       if (info.hasGeneric && !this.selectedTextBlocks[p.id]) {
+        console.log('[PromptLibrary] Prompt incomplete: missing text block selection');
         return true;
       }
 
       // Check if all tagged textblocks exist
       const validation = this.getTextBlockValidation(p);
       if (!validation.isValid) {
+        console.log('[PromptLibrary] Prompt incomplete: missing tagged text blocks');
         return true;
       }
 
