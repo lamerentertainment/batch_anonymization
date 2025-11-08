@@ -39,7 +39,7 @@
             <!-- Text block selection for {{textblock}} placeholder -->
             <div v-if="getTextBlockInfo(p).hasGeneric" class="flex gap-2 items-center">
               <span class="text-xs shrink-0">Text block:</span>
-              <select v-model="selectedTextBlocks[p.id]" class="select select-bordered select-xs flex-1">
+              <select v-model="selectedTextBlocks[p.id]" @change="onTextBlockSelectionChange(p.id)" class="select select-bordered select-xs flex-1">
                 <option value="">Select text block...</option>
                 <option v-for="tb in textBlocks" :key="tb.id" :value="tb.id">
                   {{tb.tag}} - {{tb.description || 'No description'}}
@@ -183,18 +183,27 @@ export default {
     loadCachedTextBlockSelections() {
       try {
         const cached = localStorage.getItem('promptLibrary.textBlockSelections');
-        if (!cached) return;
+        if (!cached) {
+          console.log('[PromptLibrary] No cached text block selections found');
+          return;
+        }
 
         const selections = JSON.parse(cached);
+        console.log('[PromptLibrary] Loaded cached selections:', selections);
 
         // Validate that cached text blocks still exist
         const validTextBlockIds = new Set(this.textBlocks.map(tb => tb.id));
 
+        let restoredCount = 0;
         for (const [promptId, textBlockId] of Object.entries(selections)) {
           if (validTextBlockIds.has(textBlockId)) {
             this.selectedTextBlocks[promptId] = textBlockId;
+            restoredCount++;
+          } else {
+            console.log('[PromptLibrary] Skipping invalid text block:', textBlockId, 'for prompt:', promptId);
           }
         }
+        console.log('[PromptLibrary] Restored', restoredCount, 'text block selections');
       } catch (e) {
         console.warn('Failed to load cached text block selections:', e);
       }
@@ -209,9 +218,15 @@ export default {
           }
         }
         localStorage.setItem('promptLibrary.textBlockSelections', JSON.stringify(toSave));
+        console.log('[PromptLibrary] Saved text block selections:', toSave);
       } catch (e) {
         console.warn('Failed to save cached text block selections:', e);
       }
+    },
+    onTextBlockSelectionChange(promptId) {
+      // Explicitly save when selection changes
+      this.saveCachedTextBlockSelections();
+      console.log('[PromptLibrary] Text block selection changed for prompt:', promptId, 'Selected:', this.selectedTextBlocks[promptId]);
     },
     updateScrollReviewStatus() {
       try {
