@@ -71,16 +71,17 @@
                             <ListBulletIcon class="h-5 w-5" />
                         </button>
                         <button
+                            v-if="hasGeminiKey"
                             @click="openTextBlockLibrary"
                             class="btn btn-ghost btn-xs"
-                            title="Text Block Library öffnen"
+                            title="Textbaustein Library öffnen"
                         >
-                            <span class="font-bold text-base">≡</span>
+                            <span class="font-bold text-base">§</span>
                         </button>
                         <button
                             @click="openSettings"
                             class="btn btn-ghost btn-xs"
-                            title="Anonymisierungseinstellungen konfigurieren"
+                            title="Einstellungen konfigurieren"
                         >
                             <Cog6ToothIcon class="h-5 w-5" />
                         </button>
