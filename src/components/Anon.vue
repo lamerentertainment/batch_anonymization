@@ -854,6 +854,7 @@ import TextBlockLibraryModal from './TextBlockLibraryModal.vue';
 import securityManager from '../utils/securityManager.js';
 import notificationService from '../utils/notificationService.js';
 import promptCache from '../utils/promptCache.js';
+import textBlockCache from '../utils/textBlockCache.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
@@ -1011,6 +1012,9 @@ export default {
             availablePrompts: [],
             selectedPromptId: null,
             showQuickInferDropdown: false,
+            // Text Block integration for Quick Infer
+            textBlocks: [],
+            selectedTextBlocks: {}, // Map of promptId -> textBlockId
             // Security / Restricted Mode
             isUnrestricted: false,
             unlockPassword: '',
@@ -1080,8 +1084,12 @@ export default {
             console.warn('Failed to initialize notification settings:', e);
         }
 
-        // Load available prompts for Quick Infer feature
+        // Load available prompts and text blocks for Quick Infer feature
         this.loadPrompts();
+        this.loadTextBlocks().then(() => {
+            // Load cached text block selections after text blocks are loaded
+            this.loadCachedTextBlockSelections();
+        });
     },
     computed: {
         hasGeminiKey() {
@@ -1885,6 +1893,44 @@ export default {
                 console.error('[Anon] Failed to load prompts:', e);
             }
         },
+        // Load available text blocks for Quick Infer
+        async loadTextBlocks() {
+            try {
+                this.textBlocks = await textBlockCache.list();
+                console.log('[Anon] Loaded text blocks:', this.textBlocks.length);
+            } catch (e) {
+                console.error('[Anon] Failed to load text blocks:', e);
+            }
+        },
+        // Load cached text block selections (same as PromptLibraryModal)
+        loadCachedTextBlockSelections() {
+            try {
+                const cached = localStorage.getItem('promptLibrary.textBlockSelections');
+                if (!cached) {
+                    console.log('[Anon] No cached text block selections found');
+                    return;
+                }
+
+                const selections = JSON.parse(cached);
+                console.log('[Anon] Loaded cached text block selections:', selections);
+
+                // Validate that cached text blocks still exist
+                const validTextBlockIds = new Set(this.textBlocks.map(tb => tb.id));
+
+                let restoredCount = 0;
+                for (const [promptId, textBlockId] of Object.entries(selections)) {
+                    if (validTextBlockIds.has(textBlockId)) {
+                        this.selectedTextBlocks[promptId] = textBlockId;
+                        restoredCount++;
+                    } else {
+                        console.log('[Anon] Skipping invalid text block:', textBlockId, 'for prompt:', promptId);
+                    }
+                }
+                console.log('[Anon] Restored', restoredCount, 'text block selections');
+            } catch (e) {
+                console.warn('[Anon] Failed to load cached text block selections:', e);
+            }
+        },
         // Quick Infer: Run inference with selected or most recent prompt
         async quickInfer() {
             const prompt = this.currentQuickInferPrompt;
@@ -1897,13 +1943,13 @@ export default {
 
             try {
                 await geminiInferenceService.inferWithPrompt(prompt, {
-                    showToast: this.showInfoToast.bind(this),
+                    showToast: this.showToast.bind(this),
                     onResult: (responseText) => {
                         // Handle inference result - same as PromptLibraryModal
                         this.handlePromptInferred(responseText);
                     },
-                    selectedTextBlocks: {}, // Text blocks not supported in quick infer for now
-                    textBlocks: []
+                    selectedTextBlocks: this.selectedTextBlocks,
+                    textBlocks: this.textBlocks
                 });
             } catch (e) {
                 console.error('[Anon] Quick Infer error:', e);
@@ -2934,6 +2980,15 @@ export default {
             if (oldVal === true && newVal === false) {
                 // Prompt Library was just closed, reload prompts
                 this.loadPrompts();
+            }
+        },
+        // Reload text blocks when Text Block Library is closed
+        showTextBlockLibrary(newVal, oldVal) {
+            if (oldVal === true && newVal === false) {
+                // Text Block Library was just closed, reload text blocks and selections
+                this.loadTextBlocks().then(() => {
+                    this.loadCachedTextBlockSelections();
+                });
             }
         }
     },
