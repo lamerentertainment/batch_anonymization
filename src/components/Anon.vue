@@ -346,7 +346,7 @@
                                 </li>
                                 <li v-for="prompt in availablePrompts" :key="prompt.id">
                                     <a
-                                        @click="selectPromptAndInfer(prompt.id)"
+                                        @click="selectPrompt(prompt.id)"
                                         class="text-sm"
                                         :class="{ 'active': selectedPromptId === prompt.id }"
                                     >
@@ -815,10 +815,29 @@
             v-if="showTextBlockLibrary"
             @close="showTextBlockLibrary = false"
         />
-        <!-- Info Toast -->
-        <div v-if="toastVisible" class="toast toast-center fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-            <div class="alert alert-info">
-                <span>{{ toastMessage }}</span>
+        <!-- Enhanced Toast (same as PromptLibraryModal) -->
+        <div v-if="toastVisible" class="toast toast-center fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <div
+                :class="[
+                    'alert',
+                    toastType === 'error' ? 'alert-error' : 'alert-info',
+                    toastDetail ? 'cursor-pointer' : '',
+                    toastLoading ? 'animate-pulse' : ''
+                ]"
+                :style="{
+                    maxWidth: '90vw',
+                    width: '600px',
+                    maxHeight: '400px',
+                    overflow: 'auto'
+                }"
+                @click="onToastClick"
+                role="button"
+                :title="toastDetail ? 'Click to view details' : ''"
+            >
+                <span class="flex items-start w-full">
+                    <span v-if="toastLoading" class="loading loading-spinner loading-xs mr-2 mt-1 shrink-0" aria-hidden="true"></span>
+                    <span class="whitespace-pre-wrap break-words font-mono text-sm flex-1">{{ toastMessage }}<template v-if="toastDetail"> (click to view details)</template></span>
+                </span>
             </div>
         </div>
     </div>
@@ -950,9 +969,12 @@ export default {
                 "email", "address", "credit card number", "social security number",
                 "iban"
             ],
-            // Toast for info messages
+            // Toast for info messages (enhanced - same as PromptLibraryModal)
             toastMessage: null,
             toastVisible: false,
+            toastDetail: '',
+            toastType: 'info',
+            toastLoading: false,
             _toastTimer: null,
             // Custom regex patterns
             customRegexPatterns: [],
@@ -1279,21 +1301,42 @@ export default {
                 console.error('Error in switchToPseudonymize:', e);
             }
         },
-        showInfoToast(message) {
+        // Enhanced toast method (same as PromptLibraryModal)
+        showToast(msg, opts = {}) {
             try {
-                this.toastMessage = message;
-                this.toastVisible = true;
                 if (this._toastTimer) {
                     clearTimeout(this._toastTimer);
-                }
-                this._toastTimer = setTimeout(() => {
-                    this.toastVisible = false;
-                    this.toastMessage = null;
                     this._toastTimer = null;
-                }, 2000);
-            } catch (e) {
-                // As a fallback
-                try { alert(message); } catch (_) {}
+                }
+                this.toastMessage = msg;
+                this.toastType = opts.type || 'info';
+                this.toastDetail = opts.detail || '';
+                this.toastVisible = true;
+                this.toastLoading = opts.loading === true;
+
+                const sticky = opts.sticky === true || opts.duration === 0;
+                if (!sticky) {
+                    const ms = typeof opts.duration === 'number' ? opts.duration : 2500;
+                    this._toastTimer = setTimeout(() => {
+                        this.toastVisible = false;
+                        this._toastTimer = null;
+                        this.toastLoading = false;
+                    }, ms);
+                }
+            } catch(_) {}
+        },
+        // Alias for backwards compatibility
+        showInfoToast(message) {
+            this.showToast(message);
+        },
+        // Handle toast click (show details)
+        onToastClick() {
+            if (this.toastDetail) {
+                try {
+                    alert(this.toastDetail);
+                } catch (e) {
+                    console.log('Toast detail:', this.toastDetail);
+                }
             }
         },
         hideToast() {
@@ -1871,11 +1914,11 @@ export default {
         toggleQuickInferDropdown() {
             this.showQuickInferDropdown = !this.showQuickInferDropdown;
         },
-        // Select prompt from dropdown and run inference
-        async selectPromptAndInfer(promptId) {
+        // Select prompt from dropdown (user must click main button again to trigger)
+        selectPrompt(promptId) {
             this.selectedPromptId = promptId;
             this.showQuickInferDropdown = false;
-            await this.quickInfer();
+            console.log('[Anon] Prompt selected:', promptId, '- click main button to run inference');
         },
         // Get button title/tooltip for Quick Infer
         getQuickInferButtonTitle() {
