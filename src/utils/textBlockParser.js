@@ -3,7 +3,8 @@
  *
  * Supported formats:
  * - {{textblock}} - Generic placeholder, requires manual selection
- * - {{textblock:'tag-name'}} - Auto-inject text block with specific tag
+ * - {{textblock:'tag-name'}} - Auto-inject text block with specific tag (with quotes)
+ * - {{textblock:tag-name}} - Auto-inject text block with specific tag (without quotes)
  */
 
 /**
@@ -19,12 +20,25 @@ export function parseTextBlockPlaceholders(promptText) {
   // Check for generic {{textblock}} placeholder
   const hasGeneric = /\{\{textblock\}\}/i.test(promptText);
 
-  // Extract all tagged placeholders: {{textblock:'tag-name'}}
-  const tagPattern = /\{\{textblock:\s*['"]([^'"]+)['"]\s*\}\}/gi;
+  // Extract all tagged placeholders: {{textblock:'tag-name'}} or {{textblock:tag-name}}
+  // Pattern 1: With quotes
+  const tagPatternQuoted = /\{\{textblock:\s*['"]([^'"]+)['"]\s*\}\}/gi;
+  // Pattern 2: Without quotes (alphanumeric, dash, underscore)
+  const tagPatternUnquoted = /\{\{textblock:\s*([a-zA-Z0-9_-]+)\s*\}\}/gi;
+
   const tags = [];
   let match;
 
-  while ((match = tagPattern.exec(promptText)) !== null) {
+  // Extract tags with quotes
+  while ((match = tagPatternQuoted.exec(promptText)) !== null) {
+    const tag = match[1].trim();
+    if (tag && !tags.includes(tag)) {
+      tags.push(tag);
+    }
+  }
+
+  // Extract tags without quotes
+  while ((match = tagPatternUnquoted.exec(promptText)) !== null) {
     const tag = match[1].trim();
     if (tag && !tags.includes(tag)) {
       tags.push(tag);
@@ -53,7 +67,7 @@ export function injectTextBlocks(promptText, textBlocks = [], selectedBlock = nu
     result = result.replace(/\{\{textblock\}\}/gi, selectedBlock.content);
   }
 
-  // 2. Replace tagged {{textblock:'tag-name'}} with corresponding blocks
+  // 2. Replace tagged {{textblock:'tag-name'}} or {{textblock:tag-name}} with corresponding blocks
   if (Array.isArray(textBlocks) && textBlocks.length > 0) {
     // Create a map for quick lookup
     const blockMap = {};
@@ -63,9 +77,19 @@ export function injectTextBlocks(promptText, textBlocks = [], selectedBlock = nu
       }
     });
 
-    // Replace each tagged placeholder
+    // Replace each tagged placeholder (with quotes)
     result = result.replace(
       /\{\{textblock:\s*['"]([^'"]+)['"]\s*\}\}/gi,
+      (match, tag) => {
+        const normalizedTag = tag.trim().toLowerCase();
+        const block = blockMap[normalizedTag];
+        return block ? block.content : match; // Keep placeholder if block not found
+      }
+    );
+
+    // Replace each tagged placeholder (without quotes)
+    result = result.replace(
+      /\{\{textblock:\s*([a-zA-Z0-9_-]+)\s*\}\}/gi,
       (match, tag) => {
         const normalizedTag = tag.trim().toLowerCase();
         const block = blockMap[normalizedTag];
