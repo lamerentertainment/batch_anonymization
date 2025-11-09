@@ -303,6 +303,60 @@
                                 ✓ Text kopieren
                             </span>
                         </button>
+
+                        <!-- Quick Infer Combo Button -->
+                        <div v-if="hasGeminiKey && mode === 'anonymize'" class="dropdown dropdown-end">
+                            <div class="join">
+                                <!-- Main Quick Infer Button -->
+                                <button
+                                    @click="quickInfer"
+                                    class="btn btn-warning btn-sm join-item"
+                                    :disabled="!canQuickInfer"
+                                    :title="getQuickInferButtonTitle()"
+                                >
+                                    <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed && isTextAnonymized">
+                                        🔒 Quick Infer ({{ scrollReview.progress }}%)
+                                    </span>
+                                    <span v-else-if="!canQuickInfer">
+                                        🔒 Quick Infer
+                                    </span>
+                                    <span v-else>
+                                        🚀 {{ currentQuickInferPrompt ? currentQuickInferPrompt.title.substring(0, 15) + (currentQuickInferPrompt.title.length > 15 ? '...' : '') : 'Quick Infer' }}
+                                    </span>
+                                </button>
+                                <!-- Dropdown Button -->
+                                <button
+                                    tabindex="0"
+                                    @click="toggleQuickInferDropdown"
+                                    class="btn btn-warning btn-sm join-item"
+                                    :disabled="!canQuickInfer"
+                                    title="Select prompt"
+                                >
+                                    ▼
+                                </button>
+                            </div>
+                            <!-- Dropdown Menu -->
+                            <ul
+                                v-if="showQuickInferDropdown"
+                                tabindex="0"
+                                class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto z-50"
+                            >
+                                <li v-if="availablePrompts.length === 0">
+                                    <a class="text-sm opacity-60 cursor-default">No prompts available</a>
+                                </li>
+                                <li v-for="prompt in availablePrompts" :key="prompt.id">
+                                    <a
+                                        @click="selectPromptAndInfer(prompt.id)"
+                                        class="text-sm"
+                                        :class="{ 'active': selectedPromptId === prompt.id }"
+                                    >
+                                        <span class="flex-1 truncate">{{ prompt.title }}</span>
+                                        <span v-if="selectedPromptId === prompt.id" class="badge badge-xs badge-primary">Selected</span>
+                                        <span v-if="prompt.favorite" class="text-warning">★</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -780,6 +834,8 @@ import PromptLibraryModal from './PromptLibraryModal.vue';
 import TextBlockLibraryModal from './TextBlockLibraryModal.vue';
 import securityManager from '../utils/securityManager.js';
 import notificationService from '../utils/notificationService.js';
+import promptCache from '../utils/promptCache.js';
+import geminiInferenceService from '../utils/geminiInferenceService.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
@@ -929,6 +985,10 @@ export default {
             showPromptLibrary: false,
             // Text Block Library modal
             showTextBlockLibrary: false,
+            // Quick Infer feature
+            availablePrompts: [],
+            selectedPromptId: null,
+            showQuickInferDropdown: false,
             // Security / Restricted Mode
             isUnrestricted: false,
             unlockPassword: '',
@@ -997,6 +1057,9 @@ export default {
         } catch (e) {
             console.warn('Failed to initialize notification settings:', e);
         }
+
+        // Load available prompts for Quick Infer feature
+        this.loadPrompts();
     },
     computed: {
         hasGeminiKey() {
@@ -1159,6 +1222,38 @@ export default {
             const entitiesCount = Array.isArray(this.entities) ? this.entities.length : 0;
             const hasPlaceholderByRegex = /\[\d+_[^\]]+\]/.test(this.anonymizedTextPlain || '');
             return entitiesCount > 0 && hasPlaceholderByRegex;
+        },
+        // Check if Quick Infer button should be available
+        canQuickInfer() {
+            // 1. Gemini API Key must be present
+            if (!this.hasGeminiKey) return false;
+
+            // 2. At least one prompt must exist
+            if (!this.availablePrompts || this.availablePrompts.length === 0) return false;
+
+            // 3. Text must be anonymized (same check as copy button)
+            if (!this.isTextAnonymized) return false;
+
+            // 4. In UNRESTRICTED mode: no review required, button is available immediately
+            if (!this.scrollReview.enabled) {
+                return true;
+            }
+
+            // 5. In RESTRICTED mode: review must be completed
+            return this.scrollReview.isFullyReviewed;
+        },
+        // Get most recent prompt (prompts are sorted by updatedAt DESC)
+        mostRecentPrompt() {
+            if (!this.availablePrompts || this.availablePrompts.length === 0) return null;
+            return this.availablePrompts[0];
+        },
+        // Get selected prompt or fallback to most recent
+        currentQuickInferPrompt() {
+            if (this.selectedPromptId) {
+                const found = this.availablePrompts.find(p => p.id === this.selectedPromptId);
+                if (found) return found;
+            }
+            return this.mostRecentPrompt;
         }
     },
     methods: {
@@ -1731,6 +1826,73 @@ export default {
             } catch (e) {
                 console.error('Copy failed:', e);
             }
+        },
+        // Load available prompts for Quick Infer
+        async loadPrompts() {
+            try {
+                this.availablePrompts = await promptCache.list();
+                console.log('[Anon] Loaded prompts:', this.availablePrompts.length);
+
+                // Auto-select most recent prompt if none selected
+                if (!this.selectedPromptId && this.availablePrompts.length > 0) {
+                    this.selectedPromptId = this.availablePrompts[0].id;
+                    console.log('[Anon] Auto-selected most recent prompt:', this.availablePrompts[0].title);
+                }
+            } catch (e) {
+                console.error('[Anon] Failed to load prompts:', e);
+            }
+        },
+        // Quick Infer: Run inference with selected or most recent prompt
+        async quickInfer() {
+            const prompt = this.currentQuickInferPrompt;
+            if (!prompt) {
+                this.showInfoToast('No prompt available for Quick Infer.');
+                return;
+            }
+
+            console.log('[Anon] Quick Infer with prompt:', prompt.title);
+
+            try {
+                await geminiInferenceService.inferWithPrompt(prompt, {
+                    showToast: this.showInfoToast.bind(this),
+                    onResult: (responseText) => {
+                        // Handle inference result - same as PromptLibraryModal
+                        this.handlePromptInferred(responseText);
+                    },
+                    selectedTextBlocks: {}, // Text blocks not supported in quick infer for now
+                    textBlocks: []
+                });
+            } catch (e) {
+                console.error('[Anon] Quick Infer error:', e);
+                this.showInfoToast('Error during Quick Infer.');
+            }
+        },
+        // Toggle Quick Infer dropdown
+        toggleQuickInferDropdown() {
+            this.showQuickInferDropdown = !this.showQuickInferDropdown;
+        },
+        // Select prompt from dropdown and run inference
+        async selectPromptAndInfer(promptId) {
+            this.selectedPromptId = promptId;
+            this.showQuickInferDropdown = false;
+            await this.quickInfer();
+        },
+        // Get button title/tooltip for Quick Infer
+        getQuickInferButtonTitle() {
+            if (!this.hasGeminiKey) {
+                return 'Gemini API key missing. Add it in Settings.';
+            }
+            if (!this.availablePrompts || this.availablePrompts.length === 0) {
+                return 'No prompts available. Create prompts in Prompt Library.';
+            }
+            if (!this.isTextAnonymized) {
+                return 'Text must be anonymized first.';
+            }
+            if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
+                return 'Please review anonymized text by scrolling through it first (Restricted Mode).';
+            }
+            const prompt = this.currentQuickInferPrompt;
+            return prompt ? `Quick Infer with: ${prompt.title}` : 'Quick Infer';
         },
         pseudonymizedText() {
             let pseudonymized = this.text;
@@ -2723,6 +2885,13 @@ export default {
                 this.persistCurrentOutput();
             },
             deep: false
+        },
+        // Reload prompts when Prompt Library is closed (in case new prompts were added)
+        showPromptLibrary(newVal, oldVal) {
+            if (oldVal === true && newVal === false) {
+                // Prompt Library was just closed, reload prompts
+                this.loadPrompts();
+            }
         }
     },
     components: {
