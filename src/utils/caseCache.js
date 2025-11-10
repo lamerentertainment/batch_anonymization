@@ -207,19 +207,28 @@ export default {
 
   // Update
   async update(id, patch) {
+    console.log('[caseCache] Updating case:', id, 'with patch:', patch);
     try {
       const all = await idbGetAll();
       const idx = all.findIndex(c => c.id === id);
-      if (idx === -1) return null;
+      if (idx === -1) {
+        console.error('[caseCache] Case not found:', id);
+        return null;
+      }
       const updated = { ...all[idx], ...patch, updatedAt: safeNow() };
+      console.log('[caseCache] Updated case object:', updated);
+      console.log('[caseCache] Entities count:', updated.entities?.length || 0);
       await idbPut(updated);
+      console.log('[caseCache] Case updated in IndexedDB');
       return updated;
-    } catch {
+    } catch (err) {
+      console.warn('[caseCache] IndexedDB update failed, falling back to localStorage:', err);
       const list = lsReadAll();
       const idx = list.findIndex(c => c.id === id);
       if (idx === -1) return null;
       list[idx] = { ...list[idx], ...patch, updatedAt: safeNow() };
       lsWriteAll(list);
+      console.log('[caseCache] Case updated in localStorage');
       return list[idx];
     }
   },
@@ -254,9 +263,15 @@ export default {
 
   // Get by id
   async getById(id) {
+    console.log('[caseCache] Getting case by id:', id);
     try {
       const all = await idbGetAll();
-      return all.find(c => c.id === id) || null;
+      const found = all.find(c => c.id === id) || null;
+      console.log('[caseCache] Case found:', found ? 'yes' : 'no');
+      if (found) {
+        console.log('[caseCache] Case entities count:', found.entities?.length || 0);
+      }
+      return found;
     } catch {
       return lsReadAll().find(c => c.id === id) || null;
     }

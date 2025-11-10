@@ -423,7 +423,11 @@ export default {
         return;
       }
 
+      console.log('[CaseManagement] Loading case:', this.selectedCaseId);
       this.currentCase = await caseCache.getById(this.selectedCaseId);
+      console.log('[CaseManagement] Case loaded:', this.currentCase);
+      console.log('[CaseManagement] Entities in loaded case:', this.currentCase?.entities?.length || 0);
+
       if (this.currentCase) {
         this.currentDocuments = await documentCache.listByCase(this.selectedCaseId);
       }
@@ -482,14 +486,23 @@ export default {
     async updateEntitiesFromAnon() {
       if (!this.currentCase) return;
 
+      console.log('[CaseManagement] Updating entities from Anon');
+      console.log('[CaseManagement] Current entities:', this.currentEntities);
+      console.log('[CaseManagement] Current mode:', this.currentMode);
+
       await caseCache.update(this.currentCase.id, {
         entities: this.currentEntities,
         mode: this.currentMode
       });
 
+      console.log('[CaseManagement] Entities updated in cache');
+
       this.currentCase.entities = this.currentEntities;
       this.currentCase.mode = this.currentMode;
       await this.refreshCases();
+
+      console.log('[CaseManagement] Cases refreshed');
+
       this.showToast('Entitätenliste aktualisiert');
     },
 
