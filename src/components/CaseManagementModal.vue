@@ -393,12 +393,27 @@ export default {
       const name = prompt('Name des neuen Falls:', 'Neuer Fall');
       if (!name) return;
 
-      const newCase = await caseCache.create({ name });
-      await this.refreshCases();
-      await this.loadDocumentCounts();
-      this.selectedCaseId = newCase.id;
-      await this.onCaseSelected();
-      this.showToast('Fall erstellt');
+      try {
+        console.log('[CaseManagement] Creating new case:', name);
+        const newCase = await caseCache.create({ name });
+        console.log('[CaseManagement] Case created:', newCase);
+
+        await this.refreshCases();
+        console.log('[CaseManagement] Cases refreshed, total:', this.cases.length);
+
+        await this.loadDocumentCounts();
+
+        this.selectedCaseId = newCase.id;
+        console.log('[CaseManagement] Selected case ID:', this.selectedCaseId);
+
+        await this.onCaseSelected();
+        console.log('[CaseManagement] Case selected:', this.currentCase);
+
+        this.showToast('Fall erstellt');
+      } catch (err) {
+        console.error('[CaseManagement] Error creating case:', err);
+        this.showToast('Fehler beim Erstellen: ' + err.message, { type: 'error', duration: 5000 });
+      }
     },
 
     async onCaseSelected() {

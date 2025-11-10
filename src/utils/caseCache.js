@@ -10,12 +10,15 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     try {
+      console.log('[caseCache] Opening IndexedDB:', DB_NAME, 'version 3');
       const req = indexedDB.open(DB_NAME, 3); // Increment version for new object stores
-      req.onupgradeneeded = () => {
+      req.onupgradeneeded = (event) => {
+        console.log('[caseCache] Database upgrade needed from version', event.oldVersion, 'to', event.newVersion);
         const db = req.result;
 
         // Create promptLibrary store if it doesn't exist (backward compatibility)
         if (!db.objectStoreNames.contains('promptLibrary')) {
+          console.log('[caseCache] Creating promptLibrary store');
           const os1 = db.createObjectStore('promptLibrary', { keyPath: 'id' });
           os1.createIndex('updatedAt', 'updatedAt');
           os1.createIndex('title', 'title');
@@ -23,6 +26,7 @@ function openDb() {
 
         // Create textBlockLibrary store if it doesn't exist (backward compatibility)
         if (!db.objectStoreNames.contains('textBlockLibrary')) {
+          console.log('[caseCache] Creating textBlockLibrary store');
           const os2 = db.createObjectStore('textBlockLibrary', { keyPath: 'id' });
           os2.createIndex('updatedAt', 'updatedAt');
           os2.createIndex('tag', 'tag', { unique: true });
@@ -31,6 +35,7 @@ function openDb() {
 
         // Create caseLibrary store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE)) {
+          console.log('[caseCache] Creating caseLibrary store');
           const os = db.createObjectStore(STORE, { keyPath: 'id' });
           os.createIndex('updatedAt', 'updatedAt');
           os.createIndex('name', 'name');
@@ -38,14 +43,22 @@ function openDb() {
 
         // Create documentLibrary store if it doesn't exist
         if (!db.objectStoreNames.contains('documentLibrary')) {
+          console.log('[caseCache] Creating documentLibrary store');
           const os3 = db.createObjectStore('documentLibrary', { keyPath: 'id' });
           os3.createIndex('caseId', 'caseId');
           os3.createIndex('updatedAt', 'updatedAt');
         }
       };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        console.log('[caseCache] IndexedDB opened successfully');
+        resolve(req.result);
+      };
+      req.onerror = () => {
+        console.error('[caseCache] IndexedDB open failed:', req.error);
+        reject(req.error);
+      };
     } catch (e) {
+      console.error('[caseCache] Exception opening IndexedDB:', e);
       reject(e);
     }
   });
@@ -151,7 +164,9 @@ export default {
       uses: 0
     };
     try {
+      console.log('[caseCache] Attempting to create case via IndexedDB:', rec.name);
       await idbPut(rec);
+      console.log('[caseCache] Case created successfully in IndexedDB');
       // enforce limit
       const all = await idbGetAll();
       if (all.length > MAX_CASES) {
@@ -160,12 +175,14 @@ export default {
         await Promise.all(toDelete.map(c => idbDelete(c.id)));
       }
       return rec;
-    } catch {
+    } catch (err) {
+      console.warn('[caseCache] IndexedDB failed, falling back to localStorage:', err);
       const list = lsReadAll();
       list.push(rec);
       // enforce limit
       if (list.length > MAX_CASES) list.splice(0, list.length - MAX_CASES);
       lsWriteAll(list);
+      console.log('[caseCache] Case created in localStorage');
       return rec;
     }
   },
