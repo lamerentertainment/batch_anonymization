@@ -167,6 +167,27 @@
                             {{ activeCase.entities?.length || 0 }} Entitäten gespeichert
                         </div>
                     </div>
+                    <!-- Entity Sync Buttons -->
+                    <div class="flex gap-1">
+                        <button
+                            @click="loadEntitiesFromCase"
+                            class="btn btn-xs btn-outline flex-1 gap-1"
+                            :disabled="!activeCase.entities || activeCase.entities.length === 0"
+                            title="Entitätenliste vom Fall laden"
+                        >
+                            <ArrowPathIcon class="h-3 w-3 rotate-180" />
+                            Vom Fall laden
+                        </button>
+                        <button
+                            @click="saveEntitiesToCase"
+                            class="btn btn-xs btn-outline flex-1 gap-1"
+                            :disabled="entities.length === 0"
+                            title="Aktuelle Entitätenliste im Fall speichern"
+                        >
+                            <ArrowPathIcon class="h-3 w-3" />
+                            Im Fall speichern
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Add Entity Form -->
@@ -2539,19 +2560,29 @@ export default {
                 }
             }
 
-            this.activeCase = caseData;
-            this.entities = caseData.entities || [];
-            this.mode = caseData.mode || 'anonymize';
+            // Reload case from DB to ensure we have the latest data
+            const freshCase = await caseCache.getById(caseData.id);
+            if (freshCase) {
+                this.activeCase = freshCase;
+                this.entities = freshCase.entities || [];
+                this.mode = freshCase.mode || 'anonymize';
+            } else {
+                // Fallback to provided data if DB load fails
+                this.activeCase = caseData;
+                this.entities = caseData.entities || [];
+                this.mode = caseData.mode || 'anonymize';
+            }
+
             this.showCaseManagementModal = false;
 
             // Save active case ID to localStorage
             try {
-                localStorage.setItem('anon.activeCase', caseData.id);
+                localStorage.setItem('anon.activeCase', this.activeCase.id);
             } catch (e) {
                 console.warn('Failed to save active case to localStorage:', e);
             }
 
-            this.showToast(`Fall "${caseData.name}" geladen`);
+            this.showToast(`Fall "${this.activeCase.name}" geladen (${this.entities.length} Entitäten)`);
         },
         onLoadDocument({ content, name }) {
             if (this.mode === 'anonymize') {
@@ -2603,6 +2634,50 @@ export default {
                 }
             } catch (e) {
                 console.warn('Failed to load active case:', e);
+            }
+        },
+        async loadEntitiesFromCase() {
+            if (!this.activeCase) return;
+
+            // Confirm if entities already exist
+            if (this.entities.length > 0) {
+                if (!confirm('Möchten Sie die aktuelle Entitätenliste mit den gespeicherten Entitäten ersetzen?')) {
+                    return;
+                }
+            }
+
+            // Load entities from the case
+            this.entities = this.activeCase.entities || [];
+            this.mode = this.activeCase.mode || 'anonymize';
+            this.showToast(`${this.entities.length} Entitäten vom Fall geladen`);
+        },
+        async saveEntitiesToCase() {
+            if (!this.activeCase) return;
+            if (this.entities.length === 0) {
+                this.showToast('Keine Entitäten zum Speichern vorhanden', { type: 'error' });
+                return;
+            }
+
+            try {
+                console.log('[Anon] Saving entities to case:', this.activeCase.id);
+                console.log('[Anon] Entities count:', this.entities.length);
+
+                await caseCache.update(this.activeCase.id, {
+                    entities: this.entities,
+                    mode: this.mode
+                });
+
+                // Reload the case to update the display
+                const updatedCase = await caseCache.getById(this.activeCase.id);
+                if (updatedCase) {
+                    this.activeCase = updatedCase;
+                    console.log('[Anon] Case updated, new entity count:', updatedCase.entities?.length || 0);
+                }
+
+                this.showToast(`${this.entities.length} Entitäten im Fall gespeichert`);
+            } catch (err) {
+                console.error('[Anon] Error saving entities:', err);
+                this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
             }
         },
         handlePromptInsert(content) {
