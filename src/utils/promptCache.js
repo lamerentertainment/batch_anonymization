@@ -10,13 +10,37 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     try {
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(DB_NAME, 3); // Updated to version 3 for case management
       req.onupgradeneeded = () => {
         const db = req.result;
+
+        // Create promptLibrary store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE)) {
           const os = db.createObjectStore(STORE, { keyPath: 'id' });
           os.createIndex('updatedAt', 'updatedAt');
           os.createIndex('title', 'title');
+        }
+
+        // Create textBlockLibrary store if it doesn't exist (backward compatibility)
+        if (!db.objectStoreNames.contains('textBlockLibrary')) {
+          const os2 = db.createObjectStore('textBlockLibrary', { keyPath: 'id' });
+          os2.createIndex('updatedAt', 'updatedAt');
+          os2.createIndex('tag', 'tag', { unique: true });
+          os2.createIndex('description', 'description');
+        }
+
+        // Create caseLibrary store if it doesn't exist
+        if (!db.objectStoreNames.contains('caseLibrary')) {
+          const os3 = db.createObjectStore('caseLibrary', { keyPath: 'id' });
+          os3.createIndex('updatedAt', 'updatedAt');
+          os3.createIndex('name', 'name');
+        }
+
+        // Create documentLibrary store if it doesn't exist
+        if (!db.objectStoreNames.contains('documentLibrary')) {
+          const os4 = db.createObjectStore('documentLibrary', { keyPath: 'id' });
+          os4.createIndex('caseId', 'caseId');
+          os4.createIndex('updatedAt', 'updatedAt');
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -52,7 +76,9 @@ async function idbPut(record) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.put(record);
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -63,7 +89,9 @@ async function idbDelete(id) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.delete(id);
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -74,7 +102,9 @@ async function idbClear() {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.clear();
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
