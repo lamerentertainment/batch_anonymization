@@ -42,6 +42,7 @@ Confirm Master Password: ********
 
 VITE_MASTER_PASSWORD_HASH=a3f5b8c9d2e1f4a7b6c5d8e9f1a2b3c4...
 VITE_MASTER_PASSWORD_SALT=12345678-abcd-1234-abcd-123456789abc
+VITE_SESSION_TOKEN=85a445754893g43u4da2226115b896c386cd9c....
 
 ================================
 
