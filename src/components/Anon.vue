@@ -79,6 +79,13 @@
                             <span class="font-bold text-base">§</span>
                         </button>
                         <button
+                            @click="openCaseManagement"
+                            class="btn btn-ghost btn-xs"
+                            title="Case Management öffnen"
+                        >
+                            <FolderIcon class="h-5 w-5" />
+                        </button>
+                        <button
                             @click="openSettings"
                             class="btn btn-ghost btn-xs"
                             title="Einstellungen konfigurieren"
@@ -144,6 +151,22 @@
                                             : 'Anonymisierung starten'
                         }}
                     </button>
+                </div>
+
+                <!-- Active Case Display -->
+                <div v-if="activeCase" class="p-4 border-b border-base-300 bg-base-100 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <p class="font-semibold text-sm">Aktiver Fall</p>
+                        <button @click="openCaseManagement" class="btn btn-ghost btn-xs">
+                            Wechseln
+                        </button>
+                    </div>
+                    <div class="bg-base-200 p-2 rounded">
+                        <div class="font-medium text-sm">{{ activeCase.name }}</div>
+                        <div class="text-xs opacity-60">
+                            {{ activeCase.entities?.length || 0 }} Entitäten gespeichert
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Add Entity Form -->
@@ -288,22 +311,36 @@
                                 {{ mode === 'anonymize' ? 'Anonymisierter Text' : 'Wiederhergestellter Text' }}
                             </h2>
                         </div>
-                        <button
-                            @click="copy"
-                            class="btn btn-success btn-sm"
-                            :disabled="!canCopyOutput"
-                            :title="getCopyButtonTitle()"
-                        >
-                            <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed && isTextAnonymized">
-                                🔒 Text kopieren ({{ scrollReview.progress }}%)
-                            </span>
-                            <span v-else-if="!canCopyOutput">
-                                🔒 Text kopieren
-                            </span>
-                            <span v-else>
-                                ✓ Text kopieren
-                            </span>
-                        </button>
+                        <div class="flex gap-2">
+                            <button
+                                @click="copy"
+                                class="btn btn-success btn-sm"
+                                :disabled="!canCopyOutput"
+                                :title="getCopyButtonTitle()"
+                            >
+                                <span v-if="scrollReview.enabled && !scrollReview.isFullyReviewed && isTextAnonymized">
+                                    🔒 Text kopieren ({{ scrollReview.progress }}%)
+                                </span>
+                                <span v-else-if="!canCopyOutput">
+                                    🔒 Text kopieren
+                                </span>
+                                <span v-else>
+                                    ✓ Text kopieren
+                                </span>
+                            </button>
+
+                            <!-- Save as Document Button -->
+                            <button
+                                v-if="activeCase && mode === 'anonymize'"
+                                @click="saveOutputAsDocument"
+                                class="btn btn-outline btn-sm gap-1"
+                                :disabled="!outputText"
+                                title="Anonymisierten Text als Dokument im Fall speichern"
+                            >
+                                <DocumentPlusIcon class="h-4 w-4" />
+                                Als Dokument speichern
+                            </button>
+                        </div>
 
                         <!-- Quick Infer Combo Button -->
                         <div v-if="hasGeminiKey && mode === 'anonymize'" class="dropdown dropdown-end">
@@ -816,6 +853,15 @@
             v-if="showTextBlockLibrary"
             @close="showTextBlockLibrary = false"
         />
+        <case-management-modal
+            v-if="showCaseManagementModal"
+            :currentEntities="entities"
+            :currentMode="mode"
+            :activeCaseId="activeCase?.id"
+            @close="showCaseManagementModal = false"
+            @loadCase="onLoadCase"
+            @loadDocument="onLoadDocument"
+        />
         <!-- Enhanced Toast (same as PromptLibraryModal) -->
         <div v-if="toastVisible" class="toast toast-center fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div
@@ -852,23 +898,28 @@ import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 import PromptLibraryModal from './PromptLibraryModal.vue';
 import TextBlockLibraryModal from './TextBlockLibraryModal.vue';
+import CaseManagementModal from './CaseManagementModal.vue';
 import securityManager from '../utils/securityManager.js';
 import notificationService from '../utils/notificationService.js';
 import promptCache from '../utils/promptCache.js';
 import textBlockCache from '../utils/textBlockCache.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
+import caseCache from '../utils/caseCache.js';
+import documentCache from '../utils/documentCache.js';
 
 // import * as pdfjsWorker from '../assets/pdf.worker.min.mjs';
 
 // Heroicons imports
-import { 
-    ArrowPathIcon, 
-    ArrowUpTrayIcon, 
-    Cog6ToothIcon, 
-    ExclamationTriangleIcon, 
-    StarIcon, 
-    XMarkIcon, 
-    ListBulletIcon
+import {
+    ArrowPathIcon,
+    ArrowUpTrayIcon,
+    Cog6ToothIcon,
+    ExclamationTriangleIcon,
+    StarIcon,
+    XMarkIcon,
+    ListBulletIcon,
+    FolderIcon,
+    DocumentPlusIcon
 } from '@heroicons/vue/24/outline';
 
 // Custom SigmaIcon for Σ (not in heroicons, so define as a functional component)
@@ -1009,6 +1060,10 @@ export default {
             showPromptLibrary: false,
             // Text Block Library modal
             showTextBlockLibrary: false,
+            // Case Management modal
+            showCaseManagementModal: false,
+            // Active case
+            activeCase: null,
             // Quick Infer feature
             availablePrompts: [],
             selectedPromptId: null,
@@ -1091,6 +1146,9 @@ export default {
             // Load cached text block selections after text blocks are loaded
             this.loadCachedTextBlockSelections();
         });
+
+        // Load active case from localStorage if exists
+        this.loadActiveCase();
     },
     computed: {
         hasGeminiKey() {
@@ -2470,6 +2528,83 @@ export default {
         openTextBlockLibrary() {
             this.showTextBlockLibrary = true;
         },
+        openCaseManagement() {
+            this.showCaseManagementModal = true;
+        },
+        async onLoadCase(caseData) {
+            // Confirm if entities exist
+            if (this.entities.length > 0) {
+                if (!confirm('Aktuellen Fall laden? Die bestehende Entitätenliste wird ersetzt.')) {
+                    return;
+                }
+            }
+
+            this.activeCase = caseData;
+            this.entities = caseData.entities || [];
+            this.mode = caseData.mode || 'anonymize';
+            this.showCaseManagementModal = false;
+
+            // Save active case ID to localStorage
+            try {
+                localStorage.setItem('anon.activeCase', caseData.id);
+            } catch (e) {
+                console.warn('Failed to save active case to localStorage:', e);
+            }
+
+            this.showToast(`Fall "${caseData.name}" geladen`);
+        },
+        onLoadDocument({ content, name }) {
+            if (this.mode === 'anonymize') {
+                // Anonymisieren-Modus: Document in Output laden
+                this.outputText = content;
+                this.showToast(`Dokument "${name}" in Output-Area geladen`);
+            } else {
+                // De-Anonymisieren-Modus: Document in Input laden
+                this.inputText = content;
+                this.showToast(`Dokument "${name}" in Input-Area geladen`);
+            }
+            this.showCaseManagementModal = false;
+        },
+        async saveOutputAsDocument() {
+            if (!this.activeCase) {
+                this.showToast('Kein aktiver Fall geladen', { type: 'error' });
+                return;
+            }
+
+            if (this.mode !== 'anonymize' || !this.outputText) {
+                this.showToast('Nur anonymisierte Texte können gespeichert werden', { type: 'error' });
+                return;
+            }
+
+            const name = prompt('Dokument-Name:', `Dokument ${new Date().toLocaleDateString('de-DE')}`);
+            if (!name) return;
+
+            try {
+                await documentCache.create({
+                    caseId: this.activeCase.id,
+                    name,
+                    content: this.outputText
+                });
+
+                this.showToast(`Dokument "${name}" gespeichert`);
+            } catch (err) {
+                this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
+            }
+        },
+        async loadActiveCase() {
+            try {
+                const activeCaseId = localStorage.getItem('anon.activeCase');
+                if (activeCaseId) {
+                    const caseData = await caseCache.getById(activeCaseId);
+                    if (caseData) {
+                        this.activeCase = caseData;
+                        console.log('Active case loaded:', caseData.name);
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load active case:', e);
+            }
+        },
         handlePromptInsert(content) {
             const sep = this.text && !this.text.endsWith('\n') ? '\n\n' : '';
             this.text = (this.text || '') + sep + content;
@@ -3002,8 +3137,11 @@ export default {
         XMarkIcon,
         SigmaIcon,
         ListBulletIcon,
+        FolderIcon,
+        DocumentPlusIcon,
         PromptLibraryModal,
-        TextBlockLibraryModal
+        TextBlockLibraryModal,
+        CaseManagementModal
     },
 }
 </script>
