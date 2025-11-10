@@ -88,7 +88,9 @@ async function idbPut(record) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.put(record);
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -99,7 +101,9 @@ async function idbDelete(id) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.delete(id);
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -110,7 +114,9 @@ async function idbClear() {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.clear();
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }

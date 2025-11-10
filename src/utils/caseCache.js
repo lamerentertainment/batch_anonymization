@@ -89,8 +89,22 @@ async function idbPut(record) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.put(record);
-    req.onsuccess = () => resolve(true);
-    req.onerror = () => reject(req.error);
+
+    // Handle transaction completion
+    tx.oncomplete = () => {
+      console.log('[caseCache] Transaction completed successfully');
+      resolve(true);
+    };
+
+    tx.onerror = () => {
+      console.error('[caseCache] Transaction error:', tx.error);
+      reject(tx.error);
+    };
+
+    req.onerror = () => {
+      console.error('[caseCache] Put request error:', req.error);
+      reject(req.error);
+    };
   });
 }
 
@@ -100,7 +114,9 @@ async function idbDelete(id) {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.delete(id);
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
@@ -111,7 +127,9 @@ async function idbClear() {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const req = store.clear();
-    req.onsuccess = () => resolve(true);
+
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
     req.onerror = () => reject(req.error);
   });
 }
