@@ -6,12 +6,16 @@
  * This script generates a SHA-256 hash for the master password
  * to be used in the application's restricted mode.
  *
+ * Also generates a unique SESSION_TOKEN that invalidates old sessions
+ * when the password is changed.
+ *
  * Usage:
  *   node scripts/generate-password-hash.js
  *
  * The output should be added to your .env.local file:
  *   VITE_MASTER_PASSWORD_HASH=...
  *   VITE_MASTER_PASSWORD_SALT=...
+ *   VITE_SESSION_TOKEN=...
  */
 
 import crypto from 'crypto';
@@ -48,6 +52,16 @@ async function generateHash(password, salt) {
   });
 }
 
+function generateSessionToken(hash, salt) {
+  // Create a unique session token based on hash, salt, and current timestamp
+  // This ensures that every time the password is changed, a new token is generated
+  // which invalidates all old browser sessions
+  const tokenData = `${hash}:${salt}:${Date.now()}`;
+  const tokenHash = crypto.createHash('sha256');
+  tokenHash.update(tokenData);
+  return tokenHash.digest('hex');
+}
+
 (async () => {
   console.log('\n=== Master Password Hash Generator ===\n');
   console.log('This will generate a hash for your deployment master password.');
@@ -68,11 +82,13 @@ async function generateHash(password, salt) {
 
   const salt = crypto.randomUUID();
   const hash = await generateHash(password, salt);
+  const sessionToken = generateSessionToken(hash, salt);
 
   console.log('\n✅ Hash generated successfully!\n');
   console.log('=== ADD THESE TO .env.local ===\n');
   console.log(`VITE_MASTER_PASSWORD_HASH=${hash}`);
   console.log(`VITE_MASTER_PASSWORD_SALT=${salt}`);
+  console.log(`VITE_SESSION_TOKEN=${sessionToken}`);
   console.log('\n================================\n');
   console.log('⚠️  Keep these values secret and do NOT commit them to Git!\n');
 })();

@@ -62,11 +62,12 @@ cp .env.example .env.local
 nano .env.local
 ```
 
-Add the generated hash and salt:
+Add the generated hash, salt, and session token:
 
 ```bash
 VITE_MASTER_PASSWORD_HASH=a3f5b8c9d2e1f4a7b6c5d8e9f1a2b3c4...
 VITE_MASTER_PASSWORD_SALT=12345678-abcd-1234-abcd-123456789abc
+VITE_SESSION_TOKEN=f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6...
 ```
 
 **⚠️ IMPORTANT:**
@@ -135,8 +136,12 @@ Once unlocked:
 
 1. **Master Password:** Set by deployer at build time
 2. **Hash Storage:** SHA-256 hash stored in environment variables
-3. **State Management:** Restricted/Unrestricted state in `localStorage`
-4. **Blocking Mechanisms:**
+3. **Session Token:** Unique token generated with each password change
+4. **State Management:** Restricted/Unrestricted state + session token in `localStorage`
+5. **Session Validation:** On every page load, the stored session token is compared with the current deployed token:
+   - If tokens match → session remains valid → user stays unrestricted
+   - If tokens don't match → session is invalid → user reverts to restricted mode
+6. **Blocking Mechanisms:**
    - Copy button disabled when restricted
    - Paste button disabled when restricted
    - Keyboard shortcuts (Ctrl/Cmd+C, Ctrl/Cmd+V) intercepted
@@ -163,12 +168,16 @@ Once unlocked:
 
 To change the master password after deployment:
 
-1. Generate a new hash (step 1 above)
-2. Update `.env.local` with new values
+1. Generate a new hash and session token (step 1 above)
+2. Update `.env.local` with new values (hash, salt, **AND session token**)
 3. Rebuild: `npm run build`
 4. Redeploy
 
-**Note:** All users will need the new password to unlock.
+**What happens to users:**
+- All **existing browser sessions become invalid** (session token no longer matches)
+- Users are automatically reverted to **Restricted Mode** on their next page visit
+- Users must enter the **new password** to unlock again
+- This ensures complete session invalidation across all browsers when password changes
 
 ---
 
@@ -180,8 +189,19 @@ To change the master password after deployment:
 
 **Solution:**
 1. Check `.env.local` exists in project root
-2. Verify variables start with `VITE_` prefix
-3. Rebuild: `npm run build`
+2. Verify **all three variables** are set: `VITE_MASTER_PASSWORD_HASH`, `VITE_MASTER_PASSWORD_SALT`, `VITE_SESSION_TOKEN`
+3. Verify variables start with `VITE_` prefix
+4. Rebuild: `npm run build`
+
+### Session becomes invalid after deployment
+
+**Cause:** Session token in `.env.local` was changed (password update).
+
+**Solution:**
+- This is **expected behavior** when the password is changed
+- Users will see **Restricted Mode** activated
+- Users need to enter the **new password** to unlock
+- All previous sessions are intentionally invalidated for security
 
 ### Users can still copy/paste
 
@@ -211,7 +231,10 @@ A: No, only the deployer can set/change it at build time.
 A: No, this is a UI-level restriction for policy enforcement only.
 
 **Q: What happens if user clears localStorage?**
-A: Restricted Mode becomes active again (default state).
+A: Restricted Mode becomes active again (default state). The session token is also cleared.
+
+**Q: What happens when I change the password?**
+A: All existing user sessions become invalid. Users will see Restricted Mode activated and need to enter the new password to unlock. This happens automatically on their next page visit thanks to session token validation.
 
 **Q: Can I disable Restricted Mode entirely?**
 A: Yes, simply don't set the environment variables. The app will still work, and restrictions won't apply.

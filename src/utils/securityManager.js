@@ -7,8 +7,10 @@
  */
 
 const SECURITY_KEY = 'security.isUnrestricted';
+const SESSION_TOKEN_KEY = 'security.sessionToken';
 const MASTER_HASH = import.meta.env.VITE_MASTER_PASSWORD_HASH;
 const SALT = import.meta.env.VITE_MASTER_PASSWORD_SALT;
+const CURRENT_SESSION_TOKEN = import.meta.env.VITE_SESSION_TOKEN;
 
 class SecurityManager {
   /**
@@ -55,13 +57,41 @@ class SecurityManager {
   }
 
   /**
+   * Validate the current session token against stored token
+   * This ensures that old sessions are invalidated when password is changed
+   * @returns {boolean} True if session token is valid
+   */
+  isSessionValid() {
+    try {
+      const storedToken = localStorage.getItem(SESSION_TOKEN_KEY);
+
+      // If no token stored or current token not configured, session is invalid
+      if (!storedToken || !CURRENT_SESSION_TOKEN) {
+        return false;
+      }
+
+      // Token must match exactly
+      return storedToken === CURRENT_SESSION_TOKEN;
+    } catch (error) {
+      console.warn('Failed to validate session token:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if the app is currently in unrestricted mode
    * @returns {boolean} True if unrestricted mode is active
    */
   isUnrestricted() {
     try {
       const value = localStorage.getItem(SECURITY_KEY);
-      return value === 'true';
+
+      // Only unrestricted if flag is true AND session token is valid
+      if (value === 'true') {
+        return this.isSessionValid();
+      }
+
+      return false;
     } catch (error) {
       console.warn('Failed to read security state from localStorage:', error);
       return false;
@@ -75,6 +105,14 @@ class SecurityManager {
   setUnrestricted(value) {
     try {
       localStorage.setItem(SECURITY_KEY, value ? 'true' : 'false');
+
+      // When unlocking, also store the current session token
+      if (value && CURRENT_SESSION_TOKEN) {
+        localStorage.setItem(SESSION_TOKEN_KEY, CURRENT_SESSION_TOKEN);
+      } else {
+        // When locking, clear the session token
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+      }
     } catch (error) {
       console.error('Failed to save security state to localStorage:', error);
     }
@@ -106,7 +144,7 @@ class SecurityManager {
    * @returns {boolean} True if master password is set
    */
   isConfigured() {
-    return !!(MASTER_HASH && SALT);
+    return !!(MASTER_HASH && SALT && CURRENT_SESSION_TOKEN);
   }
 }
 
