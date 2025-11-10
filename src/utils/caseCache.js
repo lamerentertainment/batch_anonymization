@@ -169,11 +169,17 @@ export default {
   // Create
   async create({ name, description = '', entities = [], mode = 'anonymize', tags = [], favorite = false }) {
     const now = safeNow();
+
+    // Serialize entities to remove Vue Proxies
+    const serializedEntities = Array.isArray(entities)
+      ? JSON.parse(JSON.stringify(entities))
+      : [];
+
     const rec = {
       id: uuid(),
       name: name?.trim() || 'Neuer Fall',
       description: description?.trim() || '',
-      entities: Array.isArray(entities) ? entities : [],
+      entities: serializedEntities,
       mode: mode || 'anonymize',
       tags: Array.isArray(tags) ? tags : [],
       favorite: !!favorite,
@@ -208,6 +214,13 @@ export default {
   // Update
   async update(id, patch) {
     console.log('[caseCache] Updating case:', id, 'with patch:', patch);
+
+    // Serialize entities to remove Vue Proxies before storing in IndexedDB
+    if (patch.entities && Array.isArray(patch.entities)) {
+      console.log('[caseCache] Serializing entities to remove Vue Proxies');
+      patch.entities = JSON.parse(JSON.stringify(patch.entities));
+    }
+
     try {
       const all = await idbGetAll();
       const idx = all.findIndex(c => c.id === id);
