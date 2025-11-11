@@ -3,7 +3,7 @@
     <div class="modal-box w-11/12 max-w-6xl h-[85vh] flex flex-col">
       <h3 class="font-bold text-lg">Case Management</h3>
 
-      <!-- Case Selector -->
+      <!-- Case Selector with Actions -->
       <div class="mt-4 flex gap-2 items-center">
         <select
           v-model="selectedCaseId"
@@ -15,7 +15,15 @@
             {{ c.name }} ({{ c.entities?.length || 0 }} Entitäten, {{ getDocCount(c.id) }} Docs)
           </option>
         </select>
-        <button @click="createNewCase" class="btn btn-sm btn-primary">
+        <button
+          @click="loadCaseToAnon"
+          class="btn btn-sm btn-primary gap-1"
+          :disabled="!selectedCaseId"
+        >
+          <ArrowDownTrayIcon class="h-4 w-4" />
+          Fall laden
+        </button>
+        <button @click="createNewCase" class="btn btn-sm btn-outline">
           Neuer Fall
         </button>
         <button
@@ -47,106 +55,20 @@
 
       <div class="divider my-2"></div>
 
-      <!-- Case Details (only when case is selected) -->
-      <div v-if="currentCase" class="border rounded p-4 bg-base-200 space-y-3">
-        <!-- Name -->
-        <input
-          v-model="currentCase.name"
-          @change="saveCase"
-          class="input input-bordered w-full font-semibold"
-          placeholder="Fall-Name"
-        />
-
-        <!-- Description -->
-        <textarea
-          v-model="currentCase.description"
-          @change="saveCase"
-          class="textarea textarea-bordered w-full"
-          rows="2"
-          placeholder="Beschreibung des Falls..."
-        ></textarea>
-
-        <!-- Tags & Favorite -->
-        <div class="flex gap-2">
-          <input
-            :value="(currentCase.tags || []).join(',')"
-            @change="updateTags"
-            class="input input-bordered input-sm flex-1"
-            placeholder="tags,komma,getrennt"
-          />
-          <button @click="toggleFav" class="btn btn-ghost btn-sm">
-            {{ currentCase.favorite ? '★' : '☆' }}
-          </button>
-        </div>
-
-        <!-- Entities (collapsible) -->
-        <div class="collapse collapse-arrow bg-base-100 border border-base-300">
-          <input type="checkbox" v-model="showEntities" />
-          <div class="collapse-title text-sm font-semibold">
-            Entitäten ({{ currentCase.entities?.length || 0 }})
-            <span class="badge badge-sm ml-2">{{ currentCase.mode || 'anonymize' }}</span>
-          </div>
-          <div class="collapse-content">
-            <div class="max-h-48 overflow-y-auto space-y-1 pt-2">
-              <div v-for="e in currentCase.entities" :key="e.id"
-                   class="text-xs bg-base-200 p-2 rounded flex items-center gap-2">
-                <span class="badge badge-outline badge-xs">{{ e.id }}_{{ e.type }}</span>
-                <span>{{ e.name }}</span>
-              </div>
-              <div v-if="!currentCase.entities?.length"
-                   class="text-xs opacity-50 text-center py-4">
-                Keine Entitäten gespeichert
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex gap-2 flex-wrap">
-          <button @click="loadCaseToAnon" class="btn btn-sm btn-primary gap-1">
-            <ArrowDownTrayIcon class="h-4 w-4" />
-            In Anon.vue laden
-          </button>
-          <button
-            v-if="canUpdateFromAnon"
-            @click="updateEntitiesFromAnon"
-            class="btn btn-sm btn-outline gap-1"
-          >
-            <ArrowUpTrayIcon class="h-4 w-4" />
-            Entitäten von Anon aktualisieren
-          </button>
-          <button @click="exportCase" class="btn btn-sm btn-outline gap-1">
-            <DocumentArrowDownIcon class="h-4 w-4" />
-            Export
-          </button>
-          <button @click="duplicateCase" class="btn btn-sm btn-outline gap-1">
-            Duplizieren
-          </button>
-        </div>
-      </div>
-
-      <!-- Empty state when no case selected -->
-      <div v-else class="border rounded p-8 bg-base-200 text-center opacity-60">
-        <FolderIcon class="h-16 w-16 mx-auto mb-3 opacity-40" />
-        <p class="text-lg">Wählen Sie einen Fall aus oder erstellen Sie einen neuen</p>
-      </div>
-
-      <div class="divider my-2"></div>
-
-      <!-- Documents Section -->
+      <!-- Documents Section (Prominent, at top) -->
       <div v-if="currentCase" class="flex-1 overflow-hidden flex flex-col">
         <div class="flex justify-between items-center mb-3">
-          <h4 class="font-semibold">
+          <h4 class="font-bold text-lg">
             Dokumente ({{ currentDocuments.length }})
           </h4>
-          <button @click="createBlankDocument" class="btn btn-sm btn-outline gap-1">
+          <button @click="createBlankDocument" class="btn btn-sm btn-primary gap-1">
             <DocumentPlusIcon class="h-4 w-4" />
             Neues Dokument
           </button>
         </div>
 
-        <!-- Documents Grid (like PromptLibrary) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 overflow-y-auto">
+        <!-- Documents Grid (2 columns) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 overflow-y-auto">
           <div v-for="doc in currentDocuments" :key="doc.id"
                class="card bg-base-100 border border-base-300 h-64">
             <div class="card-body p-3 gap-2 flex flex-col">
@@ -209,14 +131,106 @@
         </div>
       </div>
 
+      <!-- Empty state when no case selected -->
+      <div v-else class="flex-1 flex items-center justify-center border rounded bg-base-200 opacity-60">
+        <div class="text-center">
+          <FolderIcon class="h-16 w-16 mx-auto mb-3 opacity-40" />
+          <p class="text-lg">Wählen Sie einen Fall aus oder erstellen Sie einen neuen</p>
+        </div>
+      </div>
+
+      <div class="divider my-2"></div>
+
+      <!-- Case Details (Collapsible, at bottom) -->
+      <div v-if="currentCase" class="collapse collapse-arrow bg-base-200 border border-base-300">
+        <input type="checkbox" v-model="showCaseDetails" />
+        <div class="collapse-title font-semibold text-sm">
+          Fall-Metadaten & Aktionen
+        </div>
+        <div class="collapse-content space-y-3">
+          <!-- Name -->
+          <input
+            v-model="currentCase.name"
+            @change="saveCase"
+            class="input input-bordered input-sm w-full font-semibold"
+            placeholder="Fall-Name"
+          />
+
+          <!-- Description -->
+          <textarea
+            v-model="currentCase.description"
+            @change="saveCase"
+            class="textarea textarea-bordered textarea-sm w-full"
+            rows="2"
+            placeholder="Beschreibung des Falls..."
+          ></textarea>
+
+          <!-- Tags & Favorite -->
+          <div class="flex gap-2">
+            <input
+              :value="(currentCase.tags || []).join(',')"
+              @change="updateTags"
+              class="input input-bordered input-sm flex-1"
+              placeholder="tags,komma,getrennt"
+            />
+            <button @click="toggleFav" class="btn btn-ghost btn-sm">
+              {{ currentCase.favorite ? '★' : '☆' }}
+            </button>
+          </div>
+
+          <!-- Entities (nested collapsible) -->
+          <div class="collapse collapse-arrow bg-base-100 border border-base-300">
+            <input type="checkbox" v-model="showEntities" />
+            <div class="collapse-title text-sm font-semibold py-2 min-h-0">
+              Entitäten ({{ currentCase.entities?.length || 0 }})
+              <span class="badge badge-sm ml-2">{{ currentCase.mode || 'anonymize' }}</span>
+            </div>
+            <div class="collapse-content">
+              <div class="max-h-48 overflow-y-auto space-y-1 pt-2">
+                <div v-for="e in currentCase.entities" :key="e.id"
+                     class="text-xs bg-base-200 p-2 rounded flex items-center gap-2">
+                  <span class="badge badge-outline badge-xs">{{ e.id }}_{{ e.type }}</span>
+                  <span>{{ e.name }}</span>
+                </div>
+                <div v-if="!currentCase.entities?.length"
+                     class="text-xs opacity-50 text-center py-4">
+                  Keine Entitäten gespeichert
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 flex-wrap">
+            <button
+              v-if="canUpdateFromAnon"
+              @click="updateEntitiesFromAnon"
+              class="btn btn-xs btn-outline gap-1"
+            >
+              <ArrowUpTrayIcon class="h-4 w-4" />
+              Entitäten von Anon aktualisieren
+            </button>
+            <button @click="exportCase" class="btn btn-xs btn-outline gap-1">
+              <DocumentArrowDownIcon class="h-4 w-4" />
+              Export Fall
+            </button>
+            <button @click="duplicateCase" class="btn btn-xs btn-outline gap-1">
+              Duplizieren
+            </button>
+            <button class="btn btn-xs btn-outline" @click="exportAll">
+              Export Alle
+            </button>
+            <label class="btn btn-xs btn-outline">
+              Import
+              <input type="file" accept="application/json" class="hidden" @change="importFile" />
+            </label>
+          </div>
+        </div>
+      </div>
+
       <!-- Footer Buttons -->
-      <div class="mt-4 flex flex-wrap gap-2">
-        <button class="btn btn-sm btn-outline" @click="exportAll">Export Alle Cases</button>
-        <label class="btn btn-sm btn-outline">
-          Import Cases
-          <input type="file" accept="application/json" class="hidden" @change="importFile" />
-        </label>
-        <button class="btn btn-sm btn-error ml-auto" @click="$emit('close')">Schließen</button>
+      <div class="mt-4 flex justify-end">
+        <button class="btn btn-sm" @click="$emit('close')">Schließen</button>
       </div>
 
       <!-- Toast Notification -->
@@ -317,6 +331,7 @@ export default {
       tagFilter: '',
       favoritesOnly: false,
       showEntities: false,
+      showCaseDetails: false,
       fullScreenDoc: null,
 
       // Toast
