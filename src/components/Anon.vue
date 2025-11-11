@@ -167,27 +167,25 @@
                             {{ activeCase.entities?.length || 0 }} Entitäten gespeichert
                         </div>
                     </div>
-                    <!-- Entity Sync Buttons -->
-                    <div class="flex gap-1">
-                        <button
-                            @click="loadEntitiesFromCase"
-                            class="btn btn-xs btn-outline flex-1 gap-1"
-                            :disabled="!activeCase.entities || activeCase.entities.length === 0"
-                            title="Entitätenliste vom Fall laden"
-                        >
-                            <ArrowPathIcon class="h-3 w-3 rotate-180" />
-                            Vom Fall laden
-                        </button>
-                        <button
-                            @click="saveEntitiesToCase"
-                            class="btn btn-xs btn-outline flex-1 gap-1"
-                            :disabled="entities.length === 0"
-                            title="Aktuelle Entitätenliste im Fall speichern"
-                        >
-                            <ArrowPathIcon class="h-3 w-3" />
-                            Im Fall speichern
-                        </button>
-                    </div>
+                    <!-- Auto-Sync Toggle Button -->
+                    <button
+                        @click="toggleAutoSync"
+                        :class="[
+                            'btn btn-xs w-full gap-1',
+                            autoSyncCase ? 'btn-primary' : 'btn-outline'
+                        ]"
+                        :title="autoSyncCase
+                            ? 'Auto-Sync aktiv: Entitäten werden automatisch gespeichert'
+                            : 'Auto-Sync inaktiv: Klicken um manuell zu synchronisieren'"
+                    >
+                        <ArrowPathIcon
+                            :class="[
+                                'h-3 w-3',
+                                autoSyncCase ? 'animate-pulse' : ''
+                            ]"
+                        />
+                        {{ autoSyncCase ? 'Auto-Sync aktiv' : 'Jetzt synchronisieren' }}
+                    </button>
                     <!-- Close Case Button -->
                     <button
                         @click="closeActiveCase"
@@ -1094,6 +1092,7 @@ export default {
             showCaseManagementModal: false,
             // Active case
             activeCase: null,
+            autoSyncCase: false, // Auto-sync entities to case after anonymization
             // Quick Infer feature
             availablePrompts: [],
             selectedPromptId: null,
@@ -1871,6 +1870,28 @@ export default {
                     notificationService.notifyEntityDetectionCompleteIfHidden(entityCount);
                 } catch (e) {
                     console.warn('Failed to show entity detection notification:', e);
+                }
+
+                // Auto-sync entities to case if enabled
+                if (this.autoSyncCase && this.activeCase && this.entities.length > 0) {
+                    try {
+                        console.log('[Anon] Auto-syncing entities to case:', this.activeCase.id);
+                        await caseCache.update(this.activeCase.id, {
+                            entities: this.entities,
+                            mode: this.mode
+                        });
+
+                        // Reload case to update display
+                        const updatedCase = await caseCache.getById(this.activeCase.id);
+                        if (updatedCase) {
+                            this.activeCase = updatedCase;
+                        }
+
+                        console.log('[Anon] Auto-sync complete:', this.entities.length, 'entities');
+                    } catch (err) {
+                        console.error('[Anon] Auto-sync failed:', err);
+                        this.showToast('Auto-Sync fehlgeschlagen: ' + err.message, { type: 'error' });
+                    }
                 }
             }
         },
@@ -2688,12 +2709,60 @@ export default {
                 this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
             }
         },
+        async toggleAutoSync() {
+            if (!this.activeCase) return;
+
+            if (this.autoSyncCase) {
+                // Toggle off: Simply disable auto-sync
+                this.autoSyncCase = false;
+                this.showToast('Auto-Sync deaktiviert');
+            } else {
+                // Toggle on or manual sync
+                // Ask user: activate auto-sync or just sync once
+                const userChoice = confirm(
+                    'Auto-Sync aktivieren?\n\n' +
+                    'OK = Auto-Sync aktivieren (Entitäten werden nach jeder Anonymisierung automatisch gespeichert)\n' +
+                    'Abbrechen = Nur einmalig synchronisieren'
+                );
+
+                if (userChoice) {
+                    // User wants to enable auto-sync
+                    this.autoSyncCase = true;
+                    this.showToast('Auto-Sync aktiviert');
+                } else {
+                    // User wants manual sync only
+                    if (this.entities.length === 0) {
+                        this.showToast('Keine Entitäten zum Synchronisieren', { type: 'error' });
+                        return;
+                    }
+
+                    try {
+                        await caseCache.update(this.activeCase.id, {
+                            entities: this.entities,
+                            mode: this.mode
+                        });
+
+                        // Reload case
+                        const updatedCase = await caseCache.getById(this.activeCase.id);
+                        if (updatedCase) {
+                            this.activeCase = updatedCase;
+                        }
+
+                        this.showToast(`${this.entities.length} Entitäten synchronisiert`);
+                    } catch (err) {
+                        console.error('[Anon] Error syncing entities:', err);
+                        this.showToast('Fehler beim Synchronisieren: ' + err.message, { type: 'error' });
+                    }
+                }
+            }
+        },
         closeActiveCase() {
             if (!this.activeCase) return;
 
             // Optional: Confirm if user wants to close the case
             if (confirm(`Fall "${this.activeCase.name}" schließen?`)) {
                 this.activeCase = null;
+                this.autoSyncCase = false; // Reset auto-sync when closing case
                 this.showToast('Fall geschlossen');
             }
         },
