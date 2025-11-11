@@ -167,6 +167,27 @@
                             {{ activeCase.entities?.length || 0 }} Entitäten gespeichert
                         </div>
                     </div>
+                    <!-- Entity Sync Buttons -->
+                    <div class="flex gap-1">
+                        <button
+                            @click="loadEntitiesFromCase"
+                            class="btn btn-xs btn-outline flex-1 gap-1"
+                            :disabled="!activeCase.entities || activeCase.entities.length === 0"
+                            title="Entitätenliste vom Fall laden"
+                        >
+                            <ArrowPathIcon class="h-3 w-3 rotate-180" />
+                            Vom Fall laden
+                        </button>
+                        <button
+                            @click="saveEntitiesToCase"
+                            class="btn btn-xs btn-outline flex-1 gap-1"
+                            :disabled="entities.length === 0"
+                            title="Aktuelle Entitätenliste im Fall speichern"
+                        >
+                            <ArrowPathIcon class="h-3 w-3" />
+                            Im Fall speichern
+                        </button>
+                    </div>
                     <!-- Auto-Sync Toggle Button -->
                     <button
                         @click="toggleAutoSync"
