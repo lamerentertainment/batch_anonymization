@@ -153,7 +153,7 @@
                     </button>
                 </div>
 
-                <!-- Active Case Display -->
+                <!-- Active Case Display OR Save/Load Presets -->
                 <div v-if="activeCase" class="p-4 border-b border-base-300 bg-base-100 space-y-2">
                     <div class="flex justify-between items-center">
                         <p class="font-semibold text-sm">Aktiver Fall</p>
@@ -190,28 +190,11 @@
                     </div>
                 </div>
 
-                <!-- Add Entity Form -->
-                <div class="p-4 border-b border-base-300 bg-base-100 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold">{{ mode === 'anonymize' ? 'Neue Entität hinzufügen' : 'Platzhalter automatisch erkennen' }}</p>
-                        <button @click="clearEntities" class="btn btn-ghost btn-xs text-error">Alle löschen</button>
-                    </div>
-                    <template v-if="mode === 'anonymize'">
-                        <input v-model="newEntityName" class="input input-bordered input-xs w-full" placeholder="Entitätstext">
-                        <select v-model="newEntityType" class="select select-xs select-bordered w-full">
-                            <option v-for="label in availableLabels" :key="label" :value="label">
-                                {{ label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() }}
-                            </option>
-                        </select>
-                        <button @click="addEntity" class="btn btn-xs btn-outline w-full">Entität hinzufügen</button>
-                    </template>
-                </div>
-
-                <!-- Presets: Save/Load Entity Lists (collapsible) -->
-                <div class="p-4 border-b border-base-300 bg-base-100 space-y-2">
+                <!-- Presets: Save/Load Entity Lists (only when no active case) -->
+                <div v-else class="p-4 border-b border-base-300 bg-base-100 space-y-2">
                     <div class="flex items-center justify-between">
                         <p class="font-semibold">speichern/laden</p>
-                        <button 
+                        <button
                             class="btn btn-ghost btn-xs"
                             @click="togglePresetMenu"
                             :aria-expanded="showPresetMenu.toString()"
@@ -236,6 +219,23 @@
                             <button @click="deleteSelectedPreset" class="btn btn-xs btn-ghost text-error" :disabled="!selectedPreset">Löschen</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Add Entity Form -->
+                <div class="p-4 border-b border-base-300 bg-base-100 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <p class="font-semibold">{{ mode === 'anonymize' ? 'Neue Entität hinzufügen' : 'Platzhalter automatisch erkennen' }}</p>
+                        <button @click="clearEntities" class="btn btn-ghost btn-xs text-error">Alle löschen</button>
+                    </div>
+                    <template v-if="mode === 'anonymize'">
+                        <input v-model="newEntityName" class="input input-bordered input-xs w-full" placeholder="Entitätstext">
+                        <select v-model="newEntityType" class="select select-xs select-bordered w-full">
+                            <option v-for="label in availableLabels" :key="label" :value="label">
+                                {{ label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() }}
+                            </option>
+                        </select>
+                        <button @click="addEntity" class="btn btn-xs btn-outline w-full">Entität hinzufügen</button>
+                    </template>
                 </div>
 
                 <!-- Entities List -->
