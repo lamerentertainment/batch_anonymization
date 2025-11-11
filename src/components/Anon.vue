@@ -154,68 +154,67 @@
                 </div>
 
                 <!-- Active Case Display OR Save/Load Presets -->
-                <div v-if="activeCase" class="p-4 border-b border-base-300 bg-base-100 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <p class="font-semibold text-sm">Aktiver Fall</p>
-                        <button @click="openCaseManagement" class="btn btn-ghost btn-xs">
-                            Wechseln
-                        </button>
-                    </div>
-                    <div class="bg-base-200 p-2 rounded">
-                        <div class="font-medium text-sm">{{ activeCase.name }}</div>
-                        <div class="text-xs opacity-60">
-                            {{ activeCase.entities?.length || 0 }} Entitäten gespeichert
+                <div v-if="activeCase" class="p-3 border-b border-base-300 bg-base-100 space-y-2">
+                    <p class="font-semibold text-xs opacity-60">Aktiver Fall</p>
+
+                    <!-- Compact Case Info + Actions -->
+                    <div class="flex items-center gap-2">
+                        <!-- Clickable Case Name with Badge -->
+                        <div
+                            @click="openCaseManagement"
+                            class="flex-1 bg-base-200 px-2 py-1 rounded cursor-pointer hover:bg-base-300 transition-colors"
+                            title="Klicken um Fall zu wechseln"
+                        >
+                            <div class="font-medium text-sm truncate">{{ activeCase.name }}</div>
+                            <div class="badge badge-xs badge-ghost">
+                                {{ activeCase.entities?.length || 0 }}
+                            </div>
+                        </div>
+
+                        <!-- Icon-Only Action Buttons -->
+                        <div class="flex gap-1 shrink-0">
+                            <button
+                                @click="loadEntitiesFromCase"
+                                class="btn btn-xs btn-ghost btn-square"
+                                :disabled="!activeCase.entities || activeCase.entities.length === 0"
+                                title="Vom Fall laden"
+                            >
+                                <ArrowDownIcon class="h-4 w-4" />
+                            </button>
+                            <button
+                                @click="saveEntitiesToCase"
+                                class="btn btn-xs btn-ghost btn-square"
+                                :disabled="entities.length === 0"
+                                title="Im Fall speichern"
+                            >
+                                <ArrowUpIcon class="h-4 w-4" />
+                            </button>
+                            <button
+                                @click="toggleAutoSync"
+                                :class="[
+                                    'btn btn-xs btn-square',
+                                    autoSyncCase ? 'btn-primary' : 'btn-ghost'
+                                ]"
+                                :title="autoSyncCase
+                                    ? 'Auto-Sync aktiv'
+                                    : 'Auto-Sync inaktiv'"
+                            >
+                                <ArrowPathIcon
+                                    :class="[
+                                        'h-4 w-4',
+                                        autoSyncCase ? 'animate-pulse' : ''
+                                    ]"
+                                />
+                            </button>
+                            <button
+                                @click="closeActiveCase"
+                                class="btn btn-xs btn-ghost btn-square text-error"
+                                title="Fall schließen"
+                            >
+                                <XMarkIcon class="h-4 w-4" />
+                            </button>
                         </div>
                     </div>
-                    <!-- Entity Sync Buttons -->
-                    <div class="flex gap-1">
-                        <button
-                            @click="loadEntitiesFromCase"
-                            class="btn btn-xs btn-outline flex-1 gap-1"
-                            :disabled="!activeCase.entities || activeCase.entities.length === 0"
-                            title="Entitätenliste vom Fall laden"
-                        >
-                            <ArrowDownIcon class="h-3 w-3" />
-                            Vom Fall laden
-                        </button>
-                        <button
-                            @click="saveEntitiesToCase"
-                            class="btn btn-xs btn-outline flex-1 gap-1"
-                            :disabled="entities.length === 0"
-                            title="Aktuelle Entitätenliste im Fall speichern"
-                        >
-                            <ArrowUpIcon class="h-3 w-3" />
-                            Im Fall speichern
-                        </button>
-                    </div>
-                    <!-- Auto-Sync Toggle Button -->
-                    <button
-                        @click="toggleAutoSync"
-                        :class="[
-                            'btn btn-xs w-full gap-1',
-                            autoSyncCase ? 'btn-primary' : 'btn-outline'
-                        ]"
-                        :title="autoSyncCase
-                            ? 'Auto-Sync aktiv: Entitäten werden automatisch gespeichert'
-                            : 'Auto-Sync inaktiv: Klicken um zu aktivieren'"
-                    >
-                        <ArrowPathIcon
-                            :class="[
-                                'h-3 w-3',
-                                autoSyncCase ? 'animate-pulse' : ''
-                            ]"
-                        />
-                        {{ autoSyncCase ? 'Auto-Sync aktiv' : 'Auto-Sync' }}
-                    </button>
-                    <!-- Close Case Button -->
-                    <button
-                        @click="closeActiveCase"
-                        class="btn btn-xs btn-ghost text-error w-full"
-                        title="Fall schließen"
-                    >
-                        <XMarkIcon class="h-3 w-3" />
-                        Fall schließen
-                    </button>
                 </div>
 
                 <!-- Presets: Save/Load Entity Lists (only when no active case) -->
