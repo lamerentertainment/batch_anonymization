@@ -175,7 +175,7 @@
                             :disabled="!activeCase.entities || activeCase.entities.length === 0"
                             title="Entitätenliste vom Fall laden"
                         >
-                            <ArrowPathIcon class="h-3 w-3 rotate-180" />
+                            <ArrowDownIcon class="h-3 w-3" />
                             Vom Fall laden
                         </button>
                         <button
@@ -184,7 +184,7 @@
                             :disabled="entities.length === 0"
                             title="Aktuelle Entitätenliste im Fall speichern"
                         >
-                            <ArrowPathIcon class="h-3 w-3" />
+                            <ArrowUpIcon class="h-3 w-3" />
                             Im Fall speichern
                         </button>
                     </div>
@@ -197,7 +197,7 @@
                         ]"
                         :title="autoSyncCase
                             ? 'Auto-Sync aktiv: Entitäten werden automatisch gespeichert'
-                            : 'Auto-Sync inaktiv: Klicken um manuell zu synchronisieren'"
+                            : 'Auto-Sync inaktiv: Klicken um zu aktivieren'"
                     >
                         <ArrowPathIcon
                             :class="[
@@ -205,7 +205,7 @@
                                 autoSyncCase ? 'animate-pulse' : ''
                             ]"
                         />
-                        {{ autoSyncCase ? 'Auto-Sync aktiv' : 'Jetzt synchronisieren' }}
+                        {{ autoSyncCase ? 'Auto-Sync aktiv' : 'Auto-Sync' }}
                     </button>
                     <!-- Close Case Button -->
                     <button
@@ -962,6 +962,8 @@ import documentCache from '../utils/documentCache.js';
 import {
     ArrowPathIcon,
     ArrowUpTrayIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
     Cog6ToothIcon,
     ExclamationTriangleIcon,
     StarIcon,
@@ -2730,51 +2732,16 @@ export default {
                 this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
             }
         },
-        async toggleAutoSync() {
+        toggleAutoSync() {
             if (!this.activeCase) return;
 
+            // Simple silent toggle
+            this.autoSyncCase = !this.autoSyncCase;
+
             if (this.autoSyncCase) {
-                // Toggle off: Simply disable auto-sync
-                this.autoSyncCase = false;
-                this.showToast('Auto-Sync deaktiviert');
+                this.showToast('Auto-Sync aktiviert');
             } else {
-                // Toggle on or manual sync
-                // Ask user: activate auto-sync or just sync once
-                const userChoice = confirm(
-                    'Auto-Sync aktivieren?\n\n' +
-                    'OK = Auto-Sync aktivieren (Entitäten werden nach jeder Anonymisierung automatisch gespeichert)\n' +
-                    'Abbrechen = Nur einmalig synchronisieren'
-                );
-
-                if (userChoice) {
-                    // User wants to enable auto-sync
-                    this.autoSyncCase = true;
-                    this.showToast('Auto-Sync aktiviert');
-                } else {
-                    // User wants manual sync only
-                    if (this.entities.length === 0) {
-                        this.showToast('Keine Entitäten zum Synchronisieren', { type: 'error' });
-                        return;
-                    }
-
-                    try {
-                        await caseCache.update(this.activeCase.id, {
-                            entities: this.entities,
-                            mode: this.mode
-                        });
-
-                        // Reload case
-                        const updatedCase = await caseCache.getById(this.activeCase.id);
-                        if (updatedCase) {
-                            this.activeCase = updatedCase;
-                        }
-
-                        this.showToast(`${this.entities.length} Entitäten synchronisiert`);
-                    } catch (err) {
-                        console.error('[Anon] Error syncing entities:', err);
-                        this.showToast('Fehler beim Synchronisieren: ' + err.message, { type: 'error' });
-                    }
-                }
+                this.showToast('Auto-Sync deaktiviert');
             }
         },
         closeActiveCase() {
@@ -3313,6 +3280,8 @@ export default {
     components: {
         ArrowPathIcon,
         ArrowUpTrayIcon,
+        ArrowDownIcon,
+        ArrowUpIcon,
         Cog6ToothIcon,
         ExclamationTriangleIcon,
         StarIcon,
