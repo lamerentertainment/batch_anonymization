@@ -188,6 +188,15 @@
                             Im Fall speichern
                         </button>
                     </div>
+                    <!-- Close Case Button -->
+                    <button
+                        @click="closeActiveCase"
+                        class="btn btn-xs btn-ghost text-error w-full"
+                        title="Fall schließen"
+                    >
+                        <XMarkIcon class="h-3 w-3" />
+                        Fall schließen
+                    </button>
                 </div>
 
                 <!-- Presets: Save/Load Entity Lists (only when no active case) -->
@@ -2677,6 +2686,15 @@ export default {
             } catch (err) {
                 console.error('[Anon] Error saving entities:', err);
                 this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
+            }
+        },
+        closeActiveCase() {
+            if (!this.activeCase) return;
+
+            // Optional: Confirm if user wants to close the case
+            if (confirm(`Fall "${this.activeCase.name}" schließen?`)) {
+                this.activeCase = null;
+                this.showToast('Fall geschlossen');
             }
         },
         handlePromptInsert(content) {
