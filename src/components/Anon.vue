@@ -2585,14 +2585,13 @@ export default {
             this.showToast(`Fall "${this.activeCase.name}" geladen (${this.entities.length} Entitäten)`);
         },
         onLoadDocument({ content, name }) {
+            // Load document content into input text area
+            this.text = content;
+
             if (this.mode === 'anonymize') {
-                // Anonymisieren-Modus: Document in Output laden
-                this.outputText = content;
-                this.showToast(`Dokument "${name}" in Output-Area geladen`);
-            } else {
-                // De-Anonymisieren-Modus: Document in Input laden
-                this.inputText = content;
                 this.showToast(`Dokument "${name}" in Input-Area geladen`);
+            } else {
+                this.showToast(`Dokument "${name}" in Input-Area geladen (bereit zur De-Anonymisierung)`);
             }
             this.showCaseManagementModal = false;
         },
