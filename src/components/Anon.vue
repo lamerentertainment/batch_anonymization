@@ -381,12 +381,11 @@
                             <button
                                 v-if="activeCase && mode === 'anonymize'"
                                 @click="saveOutputAsDocument"
-                                class="btn btn-outline btn-sm gap-1"
-                                :disabled="!outputText"
+                                class="btn btn-ghost btn-sm btn-square"
+                                :disabled="!anonymizedTextPlain || anonymizedTextPlain.trim().length === 0"
                                 title="Anonymisierten Text als Dokument im Fall speichern"
                             >
-                                <DocumentPlusIcon class="h-4 w-4" />
-                                Als Dokument speichern
+                                <DocumentPlusIcon class="h-5 w-5" />
                             </button>
                         </div>
 
@@ -2640,7 +2639,8 @@ export default {
                 return;
             }
 
-            if (this.mode !== 'anonymize' || !this.outputText) {
+            const outputContent = this.anonymizedTextPlain;
+            if (this.mode !== 'anonymize' || !outputContent || outputContent.trim().length === 0) {
                 this.showToast('Nur anonymisierte Texte können gespeichert werden', { type: 'error' });
                 return;
             }
@@ -2652,11 +2652,12 @@ export default {
                 await documentCache.create({
                     caseId: this.activeCase.id,
                     name,
-                    content: this.outputText
+                    content: outputContent
                 });
 
                 this.showToast(`Dokument "${name}" gespeichert`);
             } catch (err) {
+                console.error('[Anon] Error saving document:', err);
                 this.showToast('Fehler beim Speichern: ' + err.message, { type: 'error' });
             }
         },
