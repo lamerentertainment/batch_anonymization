@@ -1896,26 +1896,7 @@ export default {
                 }
 
                 // Auto-sync entities to case if enabled
-                if (this.autoSyncCase && this.activeCase && this.entities.length > 0) {
-                    try {
-                        console.log('[Anon] Auto-syncing entities to case:', this.activeCase.id);
-                        await caseCache.update(this.activeCase.id, {
-                            entities: this.entities,
-                            mode: this.mode
-                        });
-
-                        // Reload case to update display
-                        const updatedCase = await caseCache.getById(this.activeCase.id);
-                        if (updatedCase) {
-                            this.activeCase = updatedCase;
-                        }
-
-                        console.log('[Anon] Auto-sync complete:', this.entities.length, 'entities');
-                    } catch (err) {
-                        console.error('[Anon] Auto-sync failed:', err);
-                        this.showToast('Auto-Sync fehlgeschlagen: ' + err.message, { type: 'error' });
-                    }
-                }
+                await this.autoSyncEntities();
             }
         },
         removeDuplicateEntities(entities) {
@@ -1966,10 +1947,16 @@ export default {
                     type: this.newEntityType
                 });
                 this.newEntityName = '';
+
+                // Auto-sync after adding entity
+                this.autoSyncEntities();
             }
         },
         removeEntity(id) {
             this.entities = this.entities.filter(e => e.id !== id);
+
+            // Auto-sync after removing entity
+            this.autoSyncEntities();
         },
         copy() {
             // Restricted Mode: Block copying in anonymize mode
@@ -2742,6 +2729,29 @@ export default {
                 this.showToast('Auto-Sync aktiviert');
             } else {
                 this.showToast('Auto-Sync deaktiviert');
+            }
+        },
+        async autoSyncEntities() {
+            // Auto-sync entities to case if enabled
+            if (!this.autoSyncCase || !this.activeCase) return;
+
+            try {
+                console.log('[Anon] Auto-syncing entities to case:', this.activeCase.id);
+                await caseCache.update(this.activeCase.id, {
+                    entities: this.entities,
+                    mode: this.mode
+                });
+
+                // Reload case to update display
+                const updatedCase = await caseCache.getById(this.activeCase.id);
+                if (updatedCase) {
+                    this.activeCase = updatedCase;
+                }
+
+                console.log('[Anon] Auto-sync complete:', this.entities.length, 'entities');
+            } catch (err) {
+                console.error('[Anon] Auto-sync failed:', err);
+                this.showToast('Auto-Sync fehlgeschlagen: ' + err.message, { type: 'error' });
             }
         },
         closeActiveCase() {
