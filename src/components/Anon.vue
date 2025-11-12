@@ -1911,36 +1911,47 @@ export default {
         },
         mergeEntities(existingEntities, newEntities) {
             // Merge existing entities with new ones (cumulative)
-            // Existing entities are preserved, new ones are added only if unique
+            // Existing entities are preserved WITH their original IDs for case consistency
             const seen = new Set();
             const merged = [];
 
-            // Step 1: Keep all existing entities
+            // Step 1: Keep all existing entities WITH their original IDs
             existingEntities.forEach(entity => {
                 const key = `${entity.name.toLowerCase()}_${entity.type}`;
                 seen.add(key);
                 merged.push(entity);
             });
 
-            // Step 2: Add only new, unique entities
+            // Step 2: Add only new, unique entities with new IDs
+            // Find max ID to avoid conflicts
+            const maxId = existingEntities.length > 0
+                ? Math.max(...existingEntities.map(e => e.id || 0))
+                : 0;
+
+            let nextId = maxId + 1;
             newEntities.forEach(entity => {
                 const key = `${entity.name.toLowerCase()}_${entity.type}`;
                 if (!seen.has(key)) {
                     seen.add(key);
-                    merged.push(entity);
+                    merged.push({
+                        ...entity,
+                        id: nextId++
+                    });
                 }
             });
 
-            // Step 3: Reassign IDs for consistency (1, 2, 3, ...)
-            return merged.map((entity, index) => ({
-                ...entity,
-                id: index + 1
-            }));
+            // Step 3 REMOVED: IDs remain stable across documents for case consistency
+            return merged;
         },
         addEntity() {
             if (this.newEntityName.trim()) {
+                // Find max ID to avoid conflicts (especially after deletions)
+                const maxId = this.entities.length > 0
+                    ? Math.max(...this.entities.map(e => e.id || 0))
+                    : 0;
+
                 this.entities.push({
-                    id: this.entities.length + 1,
+                    id: maxId + 1,
                     name: this.newEntityName,
                     type: this.newEntityType
                 });
