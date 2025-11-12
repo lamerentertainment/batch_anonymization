@@ -129,6 +129,12 @@ export default {
   components: {
     LockClosedIcon
   },
+  props: {
+    contextPrefix: {
+      type: String,
+      default: ''
+    }
+  },
   emits: ['close', 'inferResult', 'toast'],
   data() {
     return {
@@ -350,7 +356,8 @@ export default {
         showToast: this.showToast.bind(this),
         onResult: (responseText) => this.$emit('inferResult', responseText),
         selectedTextBlocks: this.selectedTextBlocks,
-        textBlocks: this.textBlocks
+        textBlocks: this.textBlocks,
+        contextPrefix: this.contextPrefix
       });
     },
     async exportAll() {
