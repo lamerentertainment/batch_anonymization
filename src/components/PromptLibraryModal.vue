@@ -474,7 +474,7 @@ export default {
     },
     toggleDocumentSelection(promptId, docId) {
       if (!this.selectedDocumentsForContext[promptId]) {
-        this.$set(this.selectedDocumentsForContext, promptId, []);
+        this.selectedDocumentsForContext[promptId] = [];
       }
 
       const selected = this.selectedDocumentsForContext[promptId];
@@ -489,11 +489,11 @@ export default {
       this.saveContextSelection(promptId);
     },
     selectAllDocuments(promptId) {
-      this.$set(this.selectedDocumentsForContext, promptId, this.availableDocuments.map(d => d.id));
+      this.selectedDocumentsForContext[promptId] = this.availableDocuments.map(d => d.id);
       this.saveContextSelection(promptId);
     },
     deselectAllDocuments(promptId) {
-      this.$set(this.selectedDocumentsForContext, promptId, []);
+      this.selectedDocumentsForContext[promptId] = [];
       this.saveContextSelection(promptId);
     },
     saveContextSelection(promptId) {
@@ -512,7 +512,7 @@ export default {
     },
     toggleContextMenu(promptId) {
       const currentState = this.showContextMenu[promptId] || false;
-      this.$set(this.showContextMenu, promptId, !currentState);
+      this.showContextMenu[promptId] = !currentState;
 
       if (!currentState) {
         // Opening menu, load documents if needed
@@ -521,12 +521,12 @@ export default {
         }
         // Load saved selection for this prompt
         if (!this.selectedDocumentsForContext[promptId]) {
-          this.$set(this.selectedDocumentsForContext, promptId, this.loadContextSelection(promptId));
+          this.selectedDocumentsForContext[promptId] = this.loadContextSelection(promptId);
         }
       }
     },
     closeContextMenu(promptId) {
-      this.$set(this.showContextMenu, promptId, false);
+      this.showContextMenu[promptId] = false;
     },
     buildContextPrefix(promptId) {
       const selectedDocs = this.selectedDocumentsForContext[promptId] || [];
