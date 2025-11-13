@@ -155,7 +155,6 @@
 
                 <!-- Active Case Display OR Save/Load Presets -->
                 <div v-if="activeCase" class="p-3 border-b border-base-300 bg-base-100 space-y-2">
-                    <p class="font-semibold text-xs opacity-60">Aktiver Fall</p>
 
                     <!-- Compact Case Info + Actions -->
                     <div class="flex items-center gap-2">
@@ -165,10 +164,12 @@
                             class="flex-1 bg-base-200 px-2 py-1 rounded cursor-pointer hover:bg-base-300 transition-colors"
                             title="Klicken um Fall zu wechseln"
                         >
+                          <div class="flex items-center gap-2">
                             <div class="font-medium text-sm truncate">{{ activeCase.name }}</div>
                             <div class="badge badge-xs badge-ghost">
-                                {{ activeCase.entities?.length || 0 }}
+                              {{ activeCase.entities?.length || 0 }}
                             </div>
+                          </div>
                         </div>
 
                         <!-- Icon-Only Action Buttons -->
