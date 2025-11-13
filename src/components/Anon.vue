@@ -46,72 +46,71 @@
                 </span>
             </div>
         </div>
-        <!-- Header with title -->
-        <div class="p-4 border-b border-base-300">
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
-                <div class="flex flex-col">
-                    <h1 class="font-bold text-3xl sm:text-4xl">
-                        Lokale Anonymisierung & Pseudonymisierung
-                    </h1>
-                    <p class="mt-1 text-sm text-base-content/60">
-                        Diese Anwendung basiert auf der grandiosen Vorarbeit von 
-                        <a href="https://www.recht-intelligent.ch" class="link link-hover" target="_blank" rel="noopener noreferrer">recht.intelligent</a>
-                        /
-                        <a href="https://iusable.ai" class="link link-hover" target="_blank" rel="noopener noreferrer">iusable.ai</a>
-                    </p>
-                </div>
-                <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
-                    <div class="flex items-center gap-2">
-                        <button
-                            v-if="hasGeminiKey"
-                            @click="openPromptLibrary"
-                            class="btn btn-ghost btn-xs"
-                            title="Prompt Library öffnen"
-                        >
-                            <ListBulletIcon class="h-5 w-5" />
-                        </button>
-                        <button
-                            v-if="hasGeminiKey"
-                            @click="openTextBlockLibrary"
-                            class="btn btn-ghost btn-xs"
-                            title="Textbaustein Library öffnen"
-                        >
-                            <span class="font-bold text-base">§</span>
-                        </button>
-                        <button
-                            @click="openCaseManagement"
-                            class="btn btn-ghost btn-xs"
-                            title="Case Management öffnen"
-                        >
-                            <FolderIcon class="h-5 w-5" />
-                        </button>
-                        <button
-                            @click="openSettings"
-                            class="btn btn-ghost btn-xs"
-                            title="Einstellungen konfigurieren"
-                        >
-                            <Cog6ToothIcon class="h-5 w-5" />
-                        </button>
-                    </div>
-                    <div class="flex gap-2 flex-wrap">
-                        <button 
-                            @click="selectModel('quantized')" 
-                            :class="['btn btn-sm', selectedModel === 'quantized' ? 'btn-primary' : 'btn-outline']"
-                            :disabled="downloading || loading || fileProcessing"
-                        >
-                            Schnell (580MB)
-                        </button>
-                        <!-- <button 
-                            @click="selectModel('full')" 
-                            :class="['btn btn-sm', selectedModel === 'full' ? 'btn-primary' : 'btn-outline']"
-                            :disabled="downloading || loading || fileProcessing"
-                        >
-                            Beste (1.16GB)
-                        </button> -->
-                    </div>
-                </div>
+      <!-- Header with title -->
+      <div class="p-2 border-b border-base-300">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div class="flex flex-col">
+            <p class="mt-1 text-sm text-base-content/60">
+              Diese Anwendung basiert auf der grandiosen Vorarbeit von
+              <a href="https://www.recht-intelligent.ch" class="link link-hover" target="_blank"
+                 rel="noopener noreferrer">recht.intelligent</a>
+              /
+              <a href="https://iusable.ai" class="link link-hover" target="_blank"
+                 rel="noopener noreferrer">iusable.ai</a>
+            </p>
+          </div>
+          <div class="flex flex-col items-start sm:items-end space-y-2 sm:space-y-2">
+            <div class="flex items-center gap-2">
+              <button
+                  v-if="hasGeminiKey"
+                  @click="openPromptLibrary"
+                  class="btn btn-ghost btn-xs"
+                  title="Prompt Library öffnen"
+              >
+                <ListBulletIcon class="h-5 w-5"/>
+              </button>
+              <button
+                  v-if="hasGeminiKey"
+                  @click="openTextBlockLibrary"
+                  class="btn btn-ghost btn-xs"
+                  title="Textbaustein Library öffnen"
+              >
+                <span class="font-bold text-base">§</span>
+              </button>
+              <button
+                  @click="openCaseManagement"
+                  class="btn btn-ghost btn-xs"
+                  title="Case Management öffnen"
+              >
+                <FolderIcon class="h-5 w-5"/>
+              </button>
+              <button
+                  @click="openSettings"
+                  class="btn btn-ghost btn-xs"
+                  title="Einstellungen konfigurieren"
+              >
+                <Cog6ToothIcon class="h-5 w-5"/>
+              </button>
             </div>
+            <div class="flex gap-2 flex-wrap">
+              <!-- <button
+                  @click="selectModel('quantized')"
+                  :class="['btn btn-sm', selectedModel === 'quantized' ? 'btn-primary' : 'btn-outline']"
+                  :disabled="true"
+              >
+                Schnell (580MB)
+              </button> -->
+              <!-- <button
+                  @click="selectModel('full')"
+                  :class="['btn btn-sm', selectedModel === 'full' ? 'btn-primary' : 'btn-outline']"
+                  :disabled="downloading || loading || fileProcessing"
+              >
+                  Beste (1.16GB)
+              </button> -->
+            </div>
+          </div>
         </div>
+      </div>
 
         <div class="flex flex-1 overflow-hidden border">
             <!-- Entities Side Panel -->
