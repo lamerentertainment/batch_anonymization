@@ -199,15 +199,15 @@ export default {
       showToast('Gemini response received.');
       await promptCache.update(prompt.id, { uses: (prompt.uses||0) + 1, updatedAt: Date.now() });
 
-      // Step 16: Show notification when Gemini inference completes (only if window is in background)
+      // Step 16: Trigger callback FIRST to ensure UI changes are applied
+      onResult(responseText);
+
+      // Step 17: Show notification AFTER callback to ensure state is updated when user clicks notification
       try {
         notificationService.notifyGeminiInferenceCompleteIfHidden(prompt.title || 'Prompt');
       } catch (e) {
         console.warn('Failed to show Gemini inference notification:', e);
       }
-
-      // Step 17: Trigger callback
-      onResult(responseText);
 
       return responseText;
     } catch (err) {
