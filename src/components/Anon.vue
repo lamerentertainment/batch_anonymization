@@ -945,7 +945,7 @@
         </div>
         <prompt-library-modal
             v-if="hasGeminiKey && showPromptLibrary"
-            :context-prefix="buildContextPrefix()"
+            :active-case="activeCase"
             @close="showPromptLibrary = false"
             @insert="handlePromptInsert"
             @inferResult="handlePromptInferred"

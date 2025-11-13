@@ -61,6 +61,60 @@
 
             <div class="flex gap-2 items-center">
               <input class="input input-bordered input-xs flex-1" placeholder="comma,separated,tags" :value="(p.tags || []).join(',')" @change="updateTags(p, $event.target.value)" />
+
+              <!-- Context Button -->
+              <div class="dropdown dropdown-end relative">
+                <button
+                  @click="toggleContextMenu(p.id)"
+                  class="btn btn-xs"
+                  :class="{ 'btn-active': isContextEnabled(p.id), 'btn-ghost': !isContextEnabled(p.id) }"
+                  :disabled="!activeCase"
+                  :title="activeCase ? (isContextEnabled(p.id) ? `${getContextDocumentCount(p.id)} Dokument(e) als Kontext` : 'Dokumente als Kontext hinzufügen') : 'Kein aktiver Fall geladen'"
+                >
+                  <DocumentTextIcon class="w-3 h-3" />
+                  <span v-if="getContextDocumentCount(p.id) > 0" class="badge badge-xs ml-1">{{ getContextDocumentCount(p.id) }}</span>
+                </button>
+
+                <!-- Context Dropdown Menu -->
+                <div v-if="showContextMenu[p.id]" class="dropdown-content menu bg-base-200 rounded-box z-50 w-80 p-4 shadow-xl absolute right-0 top-full mt-1">
+                  <h3 class="font-bold mb-2 text-sm">Kontext-Dokumente auswählen</h3>
+
+                  <!-- Falls kein aktiver Case -->
+                  <div v-if="!activeCase" class="text-xs text-base-content/70">
+                    Kein aktiver Fall geladen
+                  </div>
+
+                  <!-- Falls keine Dokumente -->
+                  <div v-else-if="availableDocuments.length === 0" class="text-xs text-base-content/70">
+                    Keine Dokumente im Fall vorhanden
+                  </div>
+
+                  <!-- Dokumenten-Liste -->
+                  <div v-else class="space-y-2 max-h-64 overflow-y-auto">
+                    <label v-for="doc in availableDocuments" :key="doc.id" class="flex items-center gap-2 cursor-pointer hover:bg-base-300 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-xs"
+                        :checked="(selectedDocumentsForContext[p.id] || []).includes(doc.id)"
+                        @change="toggleDocumentSelection(p.id, doc.id)"
+                      />
+                      <div class="flex-1">
+                        <div class="text-xs font-medium">{{ doc.name }}</div>
+                        <div class="text-[10px] text-base-content/50">{{ formatDate(doc.createdAt) }}</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="divider my-2"></div>
+
+                  <div class="flex gap-2">
+                    <button @click="selectAllDocuments(p.id)" class="btn btn-xs btn-ghost flex-1">Alle</button>
+                    <button @click="deselectAllDocuments(p.id)" class="btn btn-xs btn-ghost flex-1">Keine</button>
+                    <button @click="closeContextMenu(p.id)" class="btn btn-xs btn-primary flex-1">OK</button>
+                  </div>
+                </div>
+              </div>
+
               <button
                 class="btn btn-xs btn-warning gap-1"
                 :class="{ 'btn-disabled': isInferLocked || isPromptIncomplete(p) }"
@@ -119,20 +173,23 @@
 <script>
 import promptCache from '../utils/promptCache.js';
 import textBlockCache from '../utils/textBlockCache.js';
+import documentCache from '../utils/documentCache.js';
 import { parseTextBlockPlaceholders, injectTextBlocks, validateTextBlocks } from '../utils/textBlockParser.js';
 import notificationService from '../utils/notificationService.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
+import { DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 export default {
   name: 'PromptLibraryModal',
   components: {
-    LockClosedIcon
+    LockClosedIcon,
+    DocumentTextIcon
   },
   props: {
-    contextPrefix: {
-      type: String,
-      default: ''
+    activeCase: {
+      type: Object,
+      default: null
     }
   },
   emits: ['close', 'inferResult', 'toast'],
@@ -153,7 +210,11 @@ export default {
       scrollReviewCompleted: false,
       // Text block integration
       textBlocks: [],
-      selectedTextBlocks: {} // Map of promptId -> textBlockId for {{textblock}} placeholders
+      selectedTextBlocks: {}, // Map of promptId -> textBlockId for {{textblock}} placeholders
+      // Document Context for Inference
+      availableDocuments: [],
+      selectedDocumentsForContext: {}, // Map of promptId -> [docIds]
+      showContextMenu: {} // Map of promptId -> boolean
     };
   },
   computed: {
@@ -352,12 +413,15 @@ export default {
     async dup(p) { await promptCache.create({ title: p.title + ' (copy)', content: p.content, tags: Array.isArray(p.tags) ? [...p.tags] : [], favorite: !!p.favorite }); await this.refresh(); },
     async del(p) { if (confirm('Delete this prompt?')) { await promptCache.remove(p.id); await this.refresh(); } },
     async inferWithGemini(p) {
+      // Build context prefix for this specific prompt
+      const contextPrefix = this.buildContextPrefix(p.id);
+
       await geminiInferenceService.inferWithPrompt(p, {
         showToast: this.showToast.bind(this),
         onResult: (responseText) => this.$emit('inferResult', responseText),
         selectedTextBlocks: this.selectedTextBlocks,
         textBlocks: this.textBlocks,
-        contextPrefix: this.contextPrefix
+        contextPrefix: contextPrefix
       });
     },
     async exportAll() {
@@ -376,6 +440,133 @@ export default {
       const count = await promptCache.import(list);
       alert(`Imported ${count} prompts`);
       await this.refresh();
+    },
+    // Document Context Methods
+    async loadAvailableDocuments() {
+      if (!this.activeCase) {
+        this.availableDocuments = [];
+        return;
+      }
+
+      try {
+        this.availableDocuments = await documentCache.listByCase(this.activeCase.id);
+        console.log('[PromptLibrary] Loaded documents for context:', this.availableDocuments.length);
+      } catch (err) {
+        console.error('[PromptLibrary] Failed to load documents for context:', err);
+        this.availableDocuments = [];
+      }
+    },
+    loadContextSelection(promptId) {
+      if (!this.activeCase || !promptId) return [];
+
+      try {
+        const savedSelection = localStorage.getItem(`promptLibrary.contextDocuments.${promptId}.${this.activeCase.id}`);
+        if (savedSelection) {
+          const parsed = JSON.parse(savedSelection);
+          // Filter out documents that no longer exist
+          const validIds = this.availableDocuments.map(d => d.id);
+          return parsed.filter(id => validIds.includes(id));
+        }
+      } catch (err) {
+        console.error('[PromptLibrary] Failed to load context selection:', err);
+      }
+      return [];
+    },
+    toggleDocumentSelection(promptId, docId) {
+      if (!this.selectedDocumentsForContext[promptId]) {
+        this.$set(this.selectedDocumentsForContext, promptId, []);
+      }
+
+      const selected = this.selectedDocumentsForContext[promptId];
+      const index = selected.indexOf(docId);
+
+      if (index > -1) {
+        selected.splice(index, 1);
+      } else {
+        selected.push(docId);
+      }
+
+      this.saveContextSelection(promptId);
+    },
+    selectAllDocuments(promptId) {
+      this.$set(this.selectedDocumentsForContext, promptId, this.availableDocuments.map(d => d.id));
+      this.saveContextSelection(promptId);
+    },
+    deselectAllDocuments(promptId) {
+      this.$set(this.selectedDocumentsForContext, promptId, []);
+      this.saveContextSelection(promptId);
+    },
+    saveContextSelection(promptId) {
+      if (!this.activeCase || !promptId) return;
+
+      try {
+        const selection = this.selectedDocumentsForContext[promptId] || [];
+        localStorage.setItem(
+          `promptLibrary.contextDocuments.${promptId}.${this.activeCase.id}`,
+          JSON.stringify(selection)
+        );
+        console.log('[PromptLibrary] Context selection saved:', selection.length, 'documents for prompt', promptId);
+      } catch (err) {
+        console.error('[PromptLibrary] Failed to save context selection:', err);
+      }
+    },
+    toggleContextMenu(promptId) {
+      const currentState = this.showContextMenu[promptId] || false;
+      this.$set(this.showContextMenu, promptId, !currentState);
+
+      if (!currentState) {
+        // Opening menu, load documents if needed
+        if (this.availableDocuments.length === 0) {
+          this.loadAvailableDocuments();
+        }
+        // Load saved selection for this prompt
+        if (!this.selectedDocumentsForContext[promptId]) {
+          this.$set(this.selectedDocumentsForContext, promptId, this.loadContextSelection(promptId));
+        }
+      }
+    },
+    closeContextMenu(promptId) {
+      this.$set(this.showContextMenu, promptId, false);
+    },
+    buildContextPrefix(promptId) {
+      const selectedDocs = this.selectedDocumentsForContext[promptId] || [];
+
+      if (selectedDocs.length === 0) {
+        return '';
+      }
+
+      const docs = this.availableDocuments.filter(doc => selectedDocs.includes(doc.id));
+
+      if (docs.length === 0) {
+        return '';
+      }
+
+      let prefix = 'Nachfolgend erfolgt der Kontext der Aufgabe, welche dir am Ende dieses Prompts formuliert wird\n\n## Kontext\n\n';
+
+      docs.forEach(doc => {
+        prefix += `### ${doc.name}\n\n${doc.content}\n\n`;
+      });
+
+      return prefix;
+    },
+    isContextEnabled(promptId) {
+      const selected = this.selectedDocumentsForContext[promptId] || [];
+      return selected.length > 0;
+    },
+    getContextDocumentCount(promptId) {
+      const selected = this.selectedDocumentsForContext[promptId] || [];
+      return selected.length;
+    },
+    formatDate(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('de-DE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
   }
 };
