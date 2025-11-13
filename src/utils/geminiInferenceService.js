@@ -16,6 +16,7 @@ export default {
    * @param {Function} options.onResult - Callback when inference completes (responseText)
    * @param {Object} options.selectedTextBlocks - Map of promptId -> textBlockId for generic placeholders
    * @param {Array} options.textBlocks - Available text blocks (optional, will load if not provided)
+   * @param {String} options.contextPrefix - Optional context to prepend to the prompt (from documents)
    * @returns {Promise<string>} The Gemini response text
    */
   async inferWithPrompt(prompt, options = {}) {
@@ -23,7 +24,8 @@ export default {
       showToast = (msg) => console.log(msg),
       onResult = () => {},
       selectedTextBlocks = {},
-      textBlocks = null
+      textBlocks = null,
+      contextPrefix = ''
     } = options;
 
     try {
@@ -166,7 +168,14 @@ export default {
       }
 
       // Step 12: Build final prompt
-      const promptText = template.replaceAll('{{anontext}}', exported);
+      let promptText = template.replaceAll('{{anontext}}', exported);
+
+      // Step 12.5: Prepend context prefix if provided
+      if (contextPrefix && contextPrefix.trim()) {
+        promptText = contextPrefix + '\n\n---\n\n' + promptText;
+        console.log('[GeminiInference] Context prefix added, length:', contextPrefix.length);
+      }
+
       console.log('[GeminiInference] Final prompt length:', promptText.length);
 
       // Step 13: Check API key

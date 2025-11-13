@@ -393,6 +393,59 @@
                         <!-- Quick Infer Combo Button -->
                         <div v-if="hasGeminiKey && mode === 'anonymize'" class="dropdown dropdown-end">
                             <div class="join">
+                                <!-- Context Button -->
+                                <div class="dropdown dropdown-end join-item">
+                                    <button
+                                        @click="toggleContextMenu"
+                                        class="btn btn-sm join-item"
+                                        :class="{ 'btn-active': isContextEnabled, 'btn-ghost': !isContextEnabled }"
+                                        :disabled="!activeCase"
+                                        :title="activeCase ? (isContextEnabled ? `${selectedDocumentsForContext.length} Dokument(e) als Kontext` : 'Dokumente als Kontext hinzufügen') : 'Kein aktiver Fall geladen'"
+                                    >
+                                        <DocumentTextIcon class="w-4 h-4" />
+                                        <span v-if="selectedDocumentsForContext.length > 0" class="badge badge-xs ml-1">{{ selectedDocumentsForContext.length }}</span>
+                                    </button>
+
+                                    <!-- Context Dropdown Menu -->
+                                    <div v-if="showContextMenu" class="dropdown-content menu bg-base-200 rounded-box z-50 w-80 p-4 shadow-xl mt-1">
+                                        <h3 class="font-bold mb-2">Kontext-Dokumente auswählen</h3>
+
+                                        <!-- Falls kein aktiver Case -->
+                                        <div v-if="!activeCase" class="text-sm text-base-content/70">
+                                            Kein aktiver Fall geladen
+                                        </div>
+
+                                        <!-- Falls keine Dokumente -->
+                                        <div v-else-if="availableDocuments.length === 0" class="text-sm text-base-content/70">
+                                            Keine Dokumente im Fall vorhanden
+                                        </div>
+
+                                        <!-- Dokumenten-Liste -->
+                                        <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+                                            <label v-for="doc in availableDocuments" :key="doc.id" class="flex items-center gap-2 cursor-pointer hover:bg-base-300 p-2 rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    class="checkbox checkbox-sm"
+                                                    :checked="selectedDocumentsForContext.includes(doc.id)"
+                                                    @change="toggleDocumentSelection(doc.id)"
+                                                />
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-medium">{{ doc.name }}</div>
+                                                    <div class="text-xs text-base-content/50">{{ formatDate(doc.createdAt) }}</div>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <div class="divider my-2"></div>
+
+                                        <div class="flex gap-2">
+                                            <button @click="selectAllDocuments" class="btn btn-xs btn-ghost flex-1">Alle</button>
+                                            <button @click="deselectAllDocuments" class="btn btn-xs btn-ghost flex-1">Keine</button>
+                                            <button @click="closeContextMenu" class="btn btn-xs btn-primary flex-1">OK</button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Main Quick Infer Button -->
                                 <button
                                     @click="quickInfer"
@@ -893,6 +946,7 @@
         </div>
         <prompt-library-modal
             v-if="hasGeminiKey && showPromptLibrary"
+            :context-prefix="buildContextPrefix()"
             @close="showPromptLibrary = false"
             @insert="handlePromptInsert"
             @inferResult="handlePromptInferred"
@@ -969,7 +1023,8 @@ import {
     XMarkIcon,
     ListBulletIcon,
     FolderIcon,
-    DocumentPlusIcon
+    DocumentPlusIcon,
+    DocumentTextIcon
 } from '@heroicons/vue/24/outline';
 
 // Custom SigmaIcon for Σ (not in heroicons, so define as a functional component)
@@ -1115,6 +1170,11 @@ export default {
             // Active case
             activeCase: null,
             autoSyncCase: false, // Auto-sync entities to case after anonymization
+            // Document Context for Inference
+            showContextMenu: false,                        // Dropdown-Menü sichtbar?
+            availableDocuments: [],                        // Alle Dokumente des aktiven Cases
+            selectedDocumentsForContext: [],               // IDs der ausgewählten Dokumente (persistent)
+            isContextEnabled: false,                       // Wird Kontext bei Inference verwendet?
             // Quick Infer feature
             availablePrompts: [],
             selectedPromptId: null,
@@ -2072,6 +2132,9 @@ export default {
             console.log('[Anon] Quick Infer with prompt:', prompt.title);
 
             try {
+                // Build context prefix from selected documents
+                const contextPrefix = this.buildContextPrefix();
+
                 await geminiInferenceService.inferWithPrompt(prompt, {
                     showToast: this.showToast.bind(this),
                     onResult: (responseText) => {
@@ -2079,7 +2142,8 @@ export default {
                         this.handlePromptInferred(responseText);
                     },
                     selectedTextBlocks: this.selectedTextBlocks,
-                    textBlocks: this.textBlocks
+                    textBlocks: this.textBlocks,
+                    contextPrefix: contextPrefix
                 });
             } catch (e) {
                 console.error('[Anon] Quick Infer error:', e);
@@ -2776,6 +2840,110 @@ export default {
                 this.showToast('Fall geschlossen');
             }
         },
+        // Document Context for Inference
+        async loadAvailableDocuments() {
+            if (!this.activeCase) {
+                this.availableDocuments = [];
+                this.selectedDocumentsForContext = [];
+                this.isContextEnabled = false;
+                return;
+            }
+
+            try {
+                this.availableDocuments = await documentCache.listByCase(this.activeCase.id);
+                console.log('[Anon] Loaded documents for context:', this.availableDocuments.length);
+
+                // Gespeicherte Auswahl laden
+                const savedSelection = localStorage.getItem(`anon.contextDocuments.${this.activeCase.id}`);
+                if (savedSelection) {
+                    this.selectedDocumentsForContext = JSON.parse(savedSelection);
+                    // Filter out documents that no longer exist
+                    const validIds = this.availableDocuments.map(d => d.id);
+                    this.selectedDocumentsForContext = this.selectedDocumentsForContext.filter(id => validIds.includes(id));
+                } else {
+                    this.selectedDocumentsForContext = [];
+                }
+
+                this.isContextEnabled = this.selectedDocumentsForContext.length > 0;
+            } catch (err) {
+                console.error('[Anon] Failed to load documents for context:', err);
+                this.availableDocuments = [];
+                this.selectedDocumentsForContext = [];
+                this.isContextEnabled = false;
+            }
+        },
+        toggleDocumentSelection(docId) {
+            const index = this.selectedDocumentsForContext.indexOf(docId);
+            if (index > -1) {
+                this.selectedDocumentsForContext.splice(index, 1);
+            } else {
+                this.selectedDocumentsForContext.push(docId);
+            }
+            this.saveContextSelection();
+        },
+        selectAllDocuments() {
+            this.selectedDocumentsForContext = this.availableDocuments.map(d => d.id);
+            this.saveContextSelection();
+        },
+        deselectAllDocuments() {
+            this.selectedDocumentsForContext = [];
+            this.saveContextSelection();
+        },
+        saveContextSelection() {
+            if (!this.activeCase) return;
+
+            try {
+                localStorage.setItem(
+                    `anon.contextDocuments.${this.activeCase.id}`,
+                    JSON.stringify(this.selectedDocumentsForContext)
+                );
+                this.isContextEnabled = this.selectedDocumentsForContext.length > 0;
+                console.log('[Anon] Context selection saved:', this.selectedDocumentsForContext.length, 'documents');
+            } catch (err) {
+                console.error('[Anon] Failed to save context selection:', err);
+            }
+        },
+        toggleContextMenu() {
+            this.showContextMenu = !this.showContextMenu;
+            if (this.showContextMenu) {
+                this.loadAvailableDocuments(); // Refresh
+            }
+        },
+        closeContextMenu() {
+            this.showContextMenu = false;
+        },
+        buildContextPrefix() {
+            if (!this.isContextEnabled || this.selectedDocumentsForContext.length === 0) {
+                return '';
+            }
+
+            const selectedDocs = this.availableDocuments.filter(
+                doc => this.selectedDocumentsForContext.includes(doc.id)
+            );
+
+            if (selectedDocs.length === 0) {
+                return '';
+            }
+
+            let prefix = 'Nachfolgend erfolgt der Kontext der Aufgabe, welche dir am Ende dieses Prompts formuliert wird\n\n## Kontext\n\n';
+
+            selectedDocs.forEach(doc => {
+                prefix += `### ${doc.name}\n\n${doc.content}\n\n`;
+            });
+
+            return prefix;
+        },
+        formatDate(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
         handlePromptInsert(content) {
             const sep = this.text && !this.text.endsWith('\n') ? '\n\n' : '';
             this.text = (this.text || '') + sep + content;
@@ -3297,6 +3465,17 @@ export default {
                     this.loadCachedTextBlockSelections();
                 });
             }
+        },
+        // Reload available documents when active case changes
+        activeCase(newCase, oldCase) {
+            if (newCase && newCase.id !== oldCase?.id) {
+                this.loadAvailableDocuments();
+            } else if (!newCase) {
+                // Case closed, reset context
+                this.availableDocuments = [];
+                this.selectedDocumentsForContext = [];
+                this.isContextEnabled = false;
+            }
         }
     },
     components: {
@@ -3312,6 +3491,7 @@ export default {
         ListBulletIcon,
         FolderIcon,
         DocumentPlusIcon,
+        DocumentTextIcon,
         PromptLibraryModal,
         TextBlockLibraryModal,
         CaseManagementModal
