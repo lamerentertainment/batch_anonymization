@@ -399,8 +399,8 @@
             <li>Klicken Sie auf das <strong>Listen-Symbol</strong> (☰) oben rechts</li>
             <li>Klicken Sie auf <strong>"Neuer Prompt"</strong></li>
             <li>Geben Sie einen Namen und Prompt-Text ein</li>
-            <li>Optional: Fügen Sie Textbausteine ein mit <code>{{'{{'}}textblock:ID{{'}}'}}</code></li>
-            <li>Optional: Verwenden Sie <code>{{'{{'}}anontext{{'}}'}}</code> als Platzhalter für den Output-Text</li>
+            <li>Optional: Fügen Sie Textbausteine ein mit <code>&lbrace;&lbrace;textblock:ID&rbrace;&rbrace;</code></li>
+            <li>Optional: Verwenden Sie <code>&lbrace;&lbrace;anontext&rbrace;&rbrace;</code> als Platzhalter für den Output-Text</li>
             <li>Klicken Sie auf <strong>"Speichern"</strong></li>
           </ol>
 
@@ -448,10 +448,10 @@
             <div class="card-body">
               <h4 class="font-semibold">Beispiele für Regex-Patterns:</h4>
               <ul class="list-disc list-inside text-sm space-y-1">
-                <li><strong>Telefonnummern:</strong> <code>\+?[0-9]{{'{'}}{1,4}}[\s\-]?[0-9]{{'{'}}{3,4}}[\s\-]?[0-9]{{'{'}}{4,}}</code></li>
-                <li><strong>E-Mail:</strong> <code>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{{'{'}}{2,}}</code></li>
-                <li><strong>Kundennummern:</strong> <code>KD-\d{{'{'}}{6}}</code></li>
-                <li><strong>IBANs:</strong> <code>[A-Z]{{'{'}}{2}}\d{{'{'}}{2}}[\s]?\d{{'{'}}{4}}[\s]?\d{{'{'}}{4}}[\s]?\d{{'{'}}{4}}[\s]?\d{{'{'}}{4}}</code></li>
+                <li><strong>Telefonnummern:</strong> <code>\+?[0-9]&lbrace;1,4&rbrace;[\s\-]?[0-9]&lbrace;3,4&rbrace;[\s\-]?[0-9]&lbrace;4,&rbrace;</code></li>
+                <li><strong>E-Mail:</strong> <code>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]&lbrace;2,&rbrace;</code></li>
+                <li><strong>Kundennummern:</strong> <code>KD-\d&lbrace;6&rbrace;</code></li>
+                <li><strong>IBANs:</strong> <code>[A-Z]&lbrace;2&rbrace;\d&lbrace;2&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;</code></li>
               </ul>
             </div>
           </div>
