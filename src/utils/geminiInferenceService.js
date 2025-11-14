@@ -17,6 +17,7 @@ export default {
    * @param {Object} options.selectedTextBlocks - Map of promptId -> textBlockId for generic placeholders
    * @param {Array} options.textBlocks - Available text blocks (optional, will load if not provided)
    * @param {String} options.contextPrefix - Optional context to prepend to the prompt (from documents)
+   * @param {Boolean} options.requireAnontext - Whether to require {{anontext}} placeholder (default: true)
    * @returns {Promise<string>} The Gemini response text
    */
   async inferWithPrompt(prompt, options = {}) {
@@ -25,12 +26,16 @@ export default {
       onResult = () => {},
       selectedTextBlocks = {},
       textBlocks = null,
-      contextPrefix = ''
+      contextPrefix = '',
+      requireAnontext = true
     } = options;
 
     try {
       let template = (prompt.content || '').toString();
-      if (!template.includes('{{anontext}}')) {
+
+      // Check if {{anontext}} is required and present
+      const hasAnontext = template.includes('{{anontext}}');
+      if (requireAnontext && !hasAnontext) {
         showToast('Prompt requires {{anontext}} placeholder.');
         return '';
       }
@@ -99,76 +104,79 @@ export default {
         textBlockCache.markUsed(block.id).catch(e => console.warn('Failed to mark text block as used:', e));
       }
 
-      // Step 9: Get anonymized text
-      showToast('Reading anonymized text…');
+      // Step 9: Get anonymized text (only if {{anontext}} is present)
       let exported = '';
       let source = 'current';
-      try {
-        exported = localStorage.getItem('anon.currentOutputText') || '';
-        if (!exported) {
-          exported = localStorage.getItem('anon.lastExportText') || '';
-          source = 'exported';
+
+      if (hasAnontext) {
+        showToast('Reading anonymized text…');
+        try {
+          exported = localStorage.getItem('anon.currentOutputText') || '';
+          if (!exported) {
+            exported = localStorage.getItem('anon.lastExportText') || '';
+            source = 'exported';
+          }
+        } catch (e) {
+          console.warn('Accessing localStorage failed:', e);
+          showToast('Cannot access anonymized text.', { type: 'error', detail: String(e && (e.stack || e.message || e)) });
+          return '';
         }
-      } catch (e) {
-        console.warn('Accessing localStorage failed:', e);
-        showToast('Cannot access anonymized text.', { type: 'error', detail: String(e && (e.stack || e.message || e)) });
-        return '';
-      }
-      if (!exported) {
-        const lastAt = Number(localStorage.getItem('anon.currentUpdatedAt') || localStorage.getItem('anon.lastExportAt') || 0);
-        const lastInfo = lastAt ? ` Last update at: ${new Date(lastAt).toLocaleString()}` : '';
-        showToast('No anonymized text available. Please add text and entities under Anonymisieren first.', { type: 'error', detail: 'No current anonymized output found.' + lastInfo });
-        return '';
-      }
+        if (!exported) {
+          const lastAt = Number(localStorage.getItem('anon.currentUpdatedAt') || localStorage.getItem('anon.lastExportAt') || 0);
+          const lastInfo = lastAt ? ` Last update at: ${new Date(lastAt).toLocaleString()}` : '';
+          showToast('No anonymized text available. Please add text and entities under Anonymisieren first.', { type: 'error', detail: 'No current anonymized output found.' + lastInfo });
+          return '';
+        }
 
-      // Step 10: Security check - ensure anonymization actually happened
-      let entitiesCount = 0;
-      let hasPlaceholderFlag = '';
-      let exportMode = '';
-      try {
-        entitiesCount = Number(localStorage.getItem('anon.currentEntitiesCount') || localStorage.getItem('anon.lastExportEntitiesCount') || '0');
-        hasPlaceholderFlag = String(localStorage.getItem('anon.currentHasPlaceholder') || localStorage.getItem('anon.lastExportHasPlaceholder') || '');
-        exportMode = String(localStorage.getItem('anon.currentMode') || localStorage.getItem('anon.lastExportMode') || '');
-      } catch (e) {
-        // Non-fatal, we'll still compute a direct regex check below
-      }
-      const hasPlaceholderByRegex = /\[\d+_[^\]]+\]/.test(exported);
-      const hasPlaceholder = (hasPlaceholderFlag === 'true') || hasPlaceholderByRegex;
+        // Step 10: Security check - ensure anonymization actually happened
+        let entitiesCount = 0;
+        let hasPlaceholderFlag = '';
+        let exportMode = '';
+        try {
+          entitiesCount = Number(localStorage.getItem('anon.currentEntitiesCount') || localStorage.getItem('anon.lastExportEntitiesCount') || '0');
+          hasPlaceholderFlag = String(localStorage.getItem('anon.currentHasPlaceholder') || localStorage.getItem('anon.lastExportHasPlaceholder') || '');
+          exportMode = String(localStorage.getItem('anon.currentMode') || localStorage.getItem('anon.lastExportMode') || '');
+        } catch (e) {
+          // Non-fatal, we'll still compute a direct regex check below
+        }
+        const hasPlaceholderByRegex = /\[\d+_[^\]]+\]/.test(exported);
+        const hasPlaceholder = (hasPlaceholderFlag === 'true') || hasPlaceholderByRegex;
 
-      if (entitiesCount <= 0 || !hasPlaceholder) {
-        const details = [
-          `entitiesCount=${entitiesCount}`,
-          `hasPlaceholder(meta)=${hasPlaceholderFlag}`,
-          `hasPlaceholder(regex)=${hasPlaceholderByRegex}`,
-          exportMode ? `exportMode=${exportMode}` : null,
-          `source=${source}`,
-        ].filter(Boolean).join('\n');
-        showToast('Inference blocked: text appears not anonymized.', {
-          type: 'error',
-          detail: `For safety, Gemini inference requires at least one entity and at least one anonymization placeholder in the anonymized text.\n\n${details}`,
-        });
-        return '';
-      }
-
-      // Step 11: Check scroll review status (Restricted Mode feature)
-      try {
-        const reviewRequired = localStorage.getItem('anon.currentScrollReviewRequired') === 'true';
-        const reviewCompleted = localStorage.getItem('anon.currentScrollReviewCompleted') === 'true';
-
-        if (reviewRequired && !reviewCompleted) {
-          showToast('Please review anonymized text by scrolling through it first.', {
+        if (entitiesCount <= 0 || !hasPlaceholder) {
+          const details = [
+            `entitiesCount=${entitiesCount}`,
+            `hasPlaceholder(meta)=${hasPlaceholderFlag}`,
+            `hasPlaceholder(regex)=${hasPlaceholderByRegex}`,
+            exportMode ? `exportMode=${exportMode}` : null,
+            `source=${source}`,
+          ].filter(Boolean).join('\n');
+          showToast('Inference blocked: text appears not anonymized.', {
             type: 'error',
-            detail: 'For safety in Restricted Mode, you must review the entire anonymized text by scrolling through it before running prompts. This ensures you have verified all entities were correctly anonymized.'
+            detail: `For safety, Gemini inference requires at least one entity and at least one anonymization placeholder in the anonymized text.\n\n${details}`,
           });
           return '';
         }
-      } catch (e) {
-        // Non-fatal, continue if localStorage access fails
-        console.warn('Failed to check scroll review status:', e);
+
+        // Step 11: Check scroll review status (Restricted Mode feature)
+        try {
+          const reviewRequired = localStorage.getItem('anon.currentScrollReviewRequired') === 'true';
+          const reviewCompleted = localStorage.getItem('anon.currentScrollReviewCompleted') === 'true';
+
+          if (reviewRequired && !reviewCompleted) {
+            showToast('Please review anonymized text by scrolling through it first.', {
+              type: 'error',
+              detail: 'For safety in Restricted Mode, you must review the entire anonymized text by scrolling through it before running prompts. This ensures you have verified all entities were correctly anonymized.'
+            });
+            return '';
+          }
+        } catch (e) {
+          // Non-fatal, continue if localStorage access fails
+          console.warn('Failed to check scroll review status:', e);
+        }
       }
 
       // Step 12: Build final prompt
-      let promptText = template.replaceAll('{{anontext}}', exported);
+      let promptText = hasAnontext ? template.replaceAll('{{anontext}}', exported) : template;
 
       // Step 12.5: Prepend context prefix if provided
       if (contextPrefix && contextPrefix.trim()) {

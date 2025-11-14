@@ -402,7 +402,8 @@ export default {
         },
         selectedTextBlocks: this.selectedTextBlocks,
         textBlocks: this.textBlocks,
-        contextPrefix: contextPrefix
+        contextPrefix: contextPrefix,
+        requireAnontext: false // Allow inference without {{anontext}} placeholder
       });
     },
     buildContextPrefix() {
@@ -492,26 +493,30 @@ export default {
         // Step 4: Inject text blocks into template
         template = injectTextBlocks(template, taggedBlocks, selectedBlock);
 
-        // Step 5: Get anonymized text
+        // Step 5: Get anonymized text (only if {{anontext}} is present)
+        const hasAnontext = template.includes('{{anontext}}');
         let exported = '';
-        try {
-          exported = localStorage.getItem('anon.currentOutputText') || '';
-          if (!exported) {
-            exported = localStorage.getItem('anon.lastExportText') || '';
+
+        if (hasAnontext) {
+          try {
+            exported = localStorage.getItem('anon.currentOutputText') || '';
+            if (!exported) {
+              exported = localStorage.getItem('anon.lastExportText') || '';
+            }
+          } catch (e) {
+            console.warn('Accessing localStorage failed:', e);
+            this.showToast('Kein anonymisierter Text verfügbar.', { type: 'error' });
+            return;
           }
-        } catch (e) {
-          console.warn('Accessing localStorage failed:', e);
-          this.showToast('Kein anonymisierter Text verfügbar.', { type: 'error' });
-          return;
+
+          if (!exported) {
+            this.showToast('Kein anonymisierter Text verfügbar. Bitte erstellen Sie zuerst einen anonymisierten Text.', { type: 'error' });
+            return;
+          }
         }
 
-        if (!exported) {
-          this.showToast('Kein anonymisierter Text verfügbar. Bitte erstellen Sie zuerst einen anonymisierten Text.', { type: 'error' });
-          return;
-        }
-
-        // Step 6: Replace {{anontext}} placeholder
-        let fullPrompt = template.replaceAll('{{anontext}}', exported);
+        // Step 6: Replace {{anontext}} placeholder (if present)
+        let fullPrompt = hasAnontext ? template.replaceAll('{{anontext}}', exported) : template;
 
         // Step 7: Prepend context prefix if provided
         const contextPrefix = this.buildContextPrefix();
@@ -567,26 +572,30 @@ export default {
         // Step 4: Inject text blocks into template
         template = injectTextBlocks(template, taggedBlocks, selectedBlock);
 
-        // Step 5: Get anonymized text
+        // Step 5: Get anonymized text (only if {{anontext}} is present)
+        const hasAnontext = template.includes('{{anontext}}');
         let exported = '';
-        try {
-          exported = localStorage.getItem('anon.currentOutputText') || '';
-          if (!exported) {
-            exported = localStorage.getItem('anon.lastExportText') || '';
+
+        if (hasAnontext) {
+          try {
+            exported = localStorage.getItem('anon.currentOutputText') || '';
+            if (!exported) {
+              exported = localStorage.getItem('anon.lastExportText') || '';
+            }
+          } catch (e) {
+            console.warn('Accessing localStorage failed:', e);
+            this.showToast('Kein anonymisierter Text verfügbar.', { type: 'error' });
+            return;
           }
-        } catch (e) {
-          console.warn('Accessing localStorage failed:', e);
-          this.showToast('Kein anonymisierter Text verfügbar.', { type: 'error' });
-          return;
+
+          if (!exported) {
+            this.showToast('Kein anonymisierter Text verfügbar. Bitte erstellen Sie zuerst einen anonymisierten Text.', { type: 'error' });
+            return;
+          }
         }
 
-        if (!exported) {
-          this.showToast('Kein anonymisierter Text verfügbar. Bitte erstellen Sie zuerst einen anonymisierten Text.', { type: 'error' });
-          return;
-        }
-
-        // Step 6: Replace {{anontext}} placeholder
-        let fullPrompt = template.replaceAll('{{anontext}}', exported);
+        // Step 6: Replace {{anontext}} placeholder (if present)
+        let fullPrompt = hasAnontext ? template.replaceAll('{{anontext}}', exported) : template;
 
         // Step 7: Prepend context prefix if provided
         const contextPrefix = this.buildContextPrefix();
