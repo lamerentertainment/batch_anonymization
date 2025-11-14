@@ -91,6 +91,13 @@
               >
                 <Cog6ToothIcon class="h-5 w-5"/>
               </button>
+              <button
+                  @click="openUserGuide"
+                  class="btn btn-ghost btn-xs"
+                  title="Benutzeranleitung öffnen"
+              >
+                <QuestionMarkCircleIcon class="h-5 w-5"/>
+              </button>
             </div>
             <div class="flex gap-2 flex-wrap">
               <!-- <button
@@ -1008,6 +1015,10 @@
             @loadCase="onLoadCase"
             @loadDocument="onLoadDocument"
         />
+        <user-guide-modal
+            v-if="showUserGuide"
+            @close="showUserGuide = false"
+        />
         <!-- Enhanced Toast (same as PromptLibraryModal) -->
         <div v-if="toastVisible" class="toast toast-center fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div
@@ -1045,6 +1056,7 @@ import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPre
 import PromptLibraryModal from './PromptLibraryModal.vue';
 import TextBlockLibraryModal from './TextBlockLibraryModal.vue';
 import CaseManagementModal from './CaseManagementModal.vue';
+import UserGuideModal from './UserGuideModal.vue';
 import securityManager from '../utils/securityManager.js';
 import notificationService from '../utils/notificationService.js';
 import promptCache from '../utils/promptCache.js';
@@ -1068,7 +1080,8 @@ import {
     ListBulletIcon,
     FolderIcon,
     DocumentPlusIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    QuestionMarkCircleIcon
 } from '@heroicons/vue/24/outline';
 
 // Custom SigmaIcon for Σ (not in heroicons, so define as a functional component)
@@ -1211,6 +1224,8 @@ export default {
             showTextBlockLibrary: false,
             // Case Management modal
             showCaseManagementModal: false,
+            // User Guide modal
+            showUserGuide: false,
             // Active case
             activeCase: null,
             autoSyncCase: false, // Auto-sync entities to case after anonymization
@@ -2817,6 +2832,9 @@ export default {
         openCaseManagement() {
             this.showCaseManagementModal = true;
         },
+        openUserGuide() {
+            this.showUserGuide = true;
+        },
         async onLoadCase(caseData) {
             // Confirm if entities exist
             if (this.entities.length > 0) {
@@ -3643,9 +3661,11 @@ export default {
         FolderIcon,
         DocumentPlusIcon,
         DocumentTextIcon,
+        QuestionMarkCircleIcon,
         PromptLibraryModal,
         TextBlockLibraryModal,
-        CaseManagementModal
+        CaseManagementModal,
+        UserGuideModal
     },
 }
 </script>
