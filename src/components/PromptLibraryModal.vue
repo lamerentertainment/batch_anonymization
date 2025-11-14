@@ -14,7 +14,8 @@
 
       <div class="mt-2 text-sm text-base-content/70">
         Sämtliche Prompts müssen einen <code v-pre>{{anontext}}</code> Platzhalter aufweisen, worin vor der LLM-Inferenz automatisch
-        der anonymiserte Text eingefügt wird.
+        der anonymiserte Text eingefügt wird. Textbausteine können mit <code v-pre>{{textblock}}</code> oder <code v-pre>
+        {{textblock:tag}}</code> in den Prompt eingebaut werden.
       </div>
 
       <!-- Scroll Review Warning (Restricted Mode) -->
