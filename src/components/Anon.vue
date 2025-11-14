@@ -360,6 +360,51 @@
                             </h2>
                         </div>
                         <div class="flex gap-2">
+                            <!-- History Dropdown (only in pseudonymize mode) -->
+                            <div v-if="mode === 'pseudonymize'" class="dropdown dropdown-end">
+                                <button
+                                    @click="showHistoryDropdown = !showHistoryDropdown"
+                                    class="btn btn-ghost btn-sm"
+                                    :disabled="pseudonymizeHistory.length === 0"
+                                    :title="pseudonymizeHistory.length > 0 ? `${pseudonymizeHistory.length} Verlaufseinträge` : 'Kein Verlauf vorhanden'"
+                                >
+                                    📜 Verlauf
+                                    <span v-if="pseudonymizeHistory.length > 0" class="badge badge-xs ml-1">{{ pseudonymizeHistory.length }}</span>
+                                </button>
+
+                                <!-- History Dropdown Menu -->
+                                <div v-if="showHistoryDropdown" class="dropdown-content menu bg-base-200 rounded-box z-50 w-96 p-4 shadow-xl mt-1">
+                                    <h3 class="font-bold mb-2">Verlauf wiederherstellen</h3>
+
+                                    <div v-if="pseudonymizeHistory.length === 0" class="text-sm text-base-content/70">
+                                        Kein Verlauf vorhanden
+                                    </div>
+
+                                    <div v-else class="space-y-2">
+                                        <button
+                                            v-for="(entry, index) in pseudonymizeHistory"
+                                            :key="entry.timestamp"
+                                            @click="restoreFromHistory(index)"
+                                            class="w-full text-left p-3 rounded hover:bg-base-300 border border-base-300 transition"
+                                        >
+                                            <div class="text-xs text-base-content/50 mb-1">
+                                                {{ formatHistoryTimestamp(entry.timestamp) }}
+                                            </div>
+                                            <div class="text-sm font-medium">
+                                                "{{ getHistoryPreview(entry.outputText) }}"
+                                            </div>
+                                            <div class="text-xs text-base-content/50 mt-1">
+                                                {{ entry.entities.length }} Entitäten
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div class="divider my-2"></div>
+
+                                    <button @click="showHistoryDropdown = false" class="btn btn-xs btn-ghost w-full">Schließen</button>
+                                </div>
+                            </div>
+
                             <button
                                 @click="copy"
                                 class="btn btn-success btn-sm"
@@ -1196,6 +1241,9 @@ export default {
             },
             // Synchronized scrolling
             _isSyncScrolling: false,      // Prevent infinite scroll loops
+            // Pseudonymize History (last 3 de-anonymization outputs)
+            pseudonymizeHistory: [],      // Array of {timestamp, inputText, entities, outputText}
+            showHistoryDropdown: false,   // History dropdown visibility
             // Notification settings
             notificationSettings: {
                 enabled: true,
@@ -1227,6 +1275,9 @@ export default {
 
         // Load entity presets list
         this.refreshPresets();
+
+        // Load pseudonymize history
+        this.loadPseudonymizeHistory();
 
         // Persist current anonymized output to localStorage so other components (e.g., PromptLibraryModal)
         // can access it without requiring the user to press "Text kopieren".
@@ -1536,9 +1587,110 @@ export default {
                 localStorage.setItem('anon.currentMode', this.mode || '');
                 // Also timestamp for reference
                 localStorage.setItem('anon.currentUpdatedAt', String(Date.now()));
+
+                // Save to pseudonymize history if in pseudonymize mode
+                if (this.mode === 'pseudonymize') {
+                    this.savePseudonymizeHistory();
+                }
             } catch (e) {
                 console.warn('Failed to persist current anon output:', e);
             }
+        },
+        // Save current pseudonymize state to history (last 3 entries)
+        savePseudonymizeHistory() {
+            try {
+                const outputText = this.anonymizedTextPlain || '';
+
+                // Only save if output has meaningful content (>20 chars)
+                if (outputText.trim().length < 20) {
+                    return;
+                }
+
+                // Check if identical to last entry (avoid duplicates)
+                if (this.pseudonymizeHistory.length > 0) {
+                    const lastEntry = this.pseudonymizeHistory[0];
+                    if (lastEntry.outputText === outputText) {
+                        return; // Skip duplicate
+                    }
+                }
+
+                // Create history entry
+                const entry = {
+                    timestamp: Date.now(),
+                    inputText: this.text || '',
+                    entities: JSON.parse(JSON.stringify(this.entities)), // Deep copy
+                    outputText: outputText
+                };
+
+                // Add to beginning of array
+                this.pseudonymizeHistory.unshift(entry);
+
+                // Keep only last 3 entries
+                if (this.pseudonymizeHistory.length > 3) {
+                    this.pseudonymizeHistory = this.pseudonymizeHistory.slice(0, 3);
+                }
+
+                // Persist to localStorage
+                localStorage.setItem('anon.pseudonymizeHistory', JSON.stringify(this.pseudonymizeHistory));
+                console.log('[PseudonymizeHistory] Saved entry, total:', this.pseudonymizeHistory.length);
+            } catch (e) {
+                console.warn('Failed to save pseudonymize history:', e);
+            }
+        },
+        // Load pseudonymize history from localStorage
+        loadPseudonymizeHistory() {
+            try {
+                const stored = localStorage.getItem('anon.pseudonymizeHistory');
+                if (stored) {
+                    this.pseudonymizeHistory = JSON.parse(stored);
+                    console.log('[PseudonymizeHistory] Loaded', this.pseudonymizeHistory.length, 'entries');
+                }
+            } catch (e) {
+                console.warn('Failed to load pseudonymize history:', e);
+                this.pseudonymizeHistory = [];
+            }
+        },
+        // Restore a history entry
+        restoreFromHistory(index) {
+            try {
+                const entry = this.pseudonymizeHistory[index];
+                if (!entry) {
+                    console.warn('History entry not found at index', index);
+                    return;
+                }
+
+                // Restore state
+                this.text = entry.inputText;
+                this.entities = JSON.parse(JSON.stringify(entry.entities)); // Deep copy
+
+                // Close dropdown
+                this.showHistoryDropdown = false;
+
+                // Show confirmation
+                const timestamp = this.formatHistoryTimestamp(entry.timestamp);
+                this.showToast(`Verlauf wiederhergestellt (${timestamp})`, { type: 'success' });
+
+                console.log('[PseudonymizeHistory] Restored entry from', timestamp);
+            } catch (e) {
+                console.error('Failed to restore from history:', e);
+                this.showToast('Fehler beim Wiederherstellen des Verlaufs', { type: 'error' });
+            }
+        },
+        // Format timestamp for history display
+        formatHistoryTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}.${month}.${year} ${hours}:${minutes}`;
+        },
+        // Get preview text for history entry (first 50 chars)
+        getHistoryPreview(outputText) {
+            if (!outputText) return '(leer)';
+            const preview = outputText.trim().substring(0, 50);
+            return preview.length < outputText.trim().length ? preview + '...' : preview;
         },
         async initGliner() {
             // Check if we already have a cached instance for the selected model
