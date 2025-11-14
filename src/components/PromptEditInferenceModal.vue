@@ -77,6 +77,13 @@
       <div class="mt-4 flex gap-2 justify-end">
         <button class="btn btn-sm btn-ghost" @click="$emit('close')">Abbrechen</button>
         <button
+          class="btn btn-sm btn-outline gap-1"
+          @click="copyFullPromptToClipboard"
+          title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Zwischenablage kopieren"
+        >
+          📋 Volltext kopieren
+        </button>
+        <button
           class="btn btn-sm btn-warning gap-1"
           :class="{ 'btn-disabled': isInferLocked }"
           :disabled="isInferLocked"
@@ -120,6 +127,7 @@
 import textBlockCache from '../utils/textBlockCache.js';
 import documentCache from '../utils/documentCache.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
+import { parseTextBlockPlaceholders, injectTextBlocks, validateTextBlocks } from '../utils/textBlockParser.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
 
 export default {
@@ -351,6 +359,81 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
+    },
+    async copyFullPromptToClipboard() {
+      try {
+        let template = this.editedPromptContent || '';
+
+        // Step 1: Parse and inject text blocks
+        const { hasGeneric, tags } = parseTextBlockPlaceholders(template);
+        console.log('[PromptEditInferenceModal] hasGeneric:', hasGeneric, 'tags:', tags);
+
+        // Step 2: Load required text blocks
+        const taggedBlocks = await textBlockCache.getByTags(tags);
+        const validation = validateTextBlocks(tags, taggedBlocks);
+
+        if (!validation.valid) {
+          this.showToast(`Fehlende Textbausteine: ${validation.missingTags.join(', ')}`, { type: 'error' });
+          console.log('[PromptEditInferenceModal] Missing text blocks:', validation.missingTags);
+          return;
+        }
+
+        // Step 3: Get selected block for generic placeholder if needed
+        let selectedBlock = null;
+        if (hasGeneric) {
+          const selectedTextBlockId = this.selectedTextBlocks[this.prompt.id];
+          if (selectedTextBlockId) {
+            selectedBlock = await textBlockCache.getById(selectedTextBlockId);
+          }
+          if (!selectedBlock && hasGeneric) {
+            this.showToast('Bitte wählen Sie einen Textbaustein für {{textblock}} aus.', { type: 'error' });
+            return;
+          }
+        }
+
+        // Step 4: Inject text blocks into template
+        template = injectTextBlocks(template, taggedBlocks, selectedBlock);
+
+        // Step 5: Get anonymized text
+        let exported = '';
+        try {
+          exported = localStorage.getItem('anon.currentOutputText') || '';
+          if (!exported) {
+            exported = localStorage.getItem('anon.lastExportText') || '';
+          }
+        } catch (e) {
+          console.warn('Accessing localStorage failed:', e);
+          this.showToast('Kein anonymisierter Text verfügbar.', { type: 'error' });
+          return;
+        }
+
+        if (!exported) {
+          this.showToast('Kein anonymisierter Text verfügbar. Bitte erstellen Sie zuerst einen anonymisierten Text.', { type: 'error' });
+          return;
+        }
+
+        // Step 6: Replace {{anontext}} placeholder
+        let fullPrompt = template.replaceAll('{{anontext}}', exported);
+
+        // Step 7: Prepend context prefix if provided
+        const contextPrefix = this.buildContextPrefix();
+        if (contextPrefix && contextPrefix.trim()) {
+          fullPrompt = contextPrefix + '\n\n---\n\n' + fullPrompt;
+          console.log('[PromptEditInferenceModal] Context prefix added, length:', contextPrefix.length);
+        }
+
+        // Step 8: Copy to clipboard
+        await navigator.clipboard.writeText(fullPrompt);
+
+        const charCount = fullPrompt.length;
+        const wordCount = fullPrompt.split(/\s+/).filter(w => w.length > 0).length;
+        this.showToast(`Volltext in Zwischenablage kopiert\n${charCount.toLocaleString()} Zeichen · ${wordCount.toLocaleString()} Wörter`, { duration: 3000 });
+
+        console.log('[PromptEditInferenceModal] Full prompt copied to clipboard, length:', charCount);
+      } catch (err) {
+        console.error('copyFullPromptToClipboard error:', err);
+        this.showToast('Fehler beim Kopieren in die Zwischenablage.', { type: 'error', detail: String(err && (err.stack || err.message || err)) });
+      }
     }
   }
 };
