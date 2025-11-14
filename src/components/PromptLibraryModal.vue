@@ -116,16 +116,27 @@
                 </div>
               </div>
 
-              <button
-                class="btn btn-xs btn-warning gap-1"
-                :class="{ 'btn-disabled': isInferLocked || isPromptIncomplete(p) }"
-                :disabled="isInferLocked || isPromptIncomplete(p)"
-                @click="inferWithGemini(p)"
-                :title="getInferButtonTitle(p)"
-              >
-                <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
-                Infer with Gemini
-              </button>
+              <div class="btn-group">
+                <button
+                  class="btn btn-xs btn-warning gap-1"
+                  :class="{ 'btn-disabled': isInferLocked || isPromptIncomplete(p) }"
+                  :disabled="isInferLocked || isPromptIncomplete(p)"
+                  @click="inferWithGemini(p)"
+                  :title="getInferButtonTitle(p)"
+                >
+                  <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
+                  Infer with Gemini
+                </button>
+                <button
+                  class="btn btn-xs btn-warning"
+                  :class="{ 'btn-disabled': isInferLocked || isPromptIncomplete(p) }"
+                  :disabled="isInferLocked || isPromptIncomplete(p)"
+                  @click="openEditInferenceModal(p)"
+                  title="Prompt bearbeiten und inferieren"
+                >
+                  ✎
+                </button>
+              </div>
               <button class="btn btn-xs btn-outline" @click="dup(p)">Duplicate</button>
               <button class="btn btn-xs btn-error" @click="del(p)">Delete</button>
             </div>
@@ -168,6 +179,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Inference Modal -->
+    <PromptEditInferenceModal
+      v-if="showEditInferenceModal && currentEditPrompt"
+      :prompt="currentEditPrompt"
+      :activeCase="activeCase"
+      :selectedTextBlocks="selectedTextBlocks"
+      :selectedDocumentsForContext="selectedDocumentsForContext"
+      @close="closeEditInferenceModal"
+      @inferResult="handleInferResult"
+    />
   </div>
 </template>
 
@@ -180,12 +202,14 @@ import notificationService from '../utils/notificationService.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
+import PromptEditInferenceModal from './PromptEditInferenceModal.vue';
 
 export default {
   name: 'PromptLibraryModal',
   components: {
     LockClosedIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    PromptEditInferenceModal
   },
   props: {
     activeCase: {
@@ -215,7 +239,10 @@ export default {
       // Document Context for Inference
       availableDocuments: [],
       selectedDocumentsForContext: {}, // Map of promptId -> [docIds]
-      showContextMenu: {} // Map of promptId -> boolean
+      showContextMenu: {}, // Map of promptId -> boolean
+      // Edit Inference Modal
+      showEditInferenceModal: false,
+      currentEditPrompt: null
     };
   },
   computed: {
@@ -568,6 +595,17 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
+    },
+    openEditInferenceModal(prompt) {
+      this.currentEditPrompt = prompt;
+      this.showEditInferenceModal = true;
+    },
+    closeEditInferenceModal() {
+      this.showEditInferenceModal = false;
+      this.currentEditPrompt = null;
+    },
+    handleInferResult(responseText) {
+      this.$emit('inferResult', responseText);
     }
   }
 };
