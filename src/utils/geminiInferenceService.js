@@ -247,9 +247,31 @@ export default {
       })
     });
     if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      console.warn('Gemini HTTP error', res.status, t);
-      showToast(`Gemini error ${res.status}`, { type: 'error' });
+      const responseBody = await res.text().catch(() => '');
+      console.warn('Gemini HTTP error', res.status, responseBody);
+
+      // Parse error details from response
+      let errorMessage = 'Unknown error';
+      let errorStatus = '';
+
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData?.error) {
+          errorMessage = errorData.error.message || errorMessage;
+          errorStatus = errorData.error.status || '';
+        }
+      } catch (parseErr) {
+        // If JSON parsing fails, use raw response body as message
+        errorMessage = responseBody || errorMessage;
+      }
+
+      // Build detailed error message
+      let toastMessage = `Gemini error ${res.status}: ${errorMessage}`;
+      if (errorStatus) {
+        toastMessage += ` [${errorStatus}]`;
+      }
+
+      showToast(toastMessage, { type: 'error' });
       return '';
     }
 
