@@ -27,10 +27,14 @@
         <div v-show="activeTab === 'intro'">
           <h2>Einführung</h2>
           <p>
-            Diese Webanwendung bietet als <strong>Hauptfunktionalität die lokale, KI-gestützte Anonymisierung</strong> und
-            <strong>De-Anonymisierung</strong> von sensiblen Texten. Sie ermöglicht die datenschutzkonforme Verarbeitung
-            anonymisierter Texte mit kommerziellen KI-Providern unter Einhaltung der <strong>DSGVO, des Amts- und
-            Berufsgeheimnisses</strong>.
+            Diese Anwendung bietet als Hauptfunktionalität die <strong>lokale, KI-gestützte Anonymisierung und
+            De-Anonymisierung</strong> von sensiblen Texten. Überzeugen Sie sich selbst davon, indem sie die Website
+            offline starten und die Anonymisierung ohne Internetverbindng vornehmen. Diese Funktionalität ermöglicht
+            die datenschutzkonforme Verarbeitung anonymisierter Texte mit kommerziellen KI-Providern unter
+            <strong>Einhaltung des Datenschutz, des Amts- und Berufsgeheimnisses</strong>. Die Anwendung ist in
+            ihren weiteren Funktionalitäten daher darauf ausgerichtet, anonymisierte Texte mithilfe kommerzieller
+            KI-Anbieter zur verarbeiten und deren Ergebnisse mit einer gespeicherten Liste anonymisierter Entitäten
+            automatisch zu de-anonymieren.
           </p>
 
           <h3>Zwei zentrale Funktionsbereiche</h3>
@@ -39,7 +43,7 @@
               <div class="card-body">
                 <h4 class="card-title text-base">🔒 Lokale Offline-Verarbeitung</h4>
                 <ul class="list-disc list-inside space-y-1 text-sm">
-                  <li><strong>Anonymisierung & De-Anonymisierung</strong> - komplett im Browser</li>
+                  <li><strong>Anonymisierung & De-Anonymisierung</strong> - komplett offline im Browser</li>
                   <li><strong>Fallmanagement</strong> - konsistente Entitätsverwaltung über mehrere Dokumente</li>
                   <li>Keine Datenübertragung an externe Server</li>
                   <li>KI-Modelle werden einmalig heruntergeladen und lokal ausgeführt</li>
@@ -51,33 +55,24 @@
               <div class="card-body">
                 <h4 class="card-title text-base">🌐 Online KI-Inferenz</h4>
                 <ul class="list-disc list-inside space-y-1 text-sm">
-                  <li><strong>Prompt Library</strong> - wiederverwendbare Aufgabenstellungen</li>
-                  <li><strong>Textbausteinbibliothek</strong> - Gesetzestexte, Prompts als Vorlagen</li>
+                  <li><strong>Prompt Library</strong> - Speicherung wiederverwendbarer Aufgabenstellungen</li>
+                  <li><strong>Textbausteinbibliothek</strong> - Textbausteine als Vorlagen, die dynamisch in
+                    Prompts eingebaut werden können</li>
                   <li>Verarbeitung der <strong>anonymisierten</strong> Texte mit Google Gemini API</li>
-                  <li>DSGVO-konforme Nutzung durch vorherige Anonymisierung</li>
+                  <li>Datenschutzkonforme Nutzung durch vorherige Anonymisierung</li>
                 </ul>
               </div>
             </div>
           </div>
+          <p></p>
+          <p>
+            Das KI-Modell zur automatisierten Anonymisierung von Texten (rund 580 MB) wird beim ersten Aufruf der
+            Website vom Internet runtergeladen. Ein Fortschrittsbalken zeigt den Download-Status. Dies geschieht nur
+            beim ersten Aufruf der Website, danach ist das KI-Modell (während eines Jahres) lokal auf dem Computer
+            abgespeichert. Die Website braucht keine Internetverbindung mehr, um zu laden (weil es das KI-Modell aus
+            dem lokalen Speicher bezieht.
+          </p>
 
-          <h3 class="mt-6">Unterstützte Entitätstypen</h3>
-          <ul>
-            <li>👤 <strong>PERSON</strong> - Namen von Personen</li>
-            <li>📍 <strong>LOCATION</strong> - Orte, Adressen, Städte</li>
-            <li>🏢 <strong>ORGANIZATION</strong> - Firmen, Behörden, Institutionen</li>
-            <li>📅 <strong>DATE</strong> - Datumsangaben</li>
-            <li>⏰ <strong>TIME</strong> - Zeitangaben</li>
-            <li>🚗 <strong>LICENSE_PLATE</strong> - Kennzeichen</li>
-            <li>🚙 <strong>CAR</strong> - Fahrzeugbezeichnungen</li>
-            <li>🔧 <strong>OTHER</strong> - Sonstige sensible Informationen</li>
-          </ul>
-
-          <div class="alert alert-info mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span><strong>Wichtig:</strong> Die KI erreicht eine Genauigkeit von ca. 90-95%. Prüfen Sie erkannte Entitäten immer manuell!</span>
-          </div>
         </div>
 
         <!-- Lokale Offline Anonymisierung und De-Anonymisierung -->
@@ -123,30 +118,58 @@
             </div>
           </div>
 
-          <h3 class="mt-6">2. Entitäten erkennen</h3>
+          <h3 class="mt-6">2. Automatische Anonymisierung: Entitäten erkennen</h3>
+
+          <div class="card bg-base-200">
+              <div class="card-body">
+                <p> In den Einstellungen können Sie vordefinieren, nach welchen zu anonymisierenden Entitäten die
+                  Anwendung suchen soll</p>
+                <h4 class="mt-6">Unterstützte Entitätstypen</h4>
+                  <ul>
+                    <li>👤 <strong>PERSON</strong> - Namen von Personen</li>
+                    <li>📍 <strong>LOCATION</strong> - Orte, Adressen, Städte</li>
+                    <li>🏢 <strong>ORGANIZATION</strong> - Firmen, Behörden, Institutionen</li>
+                    <li>📅 <strong>DATE</strong> - Datumsangaben</li>
+                    <li>⏰ <strong>TIME</strong> - Zeitangaben</li>
+                    <li>🚗 <strong>LICENSE_PLATE</strong> - Kennzeichen</li>
+                    <li>🚙 <strong>CAR</strong> - Fahrzeugbezeichnungen</li>
+                    <li>🔧 <strong>OTHER</strong> - Sonstige sensible Informationen</li>
+                  </ul>
+              </div>
+            </div>
+
           <ol class="list-decimal list-inside space-y-2">
             <li>Klicken Sie auf <strong>"Anonymisierung starten"</strong> (grüner Button in der linken Seitenleiste)</li>
-            <li>Die KI analysiert den Text und erkennt sensible Entitäten</li>
-            <li><strong>Beim ersten Mal:</strong> Die KI-Modelle (~1 GB) werden heruntergeladen
-              <ul class="list-disc list-inside ml-6 mt-1">
-                <li>Ein Fortschrittsbalken zeigt den Download-Status</li>
-                <li>Dies geschieht nur einmal, danach sind die Modelle lokal verfügbar</li>
-              </ul>
-            </li>
-            <li>Nach der Analyse erscheinen die erkannten Entitäten in der <strong>Liste links</strong></li>
+            <li>Die lokale KI analysiert den Text und erkennt sensible Entitäten</li>
+            <li>Nach der Analyse erscheinen die erkannten Entitäten in der <strong>Liste links</strong>. Wenn ein
+              aktiver Fall des Fallmanagements geladen ist, kann die im Fallmanagement gespeicherte Liste
+              aktualisiert werden (Button Pfeil nach oben)</li>
           </ol>
+
+          <div class="alert alert-info mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span><strong>Wichtig:</strong> Die lokale KI erreicht eine Genauigkeit von ca. 90-95%! Daher müssen die
+              erkannten Entitäten in einem Review-Prozess manuell überprüft werden. Eine Weiterverarbeitung des
+              anonymisierten Textes (bspw. kopieren in die Zwischenablage oder KI-Inferenz) ist erst möglich, wenn der
+              Text vollumfänglich überprüft wurde.</span>
+          </div>
 
           <h3 class="mt-6">3. Review & Überprüfung</h3>
           <p>
-            Der <strong>Review-Prozess</strong> ist essenziell: Überprüfen Sie alle erkannten Entitäten sorgfältig,
-            da die KI-Erkennung eine Genauigkeit von ca. 90-95% erreicht.
+            Ein Review des automatisch anonymiserten Textes empfiehlt sich nebst der Kontrolle der Vollumfänglichkeit
+            der Anonymisierung auch deswegen, um überschiessende Anyomisierungen ("false positives") zu vermeiden.
+            Es kann bspw. vorkommen, dass die lokale KI "das Schlafzimmer" als Ort oder "der Beschuldigte" als Person
+            anonymisiert.
           </p>
 
           <h4 class="font-semibold mt-4">Scroll-Review-System:</h4>
           <ol class="list-decimal list-inside space-y-1">
             <li>Der <strong>Output-Bereich</strong> zeigt den anonymisierten Text</li>
             <li>Eine <strong>Fortschrittsanzeige</strong> unter dem Output-Bereich zeigt Ihren Prüffortschritt</li>
-            <li>Scrollen Sie durch <strong>100% des Textes</strong>, um den "Kopieren"-Button freizuschalten</li>
+            <li>Scrollen Sie durch <strong>100% des Textes</strong>, währenddem Sie die automatisierte Anonymisierung
+              prüfen, um die weitere Verarbeitung des anonymiserten Textes zu ermöglichen.</li>
             <li>Das 🔒-Symbol verschwindet vom Button, sobald der Text vollständig geprüft wurde</li>
           </ol>
 
