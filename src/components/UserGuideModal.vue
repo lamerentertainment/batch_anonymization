@@ -440,22 +440,22 @@
             <li>Klicken Sie auf <strong>"Speichern"</strong></li>
           </ol>
 
-          <h4 class="font-semibold mt-4">Der {{fanontext}} Platzhalter:</h4>
+          <h4 class="font-semibold mt-4">Der &lbrace;&lbrace;fanontext&rbrace;&rbrace; Platzhalter:</h4>
           <div class="card bg-base-200 mt-3">
             <div class="card-body">
               <p class="text-sm">
-                Der Platzhalter <code>{{fanontext}}</code> (mit doppelten geschweiften Klammern) wird automatisch durch den
+                Der Platzhalter <code>&lbrace;&lbrace;fanontext&rbrace;&rbrace;</code> (mit doppelten geschweiften Klammern) wird automatisch durch den
                 <strong>anonymisierten Text</strong> aus dem Output-Bereich ersetzt.
               </p>
               <div class="divider my-2"></div>
               <p class="text-xs"><strong>Beispiel-Prompt:</strong></p>
               <pre class="text-xs bg-base-300 p-2 rounded mt-1">Analysiere den folgenden Sachverhalt und extrahiere alle relevanten Rechtsfragen:
 
-{{fanontext}}
+&lbrace;&lbrace;fanontext&rbrace;&rbrace;
 
 Gib die Rechtsfragen als nummerierte Liste aus.</pre>
               <p class="text-xs mt-2">
-                Beim Inferieren wird <code>{{fanontext}}</code> durch Ihren anonymisierten Text ersetzt.
+                Beim Inferieren wird <code>&lbrace;&lbrace;fanontext&rbrace;&rbrace;</code> durch Ihren anonymisierten Text ersetzt.
               </p>
             </div>
           </div>
@@ -480,7 +480,7 @@ Gib die Rechtsfragen als nummerierte Liste aus.</pre>
           <div class="card bg-base-200 mt-3">
             <div class="card-body">
               <p class="text-sm">
-                Verwenden Sie <code>{{textblock:ID}}</code> in Ihrem Prompt, um einen Textbaustein einzufügen.
+                Verwenden Sie <code>&lbrace;&lbrace;textblock:ID&rbrace;&rbrace;</code> in Ihrem Prompt, um einen Textbaustein einzufügen.
                 Die ID sehen Sie in der Textbaustein-Übersicht.
               </p>
               <div class="divider my-2"></div>
@@ -488,13 +488,13 @@ Gib die Rechtsfragen als nummerierte Liste aus.</pre>
               <pre class="text-xs bg-base-300 p-2 rounded mt-1">Prüfe, ob der folgende Sachverhalt die Voraussetzungen
 von § 823 BGB erfüllt:
 
-{{textblock:gesetz_823bgb}}
+&lbrace;&lbrace;textblock:gesetz_823bgb&rbrace;&rbrace;
 
 Sachverhalt:
-{{fanontext}}
+&lbrace;&lbrace;fanontext&rbrace;&rbrace;
 
 Orientiere dich an diesem Beispiel:
-{{textblock:beispiel_analyse_1}}</pre>
+&lbrace;&lbrace;textblock:beispiel_analyse_1&rbrace;&rbrace;</pre>
               <p class="text-xs mt-2">
                 <strong>One-Shot Prompting:</strong> Speichern Sie gelungene Analysebeispiele als Textbausteine
                 und verwenden Sie diese als Vorlagen für die KI.
@@ -551,9 +551,9 @@ Orientiere dich an diesem Beispiel:
           <div class="space-y-3 mt-3">
             <div class="card bg-base-200">
               <div class="card-body py-3">
-                <h4 class="font-semibold text-sm">1. Gesamter Text ({{fanontext}})</h4>
+                <h4 class="font-semibold text-sm">1. Gesamter Text (&lbrace;&lbrace;fanontext&rbrace;&rbrace;)</h4>
                 <p class="text-xs">
-                  Verwenden Sie <code>{{fanontext}}</code> im Prompt. Der komplette Output wird als Kontext eingefügt.
+                  Verwenden Sie <code>&lbrace;&lbrace;fanontext&rbrace;&rbrace;</code> im Prompt. Der komplette Output wird als Kontext eingefügt.
                 </p>
               </div>
             </div>
