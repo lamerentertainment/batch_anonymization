@@ -27,13 +27,40 @@
         <div v-show="activeTab === 'intro'">
           <h2>Einführung</h2>
           <p>
-            Diese Webanwendung ermöglicht die <strong>lokale, KI-gestützte Anonymisierung</strong> und
-            <strong>De-Anonymisierung</strong> von sensiblen Texten. Alle Daten werden ausschließlich im Browser
-            verarbeitet - es erfolgt <strong>keine Übertragung an externe Server</strong> (außer bei optionaler
-            Nutzung der Google Gemini API).
+            Diese Webanwendung bietet als <strong>Hauptfunktionalität die lokale, KI-gestützte Anonymisierung</strong> und
+            <strong>De-Anonymisierung</strong> von sensiblen Texten. Sie ermöglicht die datenschutzkonforme Verarbeitung
+            anonymisierter Texte mit kommerziellen KI-Providern unter Einhaltung der <strong>DSGVO, des Amts- und
+            Berufsgeheimnisses</strong>.
           </p>
 
-          <h3>Unterstützte Entitätstypen</h3>
+          <h3>Zwei zentrale Funktionsbereiche</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div class="card bg-base-200">
+              <div class="card-body">
+                <h4 class="card-title text-base">🔒 Lokale Offline-Verarbeitung</h4>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Anonymisierung & De-Anonymisierung</strong> - komplett im Browser</li>
+                  <li><strong>Fallmanagement</strong> - konsistente Entitätsverwaltung über mehrere Dokumente</li>
+                  <li>Keine Datenübertragung an externe Server</li>
+                  <li>KI-Modelle werden einmalig heruntergeladen und lokal ausgeführt</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card bg-base-200">
+              <div class="card-body">
+                <h4 class="card-title text-base">🌐 Online KI-Inferenz</h4>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>Prompt Library</strong> - wiederverwendbare Aufgabenstellungen</li>
+                  <li><strong>Textbausteinbibliothek</strong> - Gesetzestexte, Prompts als Vorlagen</li>
+                  <li>Verarbeitung der <strong>anonymisierten</strong> Texte mit Google Gemini API</li>
+                  <li>DSGVO-konforme Nutzung durch vorherige Anonymisierung</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="mt-6">Unterstützte Entitätstypen</h3>
           <ul>
             <li>👤 <strong>PERSON</strong> - Namen von Personen</li>
             <li>📍 <strong>LOCATION</strong> - Orte, Adressen, Städte</li>
@@ -53,72 +80,13 @@
           </div>
         </div>
 
-        <!-- Restricted Mode -->
-        <div v-show="activeTab === 'restricted'">
-          <h2>🔒 Funktionen im Restricted Mode</h2>
-          <p>
-            Der <strong>Restricted Mode</strong> ist standardmäßig <strong>aktiviert</strong> und dient dem Schutz
-            vor versehentlichem Kopieren nicht vollständig geprüfter Texte. Er stellt sicher, dass Benutzer
-            anonymisierte Texte vollständig durchgesehen haben, bevor sie diese verwenden können.
-          </p>
-
-          <h3>Was ist im Restricted Mode eingeschränkt?</h3>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div class="card bg-base-200">
-              <div class="card-body">
-                <h4 class="card-title text-base">Im Anonymisierungs-Modus:</h4>
-                <ul class="list-disc list-inside space-y-1 text-sm">
-                  <li>❌ <strong>Kopieren blockiert</strong> bis Text vollständig durchgescrollt</li>
-                  <li>❌ <strong>Quick Infer blockiert</strong> bis Text vollständig geprüft</li>
-                  <li>✅ <strong>Einfügen erlaubt</strong> (manuell)</li>
-                  <li>✅ <strong>Datei-Upload erlaubt</strong> (TXT, PDF, DOCX)</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="card bg-base-200">
-              <div class="card-body">
-                <h4 class="card-title text-base">Im De-Anonymisierungs-Modus:</h4>
-                <ul class="list-disc list-inside space-y-1 text-sm">
-                  <li>✅ <strong>Kopieren erlaubt</strong> (jederzeit)</li>
-                  <li>❌ <strong>Einfügen blockiert</strong> (Sicherheitsgründe)</li>
-                  <li>✅ <strong>Datei-Upload erlaubt</strong></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <h3 class="mt-6">🔓 Restricted Mode entsperren</h3>
-          <ol class="list-decimal list-inside space-y-2">
-            <li>Klicken Sie auf das <strong>Zahnrad-Symbol</strong> (⚙️) oben rechts</li>
-            <li>Wählen Sie <strong>"Einstellungen konfigurieren"</strong></li>
-            <li>Geben Sie das <strong>Master-Passwort</strong> ein</li>
-            <li>Der Restricted Mode wird für die aktuelle Sitzung deaktiviert</li>
-            <li>Nach dem Schließen des Browsers wird der Restricted Mode automatisch wieder aktiviert</li>
-          </ol>
-
-          <div class="alert alert-warning mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>Wenn das Master-Passwort geändert wird, werden alle aktiven Sitzungen automatisch auf Restricted Mode zurückgesetzt.</span>
-          </div>
-
-          <h3 class="mt-6">📊 Scroll-Review-System</h3>
-          <p>Das Scroll-Review-System stellt sicher, dass Sie den gesamten anonymisierten Text geprüft haben:</p>
-          <ol class="list-decimal list-inside space-y-2">
-            <li>Der <strong>Output-Bereich</strong> wird in mehrere Zonen unterteilt</li>
-            <li>Eine <strong>Fortschrittsanzeige</strong> unter dem Output-Bereich zeigt Ihren Prüffortschritt</li>
-            <li>Sie müssen <strong>100% des Textes durchscrollen</strong>, um den "Kopieren"-Button freizuschalten</li>
-            <li>Der Fortschritt wird in Echtzeit aktualisiert</li>
-            <li>Das Symbol 🔒 verschwindet vom Button, sobald der Text vollständig geprüft wurde</li>
-          </ol>
-        </div>
-
-        <!-- Anonymisierung -->
+        <!-- Lokale Offline Anonymisierung und De-Anonymisierung -->
         <div v-show="activeTab === 'anonymize'">
-          <h2>🔐 Anonymisierungs-Modus</h2>
+          <h2>🔐 Lokale Offline Anonymisierung & De-Anonymisierung</h2>
+          <p>
+            Die Hauptfunktionalität dieser Anwendung: <strong>Lokale, KI-gestützte Anonymisierung</strong> sensibler Texte
+            direkt im Browser - ohne Datenübertragung an externe Server.
+          </p>
 
           <h3>1. Text eingeben</h3>
           <div class="space-y-4">
@@ -168,7 +136,28 @@
             <li>Nach der Analyse erscheinen die erkannten Entitäten in der <strong>Liste links</strong></li>
           </ol>
 
-          <h3 class="mt-6">3. Entitäten bearbeiten</h3>
+          <h3 class="mt-6">3. Review & Überprüfung</h3>
+          <p>
+            Der <strong>Review-Prozess</strong> ist essenziell: Überprüfen Sie alle erkannten Entitäten sorgfältig,
+            da die KI-Erkennung eine Genauigkeit von ca. 90-95% erreicht.
+          </p>
+
+          <h4 class="font-semibold mt-4">Scroll-Review-System:</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Der <strong>Output-Bereich</strong> zeigt den anonymisierten Text</li>
+            <li>Eine <strong>Fortschrittsanzeige</strong> unter dem Output-Bereich zeigt Ihren Prüffortschritt</li>
+            <li>Scrollen Sie durch <strong>100% des Textes</strong>, um den "Kopieren"-Button freizuschalten</li>
+            <li>Das 🔒-Symbol verschwindet vom Button, sobald der Text vollständig geprüft wurde</li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Interaktive Überprüfung:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong>Klick auf Entität in der Liste</strong> → Alle Platzhalter dieser Entität werden im Text hervorgehoben</li>
+            <li><strong>Klick auf Platzhalter im Text</strong> → Die zugehörige Entität in der Liste wird markiert</li>
+            <li>So können Sie schnell prüfen, welche Textstellen ersetzt wurden</li>
+          </ul>
+
+          <h3 class="mt-6">4. Entitäten bearbeiten & anpassen</h3>
 
           <h4 class="font-semibold mt-4">Erkannte Entitäten anpassen:</h4>
           <ol class="list-decimal list-inside space-y-1">
@@ -206,24 +195,27 @@
             <span><strong>Tipp:</strong> Verwenden Sie aussagekräftige Platzhalter wie "[KLIENT]" statt "[PERSON_1]" für bessere Lesbarkeit!</span>
           </div>
 
-          <h3 class="mt-6">4. Anonymisierten Text verwenden</h3>
+          <h3 class="mt-6">5. Anonymisierten Text verwenden</h3>
           <ol class="list-decimal list-inside space-y-2">
             <li>Der anonymisierte Text wird im <strong>rechten Bereich</strong> angezeigt</li>
-            <li>Im <strong>Restricted Mode</strong>: Scrollen Sie durch den gesamten Text (100%)</li>
+            <li>Scrollen Sie durch den gesamten Text (100%), um die Review-Anforderung zu erfüllen</li>
             <li>Der <strong>"Kopieren"-Button</strong> wird freigeschaltet</li>
             <li>Klicken Sie auf <strong>"Kopieren"</strong>, um den Text in die Zwischenablage zu kopieren</li>
-            <li>Der Text ist nun bereit zur Verwendung in anderen Anwendungen</li>
+            <li>Der Text ist nun bereit zur datenschutzkonformen Verwendung mit externen KI-Services</li>
           </ol>
-        </div>
 
-        <!-- De-Anonymisierung -->
-        <div v-show="activeTab === 'deanonymize'">
-          <h2>🔓 De-Anonymisierungs-Modus</h2>
+          <div class="divider my-6"></div>
 
-          <h3>1. Anonymisierten Text de-anonymisieren</h3>
+          <h3>6. De-Anonymisierung</h3>
+          <p>
+            Nach der Verarbeitung mit externen KI-Services können Sie die anonymisierten Texte wieder
+            <strong>de-anonymisieren</strong>, um die Originalwerte wiederherzustellen.
+          </p>
+
+          <h4 class="font-semibold mt-4">Anonymisierten Text de-anonymisieren:</h4>
           <ol class="list-decimal list-inside space-y-2">
             <li>Wechseln Sie in den <strong>"De-Anonymisieren"</strong>-Modus (lila Button in der linken Seitenleiste)</li>
-            <li>Laden Sie Ihren <strong>Case</strong> aus dem Case Management (wenn gespeichert)</li>
+            <li>Laden Sie Ihren <strong>Case</strong> aus dem Case Management (falls gespeichert)</li>
             <li><strong>Oder</strong> laden Sie eine zuvor gespeicherte Entitätsliste:
               <ul class="list-disc list-inside ml-6">
                 <li>Klicken Sie auf <strong>"Entitäten laden"</strong></li>
@@ -234,14 +226,14 @@
               <ul class="list-disc list-inside ml-6">
                 <li><strong>Methode 1:</strong> Datei hochladen (📎-Symbol)</li>
                 <li><strong>Methode 2:</strong> Drag & Drop</li>
-                <li><strong>Methode 3:</strong> Text einfügen (nur im Unrestricted Mode)</li>
+                <li><strong>Methode 3:</strong> Text einfügen</li>
               </ul>
             </li>
             <li>Der de-anonymisierte Text erscheint automatisch im <strong>rechten Bereich</strong></li>
             <li>Alle Platzhalter (z.B. "[PERSON_1]") werden durch die Originalwerte ersetzt</li>
           </ol>
 
-          <h3 class="mt-6">2. Partielle De-Anonymisierung</h3>
+          <h4 class="font-semibold mt-4">Partielle De-Anonymisierung:</h4>
           <p>Sie können auswählen, <strong>welche Entitäten</strong> de-anonymisiert werden sollen:</p>
           <ol class="list-decimal list-inside space-y-2">
             <li>In der linken Seitenleiste sehen Sie alle verfügbaren Entitäten</li>
@@ -260,7 +252,7 @@
             </div>
           </div>
 
-          <h3 class="mt-6">3. De-Anonymisierungs-Historie</h3>
+          <h4 class="font-semibold mt-4">De-Anonymisierungs-Historie:</h4>
           <p>Die letzten <strong>3 De-Anonymisierungen</strong> werden automatisch gespeichert:</p>
           <ol class="list-decimal list-inside space-y-2">
             <li>Unter dem Output-Bereich finden Sie die <strong>"Pseudonymize History"</strong></li>
@@ -270,24 +262,357 @@
           </ol>
         </div>
 
-        <!-- Quick Infer -->
+        <!-- Fallmanagement -->
+        <div v-show="activeTab === 'casemanagement'">
+          <h2>📁 Fallmanagement</h2>
+          <p>
+            Das <strong>Fallmanagement</strong> ermöglicht die Organisation von Anonymisierungsprojekten in strukturierten Cases.
+            Es bietet zentrale Vorteile für die Arbeit mit sensiblen Dokumenten.
+          </p>
+
+          <h3>Warum Fallmanagement?</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">🔗 Konsistente Entitätenliste</h4>
+                <p class="text-xs">
+                  Verwenden Sie <strong>dieselben Entitätszuordnungen</strong> über den gesamten Fall und über
+                  <strong>mehrere Dokumente</strong> hinweg. Personennamen werden immer gleich anonymisiert.
+                </p>
+              </div>
+            </div>
+
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">♻️ Wiederverwendbarkeit</h4>
+                <p class="text-xs">
+                  Speichern Sie <strong>zentrale Dokumente</strong> (z.B. Akte, Sachverhalt) im Case und verwenden Sie
+                  diese bei mehreren <strong>KI-Verarbeitungen</strong> als Kontext.
+                </p>
+              </div>
+            </div>
+
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">📝 Kontext-Verwaltung</h4>
+                <p class="text-xs">
+                  Nutzen Sie gespeicherte Dokumente als <strong>Kontext</strong> für Prompts. Bauen Sie eine
+                  <strong>konsistente Wissensbasis</strong> für Ihre KI-Anfragen auf.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="mt-6">1. Neuen Fall anlegen</h3>
+          <ol class="list-decimal list-inside space-y-2">
+            <li>Klicken Sie auf das <strong>Ordner-Symbol</strong> (📁) oben rechts</li>
+            <li>Klicken Sie auf <strong>"Neuer Case"</strong></li>
+            <li>Geben Sie einen <strong>aussagekräftigen Case-Namen</strong> ein (z.B. "Vertrag Müller AG 2024")</li>
+            <li>Optional: Fügen Sie eine <strong>Beschreibung</strong> hinzu (z.B. "Vertragsverhandlung mit Müller AG, Januar-März 2024")</li>
+            <li>Der neue Case wird <strong>aktiv</strong> und automatisch im Browser-Speicher gespeichert</li>
+            <li>Alle neuen Anonymisierungen werden diesem Case zugeordnet</li>
+          </ol>
+
+          <h3 class="mt-6">2. Dokumente im Fall verwalten</h3>
+          <p>
+            Ein Case kann mehrere <strong>Dokumente</strong> enthalten, die jeweils einen anonymisierten Text
+            und seine zugehörige Entitätenliste speichern.
+          </p>
+
+          <h4 class="font-semibold mt-4">Dokument anlegen:</h4>
+          <ol class="list-decimal list-inside space-y-2">
+            <li>Führen Sie eine <strong>Anonymisierung</strong> durch (siehe Tab "Anonymisierung")</li>
+            <li>Im <strong>Output-Bereich</strong> (rechts) finden Sie unter dem anonymisierten Text Buttons</li>
+            <li>Klicken Sie auf <strong>"Als Dokument speichern"</strong> oder <strong>"Save to Case"</strong></li>
+            <li>Geben Sie einen <strong>Dokumentnamen</strong> ein (z.B. "Sachverhalt", "E-Mail vom 12.01.2024", "Vertragsversion 3")</li>
+            <li>Das Dokument wird dem aktiven Case hinzugefügt</li>
+            <li>Sie können beliebig viele Dokumente pro Case anlegen</li>
+          </ol>
+
+          <div class="alert alert-info mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>
+              <strong>Wichtig:</strong> Gespeicherte Dokumente enthalten sowohl den <strong>anonymisierten Text</strong> als auch den
+              <strong>Originaltext</strong> und die <strong>Entitätenliste</strong>.
+            </span>
+          </div>
+
+          <h3 class="mt-6">3. Entitätenliste aktualisieren</h3>
+          <p>
+            Die <strong>Entitätenliste des Cases</strong> wird automatisch bei jeder neuen Anonymisierung erweitert.
+            Sie können sie aber auch manuell verwalten.
+          </p>
+
+          <h4 class="font-semibold mt-4">Automatische Aktualisierung:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Wenn Sie ein <strong>neues Dokument</strong> zum Case hinzufügen, werden alle neuen Entitäten automatisch zur Case-Entitätenliste hinzugefügt</li>
+            <li>Bereits vorhandene Entitäten werden <strong>wiederverwendet</strong> (gleicher Platzhalter)</li>
+            <li>Die Entitätenliste wird <strong>konsistent</strong> über alle Dokumente des Falls gehalten</li>
+          </ul>
+
+          <h4 class="font-semibold mt-4">Manuelle Aktualisierung:</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Öffnen Sie den aktiven Case über das <strong>Ordner-Symbol</strong> (📁)</li>
+            <li>Klicken Sie auf <strong>"Entitäten verwalten"</strong></li>
+            <li>Sie können:
+              <ul class="list-disc list-inside ml-6">
+                <li>Neue Entitäten hinzufügen</li>
+                <li>Bestehende Entitäten bearbeiten</li>
+                <li>Entitäten löschen (betrifft alle Dokumente des Cases!)</li>
+              </ul>
+            </li>
+          </ol>
+
+          <h3 class="mt-6">4. Case laden & verwalten</h3>
+
+          <h4 class="font-semibold mt-4">Case laden:</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Klicken Sie auf das <strong>Ordner-Symbol</strong> (📁) oben rechts</li>
+            <li>Eine Liste aller gespeicherten Cases erscheint</li>
+            <li>Klicken Sie auf den gewünschten <strong>Case-Namen</strong></li>
+            <li>Der Case wird geladen und als <strong>aktiver Case</strong> gesetzt</li>
+            <li>Alle zugehörigen Dokumente und Entitäten stehen zur Verfügung</li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Case exportieren:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Klicken Sie auf den <strong>💾-Button</strong> neben dem Case-Namen</li>
+            <li>Eine <strong>JSON-Datei</strong> wird heruntergeladen</li>
+            <li>Diese Datei enthält alle Dokumente, Entitäten und Metadaten des Cases</li>
+            <li>Nutzen Sie dies für <strong>Backups</strong> oder <strong>Übertragung</strong> auf andere Geräte</li>
+          </ul>
+
+          <h4 class="font-semibold mt-4">Case importieren:</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Klicken Sie auf <strong>"Case importieren"</strong></li>
+            <li>Wählen Sie eine zuvor exportierte <strong>JSON-Datei</strong></li>
+            <li>Der Case wird wiederhergestellt und zur Case-Liste hinzugefügt</li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Case löschen:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Klicken Sie auf den <strong>🗑️-Button</strong> neben dem Case-Namen</li>
+            <li><strong>Achtung:</strong> Diese Aktion kann <strong>nicht rückgängig gemacht</strong> werden!</li>
+            <li>Alle Dokumente und Entitäten des Cases werden permanent gelöscht</li>
+          </ul>
+
+          <div class="alert alert-success mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              <strong>Best Practice:</strong> Erstellen Sie für jeden Mandanten/Projekt einen eigenen Case.
+              Exportieren Sie wichtige Cases regelmäßig als Backup!
+            </span>
+          </div>
+        </div>
+
+        <!-- KI-Inferenz -->
         <div v-show="activeTab === 'infer'">
-          <h2>🤖 Quick Infer - KI-gestützte Textverarbeitung</h2>
+          <h2>🤖 KI-Inferenz mit kommerziellen Modellen</h2>
+          <p>
+            Verarbeiten Sie Ihre <strong>anonymisierten Texte</strong> datenschutzkonform mit kommerziellen KI-Providern (Google Gemini).
+            Nutzen Sie die <strong>Prompt Library</strong> und <strong>Textbausteinbibliothek</strong> für effiziente, wiederverwendbare Workflows.
+          </p>
 
           <div class="alert alert-info mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <span><strong>Voraussetzung:</strong> Google Gemini API-Schlüssel erforderlich</span>
+            <span><strong>Voraussetzung:</strong> Google Gemini API-Schlüssel erforderlich (siehe Tab "Einstellungen")</span>
           </div>
 
-          <h3>1. API-Schlüssel konfigurieren</h3>
+          <h3>1. Prompt Library - Wiederverwendbare Aufgabenstellungen</h3>
+          <p>
+            Die <strong>Prompt Library</strong> ermöglicht es Ihnen, häufig verwendete Aufgabenstellungen zu speichern
+            und wiederzuverwenden. Jeder Prompt kann Textbausteine und Platzhalter enthalten.
+          </p>
+
+          <h4 class="font-semibold mt-4">Prompt erstellen:</h4>
           <ol class="list-decimal list-inside space-y-2">
+            <li>Klicken Sie auf das <strong>Listen-Symbol</strong> (☰) oben rechts</li>
+            <li>Klicken Sie auf <strong>"Neuer Prompt"</strong></li>
+            <li>Geben Sie einen <strong>aussagekräftigen Namen</strong> ein (z.B. "Rechtliche Analyse", "Sachverhaltsextraktion")</li>
+            <li>Schreiben Sie Ihren Prompt-Text</li>
+            <li>Optional: Verwenden Sie <strong>Platzhalter</strong> (siehe unten)</li>
+            <li>Klicken Sie auf <strong>"Speichern"</strong></li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Der {{fanontext}} Platzhalter:</h4>
+          <div class="card bg-base-200 mt-3">
+            <div class="card-body">
+              <p class="text-sm">
+                Der Platzhalter <code>{{fanontext}}</code> (mit doppelten geschweiften Klammern) wird automatisch durch den
+                <strong>anonymisierten Text</strong> aus dem Output-Bereich ersetzt.
+              </p>
+              <div class="divider my-2"></div>
+              <p class="text-xs"><strong>Beispiel-Prompt:</strong></p>
+              <pre class="text-xs bg-base-300 p-2 rounded mt-1">Analysiere den folgenden Sachverhalt und extrahiere alle relevanten Rechtsfragen:
+
+{{fanontext}}
+
+Gib die Rechtsfragen als nummerierte Liste aus.</pre>
+              <p class="text-xs mt-2">
+                Beim Inferieren wird <code>{{fanontext}}</code> durch Ihren anonymisierten Text ersetzt.
+              </p>
+            </div>
+          </div>
+
+          <h3 class="mt-6">2. Textbausteinbibliothek</h3>
+          <p>
+            Textbausteine sind <strong>wiederverwendbare Textblöcke</strong>, die Sie in Prompts einfügen können.
+            Ideal für Gesetzestexte, rechtliche Voraussetzungen, oder Prompt-Beispiele (One-Shot Prompting).
+          </p>
+
+          <h4 class="font-semibold mt-4">Textbaustein erstellen:</h4>
+          <ol class="list-decimal list-inside space-y-2">
+            <li>Klicken Sie auf das <strong>§-Symbol</strong> oben rechts</li>
+            <li>Klicken Sie auf <strong>"Neuer Textbaustein"</strong></li>
+            <li>Geben Sie einen <strong>Namen</strong> ein (z.B. "§ 823 BGB", "OR Art. 41", "Beispiel-Analyse")</li>
+            <li>Fügen Sie den <strong>Textinhalt</strong> ein (z.B. Gesetzestext, rechtliche Voraussetzungen)</li>
+            <li>Klicken Sie auf <strong>"Speichern"</strong></li>
+            <li>Der Textbaustein erhält automatisch eine <strong>eindeutige ID</strong></li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Textbaustein in Prompt verwenden:</h4>
+          <div class="card bg-base-200 mt-3">
+            <div class="card-body">
+              <p class="text-sm">
+                Verwenden Sie <code>{{textblock:ID}}</code> in Ihrem Prompt, um einen Textbaustein einzufügen.
+                Die ID sehen Sie in der Textbaustein-Übersicht.
+              </p>
+              <div class="divider my-2"></div>
+              <p class="text-xs"><strong>Beispiel-Prompt mit Textbausteinen:</strong></p>
+              <pre class="text-xs bg-base-300 p-2 rounded mt-1">Prüfe, ob der folgende Sachverhalt die Voraussetzungen
+von § 823 BGB erfüllt:
+
+{{textblock:gesetz_823bgb}}
+
+Sachverhalt:
+{{fanontext}}
+
+Orientiere dich an diesem Beispiel:
+{{textblock:beispiel_analyse_1}}</pre>
+              <p class="text-xs mt-2">
+                <strong>One-Shot Prompting:</strong> Speichern Sie gelungene Analysebeispiele als Textbausteine
+                und verwenden Sie diese als Vorlagen für die KI.
+              </p>
+            </div>
+          </div>
+
+          <h3 class="mt-6">3. Prompt starten (Inferieren)</h3>
+          <p>
+            Sie haben <strong>drei Möglichkeiten</strong>, eine KI-Inferenz zu starten:
+          </p>
+
+          <h4 class="font-semibold mt-4">Methode 1: Quick Prompting</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Im <strong>Anonymisierungs-Modus</strong>: Stellen Sie sicher, dass der Text vollständig geprüft wurde</li>
+            <li>Klicken Sie auf <strong>"Quick Infer"</strong> unter dem Output-Bereich</li>
+            <li>Das <strong>Prompt-Auswahl-Modal</strong> öffnet sich</li>
+            <li>Wählen Sie einen <strong>Prompt aus der Dropdown-Liste</strong></li>
+            <li>Klicken Sie auf <strong>"Inferenz starten"</strong></li>
+            <li>Die KI-Antwort erscheint in einem Popup-Fenster</li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Methode 2: Aus der Prompt Library</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Öffnen Sie die <strong>Prompt Library</strong> (☰-Symbol)</li>
+            <li>Klicken Sie bei einem Prompt auf <strong>"Inferieren"</strong></li>
+            <li>Der Prompt wird mit dem aktuellen Output-Text ausgeführt</li>
+            <li>Die KI-Antwort erscheint in einem Popup-Fenster</li>
+          </ol>
+
+          <h4 class="font-semibold mt-4">Methode 3: Mit vorläufiger Anpassung (PromptEditInferenceModal)</h4>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Wählen Sie einen Prompt über <strong>Quick Infer</strong> oder die <strong>Prompt Library</strong></li>
+            <li>Klicken Sie auf <strong>"Bearbeiten & Inferieren"</strong> oder <strong>"Edit before inference"</strong></li>
+            <li>Das <strong>PromptEditInferenceModal</strong> öffnet sich</li>
+            <li>Sie können den Prompt <strong>temporär anpassen</strong>, ohne ihn in der Library zu ändern</li>
+            <li>Klicken Sie auf <strong>"Inferenz starten"</strong></li>
+            <li>Die KI-Antwort erscheint basierend auf Ihrer angepassten Version</li>
+          </ol>
+
+          <div class="alert alert-success mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              <strong>Tipp:</strong> Verwenden Sie <strong>"Preview Full Prompt"</strong> im Modal, um den vollständigen Prompt
+              inklusive aller eingefügten Textbausteine zu sehen, bevor Sie die Inferenz starten.
+            </span>
+          </div>
+
+          <h3 class="mt-6">4. Kontext-Auswahl</h3>
+          <p>Sie haben mehrere Möglichkeiten, Kontext für die KI-Inferenz bereitzustellen:</p>
+
+          <div class="space-y-3 mt-3">
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">1. Gesamter Text ({{fanontext}})</h4>
+                <p class="text-xs">
+                  Verwenden Sie <code>{{fanontext}}</code> im Prompt. Der komplette Output wird als Kontext eingefügt.
+                </p>
+              </div>
+            </div>
+
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">2. Textauswahl</h4>
+                <p class="text-xs">
+                  Markieren Sie Text im Output-Bereich <strong>vor</strong> dem Klick auf Quick Infer.
+                  Nur die Auswahl wird verwendet.
+                </p>
+              </div>
+            </div>
+
+            <div class="card bg-base-200">
+              <div class="card-body py-3">
+                <h4 class="font-semibold text-sm">3. Case-Dokumente als Kontext</h4>
+                <p class="text-xs">
+                  Nutzen Sie gespeicherte Case-Dokumente als zusätzlichen Kontext. Ideal für konsistente Analysen
+                  über mehrere Dokumente hinweg.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="mt-6">5. Beispiel-Anwendungsfälle</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="badge badge-lg badge-outline">Rechtliche Analyse</div>
+            <div class="badge badge-lg badge-outline">Sachverhaltsextraktion</div>
+            <div class="badge badge-lg badge-outline">Zusammenfassung</div>
+            <div class="badge badge-lg badge-outline">Vertragsanalyse</div>
+            <div class="badge badge-lg badge-outline">Anspruchsprüfung</div>
+            <div class="badge badge-lg badge-outline">Übersetzung</div>
+          </div>
+        </div>
+
+        <!-- Einstellungen -->
+        <div v-show="activeTab === 'advanced'">
+          <h2>⚙️ Einstellungen</h2>
+          <p>
+            Konfigurieren Sie die Anwendung nach Ihren Bedürfnissen. Alle Einstellungen werden lokal im Browser gespeichert.
+          </p>
+
+          <h3>Einstellungen-Menü öffnen</h3>
+          <ol class="list-decimal list-inside space-y-1">
             <li>Klicken Sie auf das <strong>Zahnrad-Symbol</strong> (⚙️) oben rechts</li>
             <li>Wählen Sie <strong>"Einstellungen konfigurieren"</strong></li>
+            <li>Das Einstellungs-Modal öffnet sich</li>
+          </ol>
+
+          <h3 class="mt-6">API-Konfiguration</h3>
+          <p>Konfigurieren Sie den Zugang zu kommerziellen KI-Providern für die Inferenz-Funktionalität.</p>
+
+          <h4 class="font-semibold mt-4">Google Gemini API-Schlüssel:</h4>
+          <ol class="list-decimal list-inside space-y-2">
+            <li>Öffnen Sie die <strong>Einstellungen</strong> (⚙️-Symbol)</li>
             <li>Geben Sie Ihren <strong>Google Gemini API-Schlüssel</strong> ein</li>
             <li>Klicken Sie auf <strong>"Speichern"</strong></li>
-            <li>Die Prompt Library und Quick Infer Funktionen werden aktiviert</li>
+            <li>Die Prompt Library und KI-Inferenz Funktionen werden aktiviert</li>
           </ol>
 
           <div class="card bg-base-200 mt-4">
@@ -295,133 +620,47 @@
               <h4 class="font-semibold">API-Schlüssel erhalten:</h4>
               <ul class="list-disc list-inside text-sm">
                 <li>Besuchen Sie <a href="https://ai.google.dev/" target="_blank" class="link">https://ai.google.dev/</a></li>
-                <li>Erstellen Sie ein Projekt</li>
+                <li>Erstellen Sie ein Projekt (falls noch nicht vorhanden)</li>
                 <li>Generieren Sie einen API-Schlüssel für Gemini</li>
+                <li>Kopieren Sie den Schlüssel und fügen Sie ihn in den Einstellungen ein</li>
               </ul>
             </div>
           </div>
 
-          <h3 class="mt-6">2. Quick Infer verwenden</h3>
-          <p>Quick Infer ermöglicht <strong>schnelle KI-Inferenzen</strong> direkt aus dem Output-Bereich:</p>
-          <ol class="list-decimal list-inside space-y-2">
-            <li>Im <strong>Anonymisierungs-Modus</strong>: Stellen Sie sicher, dass der Text vollständig geprüft wurde (Restricted Mode)</li>
-            <li>Klicken Sie auf <strong>"Quick Infer"</strong> unter dem Output-Bereich</li>
-            <li>Das <strong>Prompt-Auswahl-Modal</strong> öffnet sich</li>
-            <li>Wählen Sie einen <strong>vordefinierten Prompt</strong> aus der Dropdown-Liste</li>
-            <li><strong>Optional:</strong> Wählen Sie Kontext aus:
-              <ul class="list-disc list-inside ml-6">
-                <li>Checkbox "Include entire text": Der gesamte Output wird als Kontext verwendet</li>
-                <li><strong>Oder:</strong> Markieren Sie Text im Output-Bereich vor dem Klick auf Quick Infer</li>
-              </ul>
-            </li>
-            <li>Klicken Sie auf <strong>"Inferenz starten"</strong></li>
-            <li>Die KI-Antwort erscheint in einem <strong>Popup-Fenster</strong></li>
-          </ol>
-
-          <h3 class="mt-6">3. Beispiel-Anwendungsfälle</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div class="badge badge-lg badge-outline">Zusammenfassung</div>
-            <div class="badge badge-lg badge-outline">Rechtliche Analyse</div>
-            <div class="badge badge-lg badge-outline">Übersetzung</div>
-            <div class="badge badge-lg badge-outline">Sentiment-Analyse</div>
-            <div class="badge badge-lg badge-outline">Schlüsselbegriff-Extraktion</div>
-            <div class="badge badge-lg badge-outline">Strukturierung</div>
-          </div>
-
-          <h3 class="mt-6">4. Kontext-Auswahl</h3>
-          <p>Sie haben drei Möglichkeiten, Kontext für Quick Infer bereitzustellen:</p>
-
-          <div class="space-y-3 mt-3">
-            <div class="card bg-base-200">
-              <div class="card-body py-3">
-                <h4 class="font-semibold text-sm">1. Gesamter Text</h4>
-                <p class="text-xs">Aktivieren Sie "Include entire text" im Modal. Der komplette Output wird verwendet.</p>
-              </div>
-            </div>
-
-            <div class="card bg-base-200">
-              <div class="card-body py-3">
-                <h4 class="font-semibold text-sm">2. Textauswahl</h4>
-                <p class="text-xs">Markieren Sie Text im Output-Bereich <strong>vor</strong> dem Klick auf Quick Infer. Nur die Auswahl wird verwendet.</p>
-              </div>
-            </div>
-
-            <div class="card bg-base-200">
-              <div class="card-body py-3">
-                <h4 class="font-semibold text-sm">3. Kein Kontext</h4>
-                <p class="text-xs">Weder Text markieren noch "Include entire text" aktivieren. Nur der Prompt wird verwendet.</p>
-              </div>
-            </div>
-          </div>
-
-          <h3 class="mt-6">5. Full Prompt Preview</h3>
-          <p>Bevor Sie die Inferenz starten, können Sie den vollständigen Prompt einsehen:</p>
-          <ol class="list-decimal list-inside space-y-1">
-            <li>Im Prompt-Auswahl-Modal wählen Sie einen Prompt aus</li>
-            <li>Klicken Sie auf <strong>"Preview Full Prompt"</strong></li>
-            <li>Ein Modal zeigt den kompletten Prompt inklusive aller eingefügten Textbausteine</li>
-            <li>Sie können den Prompt in die Zwischenablage kopieren ("Copy Full Prompt")</li>
-            <li>Schließen Sie die Vorschau oder starten Sie die Inferenz direkt</li>
-          </ol>
-        </div>
-
-        <!-- Erweiterte Funktionen -->
-        <div v-show="activeTab === 'advanced'">
-          <h2>⚙️ Erweiterte Funktionen</h2>
-
-          <h3>Case Management - Projektverwaltung</h3>
-          <p>Das Case Management ermöglicht die Organisation von Anonymisierungsprojekten in wiederverwendbaren Cases.</p>
-
-          <h4 class="font-semibold mt-4">Neuen Case erstellen:</h4>
-          <ol class="list-decimal list-inside space-y-1">
-            <li>Klicken Sie auf das <strong>Ordner-Symbol</strong> (📁) oben rechts</li>
-            <li>Klicken Sie auf <strong>"Neuer Case"</strong></li>
-            <li>Geben Sie einen <strong>Case-Namen</strong> ein (z.B. "Vertrag Müller AG 2024")</li>
-            <li>Optional: Geben Sie eine Beschreibung ein</li>
-            <li>Der neue Case wird aktiv und automatisch gespeichert</li>
-          </ol>
-
-          <h4 class="font-semibold mt-4">Case laden/verwalten:</h4>
-          <ul class="list-disc list-inside space-y-1">
-            <li><strong>Laden:</strong> Klicken Sie auf einen Case-Namen in der Liste</li>
-            <li><strong>Löschen:</strong> Klicken Sie auf den 🗑️-Button (kann nicht rückgängig gemacht werden!)</li>
-            <li><strong>Exportieren:</strong> Klicken Sie auf den 💾-Button (JSON-Datei)</li>
-            <li><strong>Importieren:</strong> Klicken Sie auf "Case importieren" und wählen Sie eine JSON-Datei</li>
-          </ul>
-
           <div class="divider"></div>
 
-          <h3>Prompt Library</h3>
-          <p>Verwalten Sie wiederverwendbare KI-Prompts mit dynamischen Textbausteinen.</p>
+          <h3>Restricted Mode</h3>
+          <p>
+            Der <strong>Restricted Mode</strong> ist standardmäßig aktiviert und verhindert das versehentliche
+            Kopieren nicht vollständig geprüfter Texte.
+          </p>
 
-          <h4 class="font-semibold mt-4">Neuen Prompt erstellen:</h4>
+          <h4 class="font-semibold mt-4">Restricted Mode deaktivieren:</h4>
           <ol class="list-decimal list-inside space-y-1">
-            <li>Klicken Sie auf das <strong>Listen-Symbol</strong> (☰) oben rechts</li>
-            <li>Klicken Sie auf <strong>"Neuer Prompt"</strong></li>
-            <li>Geben Sie einen Namen und Prompt-Text ein</li>
-            <li>Optional: Fügen Sie Textbausteine ein mit <code>&lbrace;&lbrace;textblock:ID&rbrace;&rbrace;</code></li>
-            <li>Optional: Verwenden Sie <code>&lbrace;&lbrace;anontext&rbrace;&rbrace;</code> als Platzhalter für den Output-Text</li>
-            <li>Klicken Sie auf <strong>"Speichern"</strong></li>
+            <li>Öffnen Sie <strong>Einstellungen</strong> (⚙️-Symbol)</li>
+            <li>Wählen Sie <strong>"Einstellungen konfigurieren"</strong></li>
+            <li>Geben Sie das <strong>Master-Passwort</strong> ein</li>
+            <li>Der Restricted Mode wird für die aktuelle Sitzung deaktiviert</li>
+            <li>Nach dem Schließen des Browsers wird er automatisch wieder aktiviert</li>
           </ol>
 
-          <div class="divider"></div>
-
-          <h3>Textbaustein Library</h3>
-          <p>Verwalten Sie wiederverwendbare Textblöcke, die in Prompts eingefügt werden können.</p>
-
-          <h4 class="font-semibold mt-4">Neuen Textbaustein erstellen:</h4>
-          <ol class="list-decimal list-inside space-y-1">
-            <li>Klicken Sie auf das <strong>§-Symbol</strong> oben rechts</li>
-            <li>Klicken Sie auf <strong>"Neuer Textbaustein"</strong></li>
-            <li>Geben Sie einen Namen und Textinhalt ein</li>
-            <li>Klicken Sie auf <strong>"Speichern"</strong></li>
-            <li>Der Textbaustein erhält automatisch eine eindeutige ID</li>
-          </ol>
+          <div class="alert alert-warning mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>
+              <strong>Hinweis:</strong> Wenn das Master-Passwort geändert wird, werden alle aktiven Sitzungen
+              automatisch auf Restricted Mode zurückgesetzt.
+            </span>
+          </div>
 
           <div class="divider"></div>
 
           <h3>Browser-Benachrichtigungen</h3>
-          <p>Die Anwendung kann Desktop-Benachrichtigungen senden, um Sie über lange Vorgänge zu informieren.</p>
+          <p>
+            Die Anwendung kann Desktop-Benachrichtigungen senden, um Sie über abgeschlossene Vorgänge zu informieren
+            (besonders nützlich bei langen Verarbeitungen im Hintergrund).
+          </p>
 
           <h4 class="font-semibold mt-4">Benachrichtigungen aktivieren:</h4>
           <ol class="list-decimal list-inside space-y-1">
@@ -435,25 +674,36 @@
           <ul class="list-disc list-inside space-y-1">
             <li>✅ Entitätserkennung abgeschlossen (wenn länger als 3 Sekunden)</li>
             <li>✅ Datei-Verarbeitung abgeschlossen</li>
-            <li>✅ KI-Inferenz abgeschlossen (Quick Infer)</li>
+            <li>✅ KI-Inferenz abgeschlossen</li>
             <li>✅ Modell-Download abgeschlossen</li>
           </ul>
 
           <div class="divider"></div>
 
-          <h3>Regex-basierte Entitätserkennung</h3>
-          <p>Für spezielle Muster (z.B. Telefonnummern, Kundennummern), die die KI nicht automatisch erkennt:</p>
+          <h3>Weitere Einstellungsmöglichkeiten</h3>
 
-          <div class="card bg-base-200 mt-3">
-            <div class="card-body">
-              <h4 class="font-semibold">Beispiele für Regex-Patterns:</h4>
-              <ul class="list-disc list-inside text-sm space-y-1">
-                <li><strong>Telefonnummern:</strong> <code>\+?[0-9]&lbrace;1,4&rbrace;[\s\-]?[0-9]&lbrace;3,4&rbrace;[\s\-]?[0-9]&lbrace;4,&rbrace;</code></li>
-                <li><strong>E-Mail:</strong> <code>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]&lbrace;2,&rbrace;</code></li>
-                <li><strong>Kundennummern:</strong> <code>KD-\d&lbrace;6&rbrace;</code></li>
-                <li><strong>IBANs:</strong> <code>[A-Z]&lbrace;2&rbrace;\d&lbrace;2&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;[\s]?\d&lbrace;4&rbrace;</code></li>
-              </ul>
-            </div>
+          <h4 class="font-semibold mt-4">Modell-Verwaltung:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Überprüfen Sie den <strong>Download-Status</strong> der KI-Modelle</li>
+            <li>Löschen Sie heruntergeladene Modelle, um Speicherplatz freizugeben</li>
+            <li>Laden Sie Modelle bei Bedarf neu herunter</li>
+          </ul>
+
+          <h4 class="font-semibold mt-4">Daten-Verwaltung:</h4>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong>Alle Daten löschen:</strong> Entfernt alle Cases, Prompts, Textbausteine und Einstellungen</li>
+            <li><strong>Export/Import:</strong> Sichern Sie Ihre Daten oder übertragen Sie sie auf andere Geräte</li>
+            <li><strong>Browser-Speicher:</strong> Überprüfen Sie den verwendeten Speicherplatz</li>
+          </ul>
+
+          <div class="alert alert-info mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>
+              <strong>Datenschutz:</strong> Alle Einstellungen und Daten werden ausschließlich lokal im Browser gespeichert.
+              Es erfolgt keine Übertragung an externe Server (außer bei Nutzung der KI-Inferenz mit Ihrem API-Schlüssel).
+            </span>
           </div>
         </div>
 
@@ -687,11 +937,10 @@ const activeTab = ref('intro');
 
 const tabs = [
   { id: 'intro', name: 'Einführung', icon: '📖' },
-  { id: 'restricted', name: 'Restricted Mode', icon: '🔒' },
-  { id: 'anonymize', name: 'Anonymisierung', icon: '🔐' },
-  { id: 'deanonymize', name: 'De-Anonymisierung', icon: '🔓' },
-  { id: 'infer', name: 'Quick Infer', icon: '🤖' },
-  { id: 'advanced', name: 'Erweitert', icon: '⚙️' },
+  { id: 'anonymize', name: 'Anonymisierung & De-Anonymisierung', icon: '🔐' },
+  { id: 'casemanagement', name: 'Fallmanagement', icon: '📁' },
+  { id: 'infer', name: 'KI-Inferenz', icon: '🤖' },
+  { id: 'advanced', name: 'Einstellungen', icon: '⚙️' },
   { id: 'tips', name: 'Tipps', icon: '💡' },
   { id: 'faq', name: 'FAQ', icon: '❓' }
 ];
