@@ -90,7 +90,7 @@
           class="select select-bordered select-xs"
           @change="insertTextBlockTag"
         >
-          <option value="">📦 {{textblock:tag}} einfügen...</option>
+          <option value="">📦 Textblock mit Tag einfügen...</option>
           <option v-for="tb in textBlocks" :key="tb.id" :value="tb.tag">
             {{ tb.tag }} - {{ tb.description || 'No description' }}
           </option>
