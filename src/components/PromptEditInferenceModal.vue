@@ -2,7 +2,7 @@
   <div class="modal modal-open">
     <div class="modal-box w-11/12 max-w-6xl h-[90vh] flex flex-col">
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-lg">Prompt bearbeiten & inferieren</h3>
+        <h3 class="font-bold text-lg">{{ mode === 'edit' ? 'Prompt bearbeiten' : 'Prompt bearbeiten & inferieren' }}</h3>
 
         <!-- Context Button -->
         <div class="dropdown dropdown-end relative">
@@ -61,10 +61,40 @@
       <!-- Main Textarea for Prompt Editing -->
       <div class="mt-4 flex-1 flex flex-col">
         <textarea
+          ref="promptTextarea"
           v-model="editedPromptContent"
           class="textarea textarea-bordered flex-1 text-sm leading-tight font-mono"
           placeholder="Prompt hier bearbeiten..."
         ></textarea>
+      </div>
+
+      <!-- Quick Insert Toolbar -->
+      <div class="mt-2 flex gap-2 items-center flex-wrap">
+        <span class="text-xs font-semibold text-base-content/70">Schnelleinfügen:</span>
+        <button
+          class="btn btn-xs btn-outline gap-1"
+          @click="insertPlaceholder('{{anontext}}')"
+          title="{{anontext}} Platzhalter einfügen"
+        >
+          📄 {{anontext}}
+        </button>
+        <button
+          class="btn btn-xs btn-outline gap-1"
+          @click="insertPlaceholder('{{textblock}}')"
+          title="{{textblock}} Platzhalter einfügen"
+        >
+          📦 {{textblock}}
+        </button>
+        <select
+          v-model="selectedQuickTextBlockTag"
+          class="select select-bordered select-xs"
+          @change="insertTextBlockTag"
+        >
+          <option value="">📦 {{textblock:tag}} einfügen...</option>
+          <option v-for="tb in textBlocks" :key="tb.id" :value="tb.tag">
+            {{ tb.tag }} - {{ tb.description || 'No description' }}
+          </option>
+        </select>
       </div>
 
       <div class="divider my-2"></div>
@@ -131,36 +161,58 @@
       <!-- Action Buttons -->
       <div class="mt-4 flex gap-2 justify-end">
         <button class="btn btn-sm btn-ghost" @click="$emit('close')">Abbrechen</button>
-        <button
-          class="btn btn-sm btn-outline gap-1"
-          @click="copyFullPromptToClipboard"
-          title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Zwischenablage kopieren"
-        >
-          📋 Volltext kopieren
-        </button>
-        <button
-          class="btn btn-sm btn-outline gap-1"
-          @click="showFullPromptInTextarea"
-          title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Textarea anzeigen"
-        >
-          👁 Volltext anzeigen
-        </button>
-        <button
-          class="btn btn-sm btn-primary gap-1"
-          @click="saveToLibrary"
-          title="Aktuellen Prompt in die Prompt Library speichern"
-        >
-          💾 In Bibliothek speichern
-        </button>
-        <button
-          class="btn btn-sm btn-warning gap-1"
-          :class="{ 'btn-disabled': isInferLocked }"
-          :disabled="isInferLocked"
-          @click="inferWithEditedPrompt"
-        >
-          <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
-          Infer with Gemini
-        </button>
+
+        <!-- Edit Mode Buttons -->
+        <template v-if="mode === 'edit'">
+          <button
+            class="btn btn-sm btn-primary gap-1"
+            @click="savePrompt"
+            title="Änderungen am Prompt speichern"
+          >
+            💾 Speichern
+          </button>
+          <button
+            class="btn btn-sm btn-outline gap-1"
+            @click="saveToLibrary"
+            title="Als neuen Prompt in die Bibliothek speichern"
+          >
+            💾 Als Neu speichern
+          </button>
+        </template>
+
+        <!-- Inference Mode Buttons -->
+        <template v-else>
+          <button
+            class="btn btn-sm btn-outline gap-1"
+            @click="copyFullPromptToClipboard"
+            title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Zwischenablage kopieren"
+          >
+            📋 Volltext kopieren
+          </button>
+          <button
+            class="btn btn-sm btn-outline gap-1"
+            @click="showFullPromptInTextarea"
+            title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Textarea anzeigen"
+          >
+            👁 Volltext anzeigen
+          </button>
+          <button
+            class="btn btn-sm btn-primary gap-1"
+            @click="saveToLibrary"
+            title="Aktuellen Prompt in die Prompt Library speichern"
+          >
+            💾 In Bibliothek speichern
+          </button>
+          <button
+            class="btn btn-sm btn-warning gap-1"
+            :class="{ 'btn-disabled': isInferLocked }"
+            :disabled="isInferLocked"
+            @click="inferWithEditedPrompt"
+          >
+            <LockClosedIcon v-if="isInferLocked" class="w-3 h-3" />
+            Infer with Gemini
+          </button>
+        </template>
       </div>
 
       <!-- Toast Notification -->
@@ -223,9 +275,14 @@ export default {
     selectedDocumentsForContext: {
       type: Object,
       default: () => ({})
+    },
+    mode: {
+      type: String,
+      default: 'inference', // 'edit' or 'inference'
+      validator: (value) => ['edit', 'inference'].includes(value)
     }
   },
-  emits: ['close', 'inferResult'],
+  emits: ['close', 'inferResult', 'promptUpdated'],
   data() {
     return {
       editedPromptContent: '',
@@ -242,7 +299,9 @@ export default {
       scrollReviewCompleted: false,
       // Document Context
       localSelectedDocuments: [],
-      showContextMenu: false
+      showContextMenu: false,
+      // Quick insert
+      selectedQuickTextBlockTag: ''
     };
   },
   computed: {
@@ -649,6 +708,59 @@ export default {
         console.error('saveToLibrary error:', err);
         this.showToast('Fehler beim Speichern des Prompts in die Bibliothek.', { type: 'error', detail: String(err && (err.stack || err.message || err)) });
       }
+    },
+    async savePrompt() {
+      try {
+        // Update the existing prompt with the edited content
+        await promptCache.update(this.prompt.id, {
+          content: this.editedPromptContent
+        });
+
+        console.log('[PromptEditInferenceModal] Updated prompt:', this.prompt.id);
+        this.showToast('Prompt wurde erfolgreich gespeichert.', { duration: 2000 });
+
+        // Notify parent component
+        this.$emit('promptUpdated', this.prompt.id);
+
+        // Close modal after short delay
+        setTimeout(() => {
+          this.$emit('close');
+        }, 500);
+      } catch (err) {
+        console.error('savePrompt error:', err);
+        this.showToast('Fehler beim Speichern des Prompts.', { type: 'error', detail: String(err && (err.stack || err.message || err)) });
+      }
+    },
+    insertPlaceholder(placeholder) {
+      const textarea = this.$refs.promptTextarea;
+      if (!textarea) {
+        this.editedPromptContent += placeholder;
+        return;
+      }
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const content = this.editedPromptContent;
+
+      // Insert placeholder at cursor position
+      this.editedPromptContent = content.substring(0, start) + placeholder + content.substring(end);
+
+      // Move cursor to end of inserted text
+      this.$nextTick(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
+        textarea.focus();
+      });
+
+      this.showToast(`Eingefügt: ${placeholder}`, { duration: 1500 });
+    },
+    insertTextBlockTag() {
+      if (!this.selectedQuickTextBlockTag) return;
+
+      const placeholder = `{{textblock:'${this.selectedQuickTextBlockTag}'}}`;
+      this.insertPlaceholder(placeholder);
+
+      // Reset selection
+      this.selectedQuickTextBlockTag = '';
     }
   }
 };

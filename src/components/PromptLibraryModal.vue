@@ -116,6 +116,13 @@
                 </div>
               </div>
 
+              <button
+                class="btn btn-xs btn-primary"
+                @click="openEditModal(p)"
+                title="Prompt im großen Editor bearbeiten"
+              >
+                📝
+              </button>
               <div class="btn-group">
                 <button
                   class="btn btn-xs btn-warning gap-1"
@@ -180,13 +187,26 @@
       </div>
     </div>
 
-    <!-- Edit Inference Modal -->
+    <!-- Edit Modal (Edit Mode) -->
+    <PromptEditInferenceModal
+      v-if="showEditModal && currentEditModePrompt"
+      :prompt="currentEditModePrompt"
+      :activeCase="activeCase"
+      :selectedTextBlocks="selectedTextBlocks"
+      :selectedDocumentsForContext="selectedDocumentsForContext"
+      mode="edit"
+      @close="closeEditModal"
+      @promptUpdated="handlePromptUpdated"
+    />
+
+    <!-- Edit Inference Modal (Inference Mode) -->
     <PromptEditInferenceModal
       v-if="showEditInferenceModal && currentEditPrompt"
       :prompt="currentEditPrompt"
       :activeCase="activeCase"
       :selectedTextBlocks="selectedTextBlocks"
       :selectedDocumentsForContext="selectedDocumentsForContext"
+      mode="inference"
       @close="closeEditInferenceModal"
       @inferResult="handleInferResult"
     />
@@ -240,7 +260,10 @@ export default {
       availableDocuments: [],
       selectedDocumentsForContext: {}, // Map of promptId -> [docIds]
       showContextMenu: {}, // Map of promptId -> boolean
-      // Edit Inference Modal
+      // Edit Modal (Edit Mode)
+      showEditModal: false,
+      currentEditModePrompt: null,
+      // Edit Inference Modal (Inference Mode)
       showEditInferenceModal: false,
       currentEditPrompt: null
     };
@@ -595,6 +618,19 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
+    },
+    openEditModal(prompt) {
+      this.currentEditModePrompt = prompt;
+      this.showEditModal = true;
+    },
+    closeEditModal() {
+      this.showEditModal = false;
+      this.currentEditModePrompt = null;
+    },
+    async handlePromptUpdated(promptId) {
+      // Refresh the list to show updated content
+      await this.refresh();
+      console.log('[PromptLibrary] Prompt updated:', promptId);
     },
     openEditInferenceModal(prompt) {
       this.currentEditPrompt = prompt;
