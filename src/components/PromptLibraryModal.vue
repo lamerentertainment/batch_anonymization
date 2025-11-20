@@ -457,9 +457,28 @@ export default {
 
       return '';
     },
-    async save(p) { await promptCache.update(p.id, { title: p.title, content: p.content }); await this.refresh(); },
+    async save(p) {
+      try {
+        await promptCache.update(p.id, { title: p.title, content: p.content });
+        await this.refresh();
+        this.showToast('Gespeichert', { duration: 1500 });
+      } catch (err) {
+        console.error('[PromptLibrary] Failed to save prompt:', err);
+        this.showToast('Fehler beim Speichern', { type: 'error', duration: 2000 });
+      }
+    },
     async toggleFav(p) { await promptCache.update(p.id, { favorite: !p.favorite }); await this.refresh(); },
-    async updateTags(p, csv) { const tags = csv.split(',').map(s => s.trim()).filter(Boolean); await promptCache.update(p.id, { tags }); await this.refresh(); },
+    async updateTags(p, csv) {
+      try {
+        const tags = csv.split(',').map(s => s.trim()).filter(Boolean);
+        await promptCache.update(p.id, { tags });
+        await this.refresh();
+        this.showToast('Tags gespeichert', { duration: 1500 });
+      } catch (err) {
+        console.error('[PromptLibrary] Failed to update tags:', err);
+        this.showToast('Fehler beim Speichern der Tags', { type: 'error', duration: 2000 });
+      }
+    },
     async createBlank() { await promptCache.create({ title: 'New prompt', content: '' }); await this.refresh(); },
     async dup(p) { await promptCache.create({ title: p.title + ' (copy)', content: p.content, tags: Array.isArray(p.tags) ? [...p.tags] : [], favorite: !!p.favorite }); await this.refresh(); },
     async del(p) { if (confirm('Delete this prompt?')) { await promptCache.remove(p.id); await this.refresh(); } },
