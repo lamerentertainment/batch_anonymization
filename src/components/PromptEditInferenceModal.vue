@@ -70,11 +70,11 @@
       <div class="divider my-2"></div>
 
       <!-- Two Column Grid for Textblocks and Documents -->
-      <div class="grid grid-cols-2 gap-4 h-48 overflow-hidden">
+      <div class="grid grid-cols-2 gap-4">
         <!-- Textblocks Column -->
         <div class="flex flex-col">
           <h4 class="font-semibold text-sm mb-2">Textbausteine ({{ filteredTextBlocks.length }})</h4>
-          <div class="overflow-y-auto flex-1 space-y-1">
+          <div class="overflow-y-auto space-y-1 max-h-64 border border-base-300 rounded p-2">
             <div
               v-for="tb in filteredTextBlocks"
               :key="tb.id"
@@ -96,7 +96,7 @@
         <!-- Documents Column -->
         <div class="flex flex-col">
           <h4 class="font-semibold text-sm mb-2">Dokumente ({{ filteredDocuments.length }})</h4>
-          <div class="overflow-y-auto flex-1 space-y-1">
+          <div class="overflow-y-auto space-y-1 max-h-64 border border-base-300 rounded p-2">
             <div
               v-for="doc in filteredDocuments"
               :key="doc.id"
