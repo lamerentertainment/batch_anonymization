@@ -146,6 +146,13 @@
           👁 Volltext anzeigen
         </button>
         <button
+          class="btn btn-sm btn-primary gap-1"
+          @click="saveToLibrary"
+          title="Aktuellen Prompt in die Prompt Library speichern"
+        >
+          💾 In Bibliothek speichern
+        </button>
+        <button
           class="btn btn-sm btn-warning gap-1"
           :class="{ 'btn-disabled': isInferLocked }"
           :disabled="isInferLocked"
@@ -189,6 +196,7 @@
 import textBlockCache from '../utils/textBlockCache.js';
 import documentCache from '../utils/documentCache.js';
 import geminiInferenceService from '../utils/geminiInferenceService.js';
+import promptCache from '../utils/promptCache.js';
 import { parseTextBlockPlaceholders, injectTextBlocks, validateTextBlocks } from '../utils/textBlockParser.js';
 import { LockClosedIcon } from '@heroicons/vue/24/solid';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
@@ -615,6 +623,31 @@ export default {
       } catch (err) {
         console.error('showFullPromptInTextarea error:', err);
         this.showToast('Fehler beim Anzeigen des Volltexts.', { type: 'error', detail: String(err && (err.stack || err.message || err)) });
+      }
+    },
+    async saveToLibrary() {
+      try {
+        // Prompt user for a title
+        const title = prompt('Bitte geben Sie einen Titel für den neuen Prompt ein:', this.prompt.title || 'Neuer Prompt');
+
+        if (!title) {
+          // User cancelled
+          return;
+        }
+
+        // Save the current edited prompt content to the library
+        const newPrompt = await promptCache.create({
+          title: title.trim(),
+          content: this.editedPromptContent,
+          tags: [],
+          favorite: false
+        });
+
+        console.log('[PromptEditInferenceModal] Saved new prompt to library:', newPrompt);
+        this.showToast(`Prompt "${title}" wurde in die Bibliothek gespeichert.`, { duration: 3000 });
+      } catch (err) {
+        console.error('saveToLibrary error:', err);
+        this.showToast('Fehler beim Speichern des Prompts in die Bibliothek.', { type: 'error', detail: String(err && (err.stack || err.message || err)) });
       }
     }
   }
