@@ -30,8 +30,15 @@
       <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-auto">
         <div v-for="p in filtered" :key="p.id" class="card bg-base-200 h-80">
           <div class="card-body p-3 gap-2 flex flex-col">
-            <div class="flex items-center justify-between">
-              <input class="input input-ghost input-sm font-semibold w-full" v-model="p.title" @change="save(p)"/>
+            <div class="flex items-center justify-between gap-1">
+              <button
+                class="btn btn-ghost btn-xs shrink-0"
+                @click="openEditModal(p)"
+                title="Prompt im großen Editor bearbeiten"
+              >
+                🔍
+              </button>
+              <input class="input input-ghost input-sm font-semibold flex-1" v-model="p.title" @change="save(p)"/>
               <button class="btn btn-ghost btn-xs shrink-0" @click="toggleFav(p)">{{ p.favorite ? '★' : '☆' }}</button>
             </div>
             <textarea class="textarea textarea-bordered textarea-sm flex-1 text-[0.9em] leading-[1]" v-model="p.content"
@@ -116,13 +123,6 @@
                 </div>
               </div>
 
-              <button
-                class="btn btn-xs btn-primary"
-                @click="openEditModal(p)"
-                title="Prompt im großen Editor bearbeiten"
-              >
-                📝
-              </button>
               <div class="btn-group">
                 <button
                   class="btn btn-xs btn-warning gap-1"
