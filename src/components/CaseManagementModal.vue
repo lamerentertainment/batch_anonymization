@@ -1,6 +1,6 @@
 <template>
   <div class="modal modal-open">
-    <div class="modal-box w-11/12 max-w-6xl h-[85vh] flex flex-col">
+    <div class="modal-box w-[95vw] max-w-[1600px] h-[92vh] flex flex-col">
       <h3 class="font-bold text-lg">Case Management</h3>
 
       <!-- Case Selector with Actions -->
