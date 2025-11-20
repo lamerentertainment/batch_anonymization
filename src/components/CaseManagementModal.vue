@@ -246,7 +246,7 @@
   </div>
 
   <!-- Fullscreen Document Viewer (Modal-in-Modal) -->
-  <div v-if="fullScreenDoc" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+  <div v-if="fullScreenDoc" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
        @click.self="fullScreenDoc = null">
     <div class="bg-base-100 rounded-lg w-full max-w-4xl h-5/6 flex flex-col shadow-2xl">
       <div class="p-4 border-b border-base-300 flex justify-between items-center">
