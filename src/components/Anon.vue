@@ -956,12 +956,10 @@
 
                     <!-- Restricted Mode Info -->
                     <div v-if="!isUnrestricted" class="text-sm text-base-content/60 mb-3">
-                        <p class="font-medium mb-1">Restricted mode verhindert:</p>
-                        <ul class="list-disc ml-5">
-                            <li>Kopieren und LLM-Inferenz des anonymisierten Textes, solange dieser nicht überprüft
-                              wurde</li>
-                            <li>Einfügen von Text im De-Anonymisierungsmodus</li>
-                        </ul>
+                        <p class="font-medium mb-1">Die "restricted mode" verhindert Kopier- und Einfügevorgänge des
+                          anonymisierten Textes, was eine häufige Fehlerquelle für versehentliches Offenbaren von vertraulichen Texten
+                          darstellt. Die Benutzer müssen dadurch die Inferenz-Funktionalität der vorliegenden Website
+                          nützen, welche erst nach einer Kontrolle des automatisch anonymiserten Textes möglich ist.</p>
                     </div>
 
                     <!-- Unlock/Lock Controls -->
