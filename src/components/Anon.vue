@@ -669,7 +669,7 @@
                         <button @click="selectAllLabels" class="btn btn-sm btn-outline">
                             Alle auswählen
                         </button>
-                        <button @click="deselectAllLabels" class="btn btn-sm btn-outline">
+                        <button v-if="isUnrestricted" @click="deselectAllLabels" class="btn btn-sm btn-outline">
                             Alle abwählen
                         </button>
                         <button @click="selectCommonLabels" class="btn btn-sm btn-primary">
@@ -679,11 +679,17 @@
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border border-base-300 rounded p-3">
-                    <label v-for="label in availableLabels" :key="label" class="flex items-center space-x-2 hover:bg-base-200 p-1 rounded">
-                        <input 
-                            type="checkbox" 
-                            :value="label" 
+                    <label
+                        v-for="label in availableLabels"
+                        :key="label"
+                        class="flex items-center space-x-2 hover:bg-base-200 p-1 rounded"
+                        :class="{ 'opacity-50': isLabelMandatoryInRestrictedMode(label) }"
+                    >
+                        <input
+                            type="checkbox"
+                            :value="label"
                             v-model="selectedLabels"
+                            :disabled="isLabelMandatoryInRestrictedMode(label)"
                             class="checkbox checkbox-sm"
                         >
                         <span class="text-sm capitalize">{{ formatLabel(label) }}</span>
@@ -1183,10 +1189,18 @@ export default {
             dragOver: false, // Drag over state
             fileError: null, // File validation error
             showSettings: false, // Settings modal visibility
-            selectedLabels: [ // Default selected labels (common ones)
+            // Label selection configuration per mode
+            restrictedSelectedLabels: [], // Will be populated with all availableLabels in mounted()
+            unrestrictedSelectedLabels: [ // Default selected labels for unrestricted mode
                 "person", "organization", "phone number",
                 "email", "address", "credit card number", "social security number",
                 "iban"
+            ],
+            selectedLabels: [], // Will be set dynamically based on mode
+            // Mandatory labels that cannot be deselected in restricted mode
+            mandatoryLabels: [
+                "person", "organization", "address", "phone number",
+                "email", "social security number", "credit card number", "iban"
             ],
             // Toast for info messages (enhanced - same as PromptLibraryModal)
             toastMessage: null,
@@ -1306,6 +1320,12 @@ export default {
 
         // Load security state (restricted/unrestricted mode)
         this.isUnrestricted = securityManager.isUnrestricted();
+
+        // Initialize restricted mode labels (all available labels)
+        this.restrictedSelectedLabels = [...this.availableLabels];
+
+        // Set selectedLabels based on current mode
+        this.updateSelectedLabelsByMode();
 
         // Add keyboard event listeners for restricted mode
         this.setupKeyboardRestrictions();
@@ -2606,6 +2626,10 @@ export default {
         formatLabel(label) {
             return label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         },
+        isLabelMandatoryInRestrictedMode(label) {
+            // In restricted mode, mandatory labels cannot be deselected
+            return !this.isUnrestricted && this.mandatoryLabels.includes(label);
+        },
         selectAllLabels() {
             this.selectedLabels = [...this.availableLabels];
         },
@@ -3370,6 +3394,7 @@ export default {
             if (success) {
                 this.isUnrestricted = true;
                 this.unlockPassword = '';
+                this.updateSelectedLabelsByMode();
                 this.showInfoToast('Unrestricted Mode activated');
             } else {
                 this.showInfoToast('Invalid password');
@@ -3379,7 +3404,18 @@ export default {
         lockMode() {
             securityManager.lock();
             this.isUnrestricted = false;
+            this.updateSelectedLabelsByMode();
             this.showInfoToast('Restricted Mode activated');
+        },
+        updateSelectedLabelsByMode() {
+            // Update selectedLabels based on current mode
+            if (this.isUnrestricted) {
+                // Unrestricted mode: use predefined default labels
+                this.selectedLabels = [...this.unrestrictedSelectedLabels];
+            } else {
+                // Restricted mode: preselect ALL available labels
+                this.selectedLabels = [...this.restrictedSelectedLabels];
+            }
         },
         getCopyButtonTitle() {
             if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
