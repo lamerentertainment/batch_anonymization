@@ -669,7 +669,7 @@
                         <button @click="selectAllLabels" class="btn btn-sm btn-outline">
                             Alle auswählen
                         </button>
-                        <button @click="deselectAllLabels" class="btn btn-sm btn-outline">
+                        <button v-if="isUnrestricted" @click="deselectAllLabels" class="btn btn-sm btn-outline">
                             Alle abwählen
                         </button>
                         <button @click="selectCommonLabels" class="btn btn-sm btn-primary">
@@ -679,11 +679,17 @@
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border border-base-300 rounded p-3">
-                    <label v-for="label in availableLabels" :key="label" class="flex items-center space-x-2 hover:bg-base-200 p-1 rounded">
-                        <input 
-                            type="checkbox" 
-                            :value="label" 
+                    <label
+                        v-for="label in availableLabels"
+                        :key="label"
+                        class="flex items-center space-x-2 hover:bg-base-200 p-1 rounded"
+                        :class="{ 'opacity-50': isLabelMandatoryInRestrictedMode(label) }"
+                    >
+                        <input
+                            type="checkbox"
+                            :value="label"
                             v-model="selectedLabels"
+                            :disabled="isLabelMandatoryInRestrictedMode(label)"
                             class="checkbox checkbox-sm"
                         >
                         <span class="text-sm capitalize">{{ formatLabel(label) }}</span>
@@ -1191,6 +1197,11 @@ export default {
                 "iban"
             ],
             selectedLabels: [], // Will be set dynamically based on mode
+            // Mandatory labels that cannot be deselected in restricted mode
+            mandatoryLabels: [
+                "person", "organization", "address", "phone number",
+                "email", "social security number", "credit card number", "iban"
+            ],
             // Toast for info messages (enhanced - same as PromptLibraryModal)
             toastMessage: null,
             toastVisible: false,
@@ -2614,6 +2625,10 @@ export default {
         },
         formatLabel(label) {
             return label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
+        isLabelMandatoryInRestrictedMode(label) {
+            // In restricted mode, mandatory labels cannot be deselected
+            return !this.isUnrestricted && this.mandatoryLabels.includes(label);
         },
         selectAllLabels() {
             this.selectedLabels = [...this.availableLabels];
