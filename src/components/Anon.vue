@@ -413,6 +413,7 @@
                             </div>
 
                             <button
+                                v-if="mode !== 'anonymize' || isUnrestricted"
                                 @click="copy"
                                 class="btn btn-success btn-sm"
                                 :disabled="!canCopyOutput"
@@ -615,7 +616,11 @@
                             ref="outputContainer"
                             @mouseup="setTextSelection"
                             @click="onOutputClick"
-                            class="w-1/2 h-full border-l border-base-300 bg-info/5 relative overflow-y-auto"
+                            @copy="mode === 'anonymize' && !isUnrestricted ? $event.preventDefault() : null"
+                            :class="[
+                                'w-1/2 h-full border-l border-base-300 bg-info/5 relative overflow-y-auto',
+                                mode === 'anonymize' && !isUnrestricted ? 'select-none' : ''
+                            ]"
                         >
                             <!-- Zone Visualization Overlay (Restricted Mode) -->
                             <div v-if="scrollReview.enabled && isTextAnonymized" class="absolute inset-0 pointer-events-none">
