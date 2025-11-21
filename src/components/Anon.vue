@@ -1956,12 +1956,18 @@ export default {
         onOutputClick(e) {
             const target = e.target;
             if (!(target instanceof HTMLElement)) return;
-            if (!target.classList.contains('badge') || !target.classList.contains('badge-outline')) return;
-            const text = (target.textContent || '').trim();
-            const m = text.match(/^(\d+)_([^_\s]+)(?:_.+)?$/);
-            if (!m) return;
-            const entityId = Number(m[1]);
-            if (!Number.isNaN(entityId)) this.scrollToEntity(entityId);
+
+            // If clicking on a badge, navigate to the entity
+            if (target.classList.contains('badge') && target.classList.contains('badge-outline')) {
+                const text = (target.textContent || '').trim();
+                const m = text.match(/^(\d+)_([^_\s]+)(?:_.+)?$/);
+                if (!m) return;
+                const entityId = Number(m[1]);
+                if (!Number.isNaN(entityId)) this.scrollToEntity(entityId);
+            } else {
+                // If clicking on empty area, clear the entity highlight
+                this.activeHighlightEntityId = null;
+            }
         },
         // Handle clicks inside the input textarea to detect [id_type] tokens
         onInputClick() {
