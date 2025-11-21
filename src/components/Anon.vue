@@ -1183,11 +1183,14 @@ export default {
             dragOver: false, // Drag over state
             fileError: null, // File validation error
             showSettings: false, // Settings modal visibility
-            selectedLabels: [ // Default selected labels (common ones)
+            // Label selection configuration per mode
+            restrictedSelectedLabels: [], // Will be populated with all availableLabels in mounted()
+            unrestrictedSelectedLabels: [ // Default selected labels for unrestricted mode
                 "person", "organization", "phone number",
                 "email", "address", "credit card number", "social security number",
                 "iban"
             ],
+            selectedLabels: [], // Will be set dynamically based on mode
             // Toast for info messages (enhanced - same as PromptLibraryModal)
             toastMessage: null,
             toastVisible: false,
@@ -1306,6 +1309,12 @@ export default {
 
         // Load security state (restricted/unrestricted mode)
         this.isUnrestricted = securityManager.isUnrestricted();
+
+        // Initialize restricted mode labels (all available labels)
+        this.restrictedSelectedLabels = [...this.availableLabels];
+
+        // Set selectedLabels based on current mode
+        this.updateSelectedLabelsByMode();
 
         // Add keyboard event listeners for restricted mode
         this.setupKeyboardRestrictions();
@@ -3370,6 +3379,7 @@ export default {
             if (success) {
                 this.isUnrestricted = true;
                 this.unlockPassword = '';
+                this.updateSelectedLabelsByMode();
                 this.showInfoToast('Unrestricted Mode activated');
             } else {
                 this.showInfoToast('Invalid password');
@@ -3379,7 +3389,18 @@ export default {
         lockMode() {
             securityManager.lock();
             this.isUnrestricted = false;
+            this.updateSelectedLabelsByMode();
             this.showInfoToast('Restricted Mode activated');
+        },
+        updateSelectedLabelsByMode() {
+            // Update selectedLabels based on current mode
+            if (this.isUnrestricted) {
+                // Unrestricted mode: use predefined default labels
+                this.selectedLabels = [...this.unrestrictedSelectedLabels];
+            } else {
+                // Restricted mode: preselect ALL available labels
+                this.selectedLabels = [...this.restrictedSelectedLabels];
+            }
         },
         getCopyButtonTitle() {
             if (this.scrollReview.enabled && !this.scrollReview.isFullyReviewed) {
