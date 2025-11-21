@@ -956,10 +956,10 @@
 
                     <!-- Restricted Mode Info -->
                     <div v-if="!isUnrestricted" class="text-sm text-base-content/60 mb-3">
-                        <p class="font-medium mb-1">Die "restricted mode" verhindert Kopier- und Einfügevorgänge des
-                          anonymisierten Textes, was eine häufige Fehlerquelle für versehentliches Offenbaren von vertraulichen Texten
+                        <p class="font-medium mb-1">Der "eingeschränkte Modus" verhindert Kopier- und Einfügevorgänge
+                          des anonymisierten Textes, was eine häufige Fehlerquelle für versehentliches Offenbaren von vertraulichen Texten
                           darstellt. Die Benutzer müssen dadurch die Inferenz-Funktionalität der vorliegenden Website
-                          nützen, welche erst nach einer Kontrolle des automatisch anonymiserten Textes möglich ist.</p>
+                          nützen, welche erst nach einer Kontrolle des automatisch anonymisierten Textes möglich ist .</p>
                     </div>
 
                     <!-- Unlock/Lock Controls -->
