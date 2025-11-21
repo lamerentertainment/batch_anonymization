@@ -3512,7 +3512,7 @@ export default {
                     localStorage.setItem('anon.currentScrollReviewCompleted', 'true');
                 } catch (e) {}
                 this.notifyScrollReviewStatus();
-                this.showInfoToast('✓ Text review completed. You can now copy or run prompts.');
+                this.showInfoToast('✓ Text Kontrolle vollständig erfolgt. Sie können nun Prompts ausführen.');
             }
         },
         // Helper method to notify other components about scroll review status changes
