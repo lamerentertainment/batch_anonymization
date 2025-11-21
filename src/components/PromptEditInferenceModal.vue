@@ -183,6 +183,7 @@
         <!-- Inference Mode Buttons -->
         <template v-else>
           <button
+            v-if="isUnrestricted"
             class="btn btn-sm btn-outline gap-1"
             @click="copyFullPromptToClipboard"
             title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Zwischenablage kopieren"
@@ -190,6 +191,7 @@
             📋 Volltext kopieren
           </button>
           <button
+            v-if="isUnrestricted"
             class="btn btn-sm btn-outline gap-1"
             @click="showFullPromptInTextarea"
             title="Vollständigen Prompt (mit Kontext und Textbausteinen) in Textarea anzeigen"
@@ -280,6 +282,10 @@ export default {
       type: String,
       default: 'inference', // 'edit' or 'inference'
       validator: (value) => ['edit', 'inference'].includes(value)
+    },
+    isUnrestricted: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['close', 'inferResult', 'promptUpdated'],

@@ -1003,6 +1003,7 @@
         <prompt-library-modal
             v-if="hasGeminiKey && showPromptLibrary"
             :active-case="activeCase"
+            :is-unrestricted="isUnrestricted"
             @close="showPromptLibrary = false"
             @insert="handlePromptInsert"
             @inferResult="handlePromptInferred"

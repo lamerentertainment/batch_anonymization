@@ -194,6 +194,7 @@
       :activeCase="activeCase"
       :selectedTextBlocks="selectedTextBlocks"
       :selectedDocumentsForContext="selectedDocumentsForContext"
+      :isUnrestricted="isUnrestricted"
       mode="edit"
       @close="closeEditModal"
       @promptUpdated="handlePromptUpdated"
@@ -206,6 +207,7 @@
       :activeCase="activeCase"
       :selectedTextBlocks="selectedTextBlocks"
       :selectedDocumentsForContext="selectedDocumentsForContext"
+      :isUnrestricted="isUnrestricted"
       mode="inference"
       @close="closeEditInferenceModal"
       @inferResult="handleInferResult"
@@ -235,6 +237,10 @@ export default {
     activeCase: {
       type: Object,
       default: null
+    },
+    isUnrestricted: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['close', 'inferResult', 'toast'],
