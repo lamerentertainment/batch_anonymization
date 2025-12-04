@@ -1798,7 +1798,7 @@ export default {
                 console.log(`Using execution providers: ${executionProviders.join(', ')}`);
                 
                 const newGliner = new Gliner({
-                    tokenizerPath: "./gliner_multi_pii-v1",
+                    tokenizerPath: "./models/gliner_multi_pii-v1",
                     onnxSettings: {
                         modelPath: modelUrl, // Use the blob URL instead of the original path
                         wasmPaths: {

@@ -1,7 +1,11 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": [],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "headers": [
       {
         "source": "**/*.mjs",
@@ -9,6 +13,15 @@
           {
             "key": "Content-Type",
             "value": "application/javascript"
+          }
+        ]
+      },
+      {
+        "source": "**/*.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
           }
         ]
       },
