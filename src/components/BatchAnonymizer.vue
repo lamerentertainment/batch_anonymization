@@ -1,12 +1,12 @@
 <template>
     <div class="flex flex-col h-screen bg-base-200">
         <!-- Header -->
-        <header class="bg-base-100 border-b border-base-300 px-6 py-4">
+        <header class="bg-base-100 border-b border-base-300 px-6 py-4 flex items-baseline gap-x-4">
             <h1 class="text-2xl font-bold text-base-content">
                 Batch-Anonymisierung
             </h1>
             <p class="text-sm text-base-content/60 mt-1">
-                Mehrere Dateien gleichzeitig anonymisieren
+                Mehrere Dateien nacheinander anonymisieren
             </p>
         </header>
 
