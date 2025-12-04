@@ -17,7 +17,7 @@
                 <span v-else-if="modelStatus === 'error'" class="text-error text-xl">!</span>
                 <div class="flex-1">
                     <template v-if="modelStatus === 'idle'">
-                        <strong>Modell nicht geladen.</strong> Klicken Sie auf "Verarbeitung starten" um das Modell zu initialisieren.
+                        <strong>Modell wird vorbereitet...</strong>
                     </template>
                     <template v-else-if="modelStatus === 'loading'">
                         <strong>Modell wird geladen...</strong> {{ modelProgress }}%
@@ -344,7 +344,31 @@ export default {
             return Math.round((this.processedCount / this.inputFiles.length) * 100);
         }
     },
+    mounted() {
+        // Preload the anonymization model on page load
+        this.initializeModel();
+    },
     methods: {
+        // Initialize model
+        async initializeModel() {
+            if (this.modelStatus === 'ready' || this.modelStatus === 'loading') {
+                return;
+            }
+
+            try {
+                this.modelStatus = 'loading';
+                this.modelProgress = 0;
+                await anonymizerService.initialize((progress) => {
+                    this.modelProgress = progress;
+                });
+                this.modelStatus = 'ready';
+                console.log('Model preloaded successfully');
+            } catch (error) {
+                this.modelStatus = 'error';
+                this.modelError = error.message;
+                console.error('Failed to preload model:', error);
+            }
+        },
         // File input methods
         triggerFileInput() {
             this.$refs.fileInput.click();
@@ -458,6 +482,16 @@ export default {
         async startProcessing() {
             if (!this.canStartProcessing) return;
 
+            // Ensure model is ready (fallback in case preload failed)
+            if (this.modelStatus !== 'ready') {
+                await this.initializeModel();
+                if (this.modelStatus !== 'ready') {
+                    // Model initialization failed
+                    this.isProcessing = false;
+                    return;
+                }
+            }
+
             this.isProcessing = true;
             this.processedCount = 0;
             this.outputFiles = [];
@@ -476,22 +510,6 @@ export default {
                     error: null
                 });
             });
-
-            // Initialize model if needed
-            if (this.modelStatus !== 'ready') {
-                try {
-                    this.modelStatus = 'loading';
-                    await anonymizerService.initialize((progress) => {
-                        this.modelProgress = progress;
-                    });
-                    this.modelStatus = 'ready';
-                } catch (error) {
-                    this.modelStatus = 'error';
-                    this.modelError = error.message;
-                    this.isProcessing = false;
-                    return;
-                }
-            }
 
             // Process files sequentially
             for (let i = 0; i < this.outputFiles.length; i++) {
