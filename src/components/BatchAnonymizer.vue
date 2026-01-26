@@ -408,7 +408,7 @@
                         ></div>
 
                         <!-- Legend -->
-                        <div class="mt-4 flex gap-2 flex-wrap text-xs">
+                        <div class="mt-4 flex gap-2 flex-wrap text-xs items-center">
                             <span class="font-medium text-base-content/60 mr-2">Legende:</span>
                             <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded">person</span>
                             <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded">email</span>
@@ -418,6 +418,7 @@
                             <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
                             <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
                             <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
+                            <span class="text-base-content/40 ml-2 italic">Hover zeigt Original</span>
                         </div>
                     </div>
                 </div>
@@ -519,6 +520,12 @@ export default {
         highlightedAnonymizedText() {
             if (!this.testPreviewResult) return '';
 
+            // Create a map of entity ID to original name
+            const entityMap = {};
+            this.testPreviewResult.entities.forEach(entity => {
+                entityMap[entity.id] = entity.name;
+            });
+
             let text = this.escapeHtml(this.testPreviewResult.anonymizedText);
 
             // Color mapping by entity type
@@ -547,7 +554,10 @@ export default {
             text = text.replace(placeholderRegex, (match, id, type) => {
                 const normalizedType = type.toLowerCase().trim();
                 const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
-                return `<span style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600;">${match}</span>`;
+                const originalValue = entityMap[id] || 'Unbekannt';
+                // Escape quotes for the title attribute
+                const escapedOriginal = originalValue.replace(/"/g, '&quot;');
+                return `<span style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;" title="Original: ${escapedOriginal}">${match}</span>`;
             });
 
             return text;
