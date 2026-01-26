@@ -268,12 +268,21 @@ class AnonymizerService {
      * Anonymize text by replacing entities with placeholders
      * @param {string} text - Original text
      * @param {Array<{id: number, name: string, type: string}>} entities - Entities to anonymize
+     * @param {Object} options - Anonymization options
+     * @param {boolean} options.anonymizePartialWords - Whether to anonymize individual words of multi-word entities (default: true)
+     * @param {number} options.minCharacterThreshold - Minimum character length for entities to be anonymized (default: 0)
      * @returns {string} - Anonymized text
      */
-    anonymizeText(text, entities) {
+    anonymizeText(text, entities, options = {}) {
         if (!entities || entities.length === 0) {
             return text;
         }
+
+        // Default options
+        const {
+            anonymizePartialWords = true,
+            minCharacterThreshold = 0
+        } = options;
 
         let anonymized = text;
         const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -281,6 +290,11 @@ class AnonymizerService {
 
         entities.forEach(entity => {
             if (!entity.name) return;
+
+            // Skip entities below character threshold
+            if (minCharacterThreshold > 0 && entity.name.length <= minCharacterThreshold) {
+                return;
+            }
 
             // Split entity name into words
             const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
@@ -299,12 +313,14 @@ class AnonymizerService {
                 anonymized = anonymized.replace(singleWordPattern, `[${entity.id}_${entity.type}]`);
             }
 
-            // Replace remaining individual words
-            words.forEach((w, idx) => {
-                const suffix = letters[idx] || String(idx + 1);
-                const wordPattern = new RegExp(`\\b${escapeRegex(w)}\\b`, 'gi');
-                anonymized = anonymized.replace(wordPattern, `[${entity.id}_${entity.type}_${suffix}]`);
-            });
+            // Replace remaining individual words (only if anonymizePartialWords is true)
+            if (anonymizePartialWords) {
+                words.forEach((w, idx) => {
+                    const suffix = letters[idx] || String(idx + 1);
+                    const wordPattern = new RegExp(`\\b${escapeRegex(w)}\\b`, 'gi');
+                    anonymized = anonymized.replace(wordPattern, `[${entity.id}_${entity.type}_${suffix}]`);
+                });
+            }
         });
 
         return anonymized;

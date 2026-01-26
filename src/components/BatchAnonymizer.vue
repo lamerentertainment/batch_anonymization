@@ -156,6 +156,40 @@
                     </div>
                 </div>
 
+                <!-- Anonymization Options -->
+                <div class="p-4 border-t border-base-300 space-y-3">
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-2">
+                            <input
+                                type="checkbox"
+                                v-model="anonymizePartialWords"
+                                class="checkbox checkbox-sm checkbox-primary"
+                            >
+                            <span class="label-text text-sm">Einzelne Wörter anonymisieren</span>
+                        </label>
+                        <p class="text-xs text-base-content/50 ml-6">
+                            Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
+                        </p>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text text-sm">Minimale Zeichenlänge</span>
+                        </label>
+                        <input
+                            type="number"
+                            v-model.number="minCharacterThreshold"
+                            min="0"
+                            max="50"
+                            class="input input-sm input-bordered w-full"
+                            placeholder="0 = keine Beschränkung"
+                        >
+                        <p class="text-xs text-base-content/50 mt-1">
+                            Entitäten mit weniger Zeichen werden nicht anonymisiert
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Start Processing Button -->
                 <div class="p-4 border-t border-base-300">
                     <button
@@ -318,6 +352,10 @@ export default {
             // Entity selection
             availableLabels: AVAILABLE_LABELS,
             selectedLabels: [...DEFAULT_SELECTED_LABELS],
+
+            // Anonymization options
+            anonymizePartialWords: true,
+            minCharacterThreshold: 0,
 
             // Model status
             modelStatus: 'idle', // 'idle', 'loading', 'ready', 'error'
@@ -531,7 +569,14 @@ export default {
                     );
 
                     // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(result.text, entities);
+                    const anonymizedText = anonymizerService.anonymizeText(
+                        result.text,
+                        entities,
+                        {
+                            anonymizePartialWords: this.anonymizePartialWords,
+                            minCharacterThreshold: this.minCharacterThreshold
+                        }
+                    );
 
                     outputFile.content = anonymizedText;
                     outputFile.entitiesFound = entities.length;
