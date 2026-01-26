@@ -188,6 +188,21 @@
                             Entitäten mit weniger Zeichen werden nicht anonymisiert
                         </p>
                     </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text text-sm">Negativliste (Ausnahmen)</span>
+                        </label>
+                        <textarea
+                            v-model="exclusionList"
+                            @input="saveExclusionList"
+                            class="textarea textarea-sm textarea-bordered w-full h-20 text-xs"
+                            placeholder="Wörter durch Komma trennen, z.B.: Berlin, Deutschland, Max"
+                        ></textarea>
+                        <p class="text-xs text-base-content/50 mt-1">
+                            Diese Wörter werden nie anonymisiert
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Threshold Control -->
@@ -373,6 +388,12 @@ export default {
             availableLabels: AVAILABLE_LABELS,
             selectedLabels: [...DEFAULT_SELECTED_LABELS],
 
+            // Anonymization options
+            anonymizePartialWords: true,
+            minCharacterThreshold: 0,
+            threshold: 0.1,
+            exclusionList: '',
+
             // Model status
             modelStatus: 'idle', // 'idle', 'loading', 'ready', 'error'
             modelProgress: 0,
@@ -401,8 +422,38 @@ export default {
     mounted() {
         // Preload the anonymization model on page load
         this.initializeModel();
+        // Load exclusion list from localStorage
+        this.loadExclusionList();
     },
     methods: {
+        // Exclusion list methods
+        saveExclusionList() {
+            try {
+                localStorage.setItem('anonymizer_exclusion_list', this.exclusionList);
+            } catch (error) {
+                console.error('Failed to save exclusion list to localStorage:', error);
+            }
+        },
+        loadExclusionList() {
+            try {
+                const saved = localStorage.getItem('anonymizer_exclusion_list');
+                if (saved) {
+                    this.exclusionList = saved;
+                }
+            } catch (error) {
+                console.error('Failed to load exclusion list from localStorage:', error);
+            }
+        },
+        parseExclusionList() {
+            if (!this.exclusionList || this.exclusionList.trim() === '') {
+                return [];
+            }
+            return this.exclusionList
+                .split(',')
+                .map(word => word.trim())
+                .filter(word => word.length > 0);
+        },
+
         // Initialize model
         async initializeModel() {
             if (this.modelStatus === 'ready' || this.modelStatus === 'loading') {
@@ -581,11 +632,16 @@ export default {
                     // Detect entities
                     const entities = await anonymizerService.detectEntities(
                         result.text,
-                        this.selectedLabels
+                        this.selectedLabels,
+                        this.threshold
                     );
 
                     // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(result.text, entities);
+                    const anonymizedText = anonymizerService.anonymizeText(result.text, entities, {
+                        anonymizePartialWords: this.anonymizePartialWords,
+                        minCharacterThreshold: this.minCharacterThreshold,
+                        exclusionList: this.parseExclusionList()
+                    });
 
                     outputFile.content = anonymizedText;
                     outputFile.entitiesFound = entities.length;

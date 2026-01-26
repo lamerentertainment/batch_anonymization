@@ -270,6 +270,7 @@ class AnonymizerService {
      * @param {Object} options - Anonymization options
      * @param {boolean} options.anonymizePartialWords - Whether to anonymize individual words of multi-word entities (default: true)
      * @param {number} options.minCharacterThreshold - Minimum character length for entities to be anonymized (default: 0)
+     * @param {Array<string>} options.exclusionList - List of words that should never be anonymized (default: [])
      * @returns {string} - Anonymized text
      */
     anonymizeText(text, entities, options = {}) {
@@ -280,18 +281,31 @@ class AnonymizerService {
         // Default options
         const {
             anonymizePartialWords = true,
-            minCharacterThreshold = 0
+            minCharacterThreshold = 0,
+            exclusionList = []
         } = options;
+
+        // Normalize exclusion list to lowercase for case-insensitive comparison
+        const normalizedExclusionList = exclusionList.map(word => word.toLowerCase());
 
         let anonymized = text;
         const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const letters = 'abcdefghijklmnopqrstuvwxyz';
+
+        const isExcluded = (word) => {
+            return normalizedExclusionList.includes(word.toLowerCase());
+        };
 
         entities.forEach(entity => {
             if (!entity.name) return;
 
             // Skip entities below character threshold
             if (minCharacterThreshold > 0 && entity.name.length <= minCharacterThreshold) {
+                return;
+            }
+
+            // Skip entities in exclusion list
+            if (isExcluded(entity.name)) {
                 return;
             }
 
@@ -315,6 +329,10 @@ class AnonymizerService {
             // Replace remaining individual words (only if anonymizePartialWords is true)
             if (anonymizePartialWords) {
                 words.forEach((w, idx) => {
+                    // Skip individual words that are in the exclusion list
+                    if (isExcluded(w)) {
+                        return;
+                    }
                     const suffix = letters[idx] || String(idx + 1);
                     const wordPattern = new RegExp(`\\b${escapeRegex(w)}\\b`, 'gi');
                     anonymized = anonymized.replace(wordPattern, `[${entity.id}_${entity.type}_${suffix}]`);
