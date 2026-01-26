@@ -35,7 +35,10 @@
         <!-- Main Content: 3 Columns -->
         <main class="flex-1 flex overflow-hidden">
             <!-- LEFT: File Input -->
-            <section class="w-80 border-r border-base-300 bg-base-100 flex flex-col">
+            <section 
+                class="border-r border-base-300 bg-base-100 flex flex-col flex-shrink-0"
+                :style="{ width: leftPanelWidth + 'px' }"
+            >
                 <div class="p-4 border-b border-base-300">
                     <h2 class="font-semibold text-lg flex items-center gap-2">
                         <FolderIcon class="w-5 h-5" />
@@ -121,12 +124,21 @@
                 </div>
             </section>
 
+            <!-- Resize Handle Left -->
+            <div
+                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors flex-shrink-0"
+                @mousedown="startResizeLeft"
+            ></div>
+
             <!-- CENTER: Entity Selection -->
-            <section class="w-80 border-r border-base-300 bg-base-100 flex flex-col">
+            <section 
+                class="border-r border-base-300 bg-base-100 flex flex-col flex-shrink-0"
+                :style="{ width: centerPanelWidth + 'px' }"
+            >
                 <div class="p-4 border-b border-base-300">
                     <h2 class="font-semibold text-lg flex items-center gap-2">
                         <TagIcon class="w-5 h-5" />
-                        Entitäten auswählen
+                         Anonymisierungseinstellungen
                     </h2>
                 </div>
 
@@ -232,6 +244,12 @@
                     </p>
                 </div>
             </section>
+
+            <!-- Resize Handle Center -->
+            <div
+                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors flex-shrink-0"
+                @mousedown="startResizeCenter"
+            ></div>
 
             <!-- RIGHT: Output Files -->
             <section class="flex-1 bg-base-100 flex flex-col">
@@ -365,6 +383,11 @@ export default {
     },
     data() {
         return {
+            // Layout
+            leftPanelWidth: 320,
+            centerPanelWidth: 320,
+            isDraggingLeft: false,
+            isDraggingCenter: false,
             // Input files
             inputFiles: [],
             dragOver: false,
@@ -399,8 +422,22 @@ export default {
         }
     },
     mounted() {
+        // Load saved widths
+        const savedLeft = localStorage.getItem('batchAnonymizer_leftPanelWidth');
+        const savedCenter = localStorage.getItem('batchAnonymizer_centerPanelWidth');
+        if (savedLeft) this.leftPanelWidth = parseInt(savedLeft);
+        if (savedCenter) this.centerPanelWidth = parseInt(savedCenter);
+
         // Preload the anonymization model on page load
         this.initializeModel();
+        
+        // Add global listeners for drag safety (in case mouse leaves window)
+        window.addEventListener('mouseup', this.stopResize);
+        window.addEventListener('mousemove', this.handleMouseMove);
+    },
+    beforeUnmount() {
+        window.removeEventListener('mouseup', this.stopResize);
+        window.removeEventListener('mousemove', this.handleMouseMove);
     },
     methods: {
         // Initialize model
@@ -421,6 +458,42 @@ export default {
                 this.modelStatus = 'error';
                 this.modelError = error.message;
                 console.error('Failed to preload model:', error);
+            }
+        },
+        // Layout resizing methods
+        startResizeLeft() {
+            this.isDraggingLeft = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none'; // Prevent text selection
+        },
+        startResizeCenter() {
+            this.isDraggingCenter = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        },
+        handleMouseMove(e) {
+            if (this.isDraggingLeft) {
+                // Minimum width 200px, Maximum width 600px
+                const newWidth = Math.max(200, Math.min(600, e.clientX));
+                this.leftPanelWidth = newWidth;
+            } else if (this.isDraggingCenter) {
+                // Calculate center panel width based on mouse position relative to left panel
+                // The dragging handle is at the right of the center panel
+                // So width = mouseX - leftPanelWidth - handleWidth(4px usually, negligible)
+                const newWidth = Math.max(200, Math.min(600, e.clientX - this.leftPanelWidth));
+                this.centerPanelWidth = newWidth;
+            }
+        },
+        stopResize() {
+            if (this.isDraggingLeft || this.isDraggingCenter) {
+                this.isDraggingLeft = false;
+                this.isDraggingCenter = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // Save widths to localStorage
+                localStorage.setItem('batchAnonymizer_leftPanelWidth', this.leftPanelWidth);
+                localStorage.setItem('batchAnonymizer_centerPanelWidth', this.centerPanelWidth);
             }
         },
         // File input methods
