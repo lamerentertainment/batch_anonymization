@@ -431,6 +431,13 @@
                             <span>Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong></span>
                             <span class="text-base-content/40">|</span>
                             <span>Labels: <strong>{{ selectedLabels.length }}</strong></span>
+                            <span v-if="testPreviewResult.exclusionListCount > 0" class="text-base-content/40">|</span>
+                            <span v-if="testPreviewResult.exclusionListCount > 0" :title="'Negativliste: ' + exclusionList">
+                                Negativliste: <strong class="text-warning">{{ testPreviewResult.exclusionListCount }}</strong> Wörter
+                                <span v-if="testPreviewResult.excludedEntitiesCount > 0" class="text-success">
+                                    ({{ testPreviewResult.excludedEntitiesCount }} übersprungen)
+                                </span>
+                            </span>
                         </div>
 
                         <!-- Anonymized Text with Highlighting -->
@@ -1041,13 +1048,25 @@ export default {
                     this.threshold
                 );
 
-                // Anonymize text with current options
+                // Get current exclusion list
+                const exclusionList = this.parseExclusionList();
+
+                // Count how many entities would be excluded
+                const excludedEntities = entities.filter(entity => {
+                    const entityWords = entity.name.toLowerCase().split(/\s+/);
+                    return entityWords.some(word =>
+                        exclusionList.some(excl => excl.toLowerCase() === word)
+                    );
+                });
+
+                // Anonymize text with current options including exclusion list
                 const anonymizedText = anonymizerService.anonymizeText(
                     limitedText,
                     entities,
                     {
                         anonymizePartialWords: this.anonymizePartialWords,
-                        minCharacterThreshold: this.minCharacterThreshold
+                        minCharacterThreshold: this.minCharacterThreshold,
+                        exclusionList: exclusionList
                     }
                 );
 
@@ -1057,7 +1076,9 @@ export default {
                     anonymizedText: anonymizedText,
                     entities: entities,
                     wordCount: Math.min(words.length, 1000),
-                    totalWords: words.length
+                    totalWords: words.length,
+                    exclusionListCount: exclusionList.length,
+                    excludedEntitiesCount: excludedEntities.length
                 };
 
             } catch (error) {
