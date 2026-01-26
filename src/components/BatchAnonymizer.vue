@@ -453,6 +453,37 @@
                             <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
                             <span class="text-base-content/40 ml-2 italic">Hover zeigt Original</span>
                         </div>
+
+                        <!-- Anonymized Words List - Click to exclude -->
+                        <div class="mt-6 p-4 bg-base-200 rounded-lg">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-semibold text-sm">Anonymisierte Wörter</h4>
+                                <span class="text-xs text-base-content/60">
+                                    Klicken um zur Negativliste hinzuzufügen
+                                </span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="item in uniqueAnonymizedWords"
+                                    :key="item.word"
+                                    @click="addToExclusionList(item.word)"
+                                    :disabled="item.isInExclusionList"
+                                    class="px-2 py-1 text-xs rounded-full border transition-all"
+                                    :class="item.isInExclusionList
+                                        ? 'bg-base-300 text-base-content/40 border-base-300 cursor-not-allowed line-through'
+                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
+                                    :title="item.isInExclusionList
+                                        ? 'Bereits in der Negativliste'
+                                        : `Klicken um '${item.word}' zur Negativliste hinzuzufügen`"
+                                >
+                                    {{ item.word }}
+                                    <span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                                </button>
+                            </div>
+                            <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
+                                Keine Wörter anonymisiert
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -605,6 +636,38 @@ export default {
             });
 
             return text;
+        },
+        uniqueAnonymizedWords() {
+            if (!this.testPreviewResult || !this.testPreviewResult.entities) return [];
+
+            // Get all unique words from entities, split multi-word entities
+            const wordsMap = new Map(); // word -> { word, type, entityId, isInExclusionList }
+            const currentExclusions = this.parseExclusionList().map(w => w.toLowerCase());
+
+            this.testPreviewResult.entities.forEach(entity => {
+                // Split entity name into individual words
+                const entityWords = entity.name.split(/\s+/).filter(w => w.trim().length > 0);
+
+                entityWords.forEach(word => {
+                    const cleanWord = word.trim();
+                    const lowerWord = cleanWord.toLowerCase();
+
+                    // Only add if not already in map (keep first occurrence type)
+                    if (!wordsMap.has(lowerWord)) {
+                        wordsMap.set(lowerWord, {
+                            word: cleanWord,
+                            type: entity.type,
+                            entityId: entity.id,
+                            isInExclusionList: currentExclusions.includes(lowerWord)
+                        });
+                    }
+                });
+            });
+
+            // Convert to array and sort alphabetically
+            return Array.from(wordsMap.values()).sort((a, b) =>
+                a.word.toLowerCase().localeCompare(b.word.toLowerCase())
+            );
         }
     },
     mounted() {
@@ -654,6 +717,29 @@ export default {
                 .split(',')
                 .map(word => word.trim())
                 .filter(word => word.length > 0);
+        },
+        addToExclusionList(word) {
+            if (!word || word.trim() === '') return;
+
+            const cleanWord = word.trim();
+            const currentExclusions = this.parseExclusionList();
+
+            // Check if word already exists (case-insensitive)
+            const alreadyExists = currentExclusions.some(
+                w => w.toLowerCase() === cleanWord.toLowerCase()
+            );
+
+            if (alreadyExists) return;
+
+            // Add word to exclusion list
+            if (this.exclusionList.trim() === '') {
+                this.exclusionList = cleanWord;
+            } else {
+                this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
+            }
+
+            // Save to localStorage
+            this.saveExclusionList();
         },
 
         // Initialize model
