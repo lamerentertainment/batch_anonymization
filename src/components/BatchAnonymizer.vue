@@ -116,22 +116,25 @@
                                     <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
-                            <!-- Test Button on Hover -->
-                            <button
+                            <!-- Test Button Overlay on Hover -->
+                            <div
                                 v-if="hoveredFileIndex === index && modelStatus === 'ready'"
-                                @click.stop="testAnonymization(file)"
-                                class="absolute left-0 right-0 -bottom-7 z-10
-                                       btn btn-xs btn-primary shadow-lg"
-                                :disabled="testPreviewLoading"
+                                class="absolute inset-0 flex items-center justify-center bg-base-200/90 rounded"
                             >
-                                <template v-if="testPreviewLoading && testPreviewFile === file">
-                                    <span class="loading loading-spinner loading-xs mr-1"></span>
-                                    Teste...
-                                </template>
-                                <template v-else>
-                                    Anonymisierung testen
-                                </template>
-                            </button>
+                                <button
+                                    @click.stop="testAnonymization(file)"
+                                    class="btn btn-xs btn-primary"
+                                    :disabled="testPreviewLoading"
+                                >
+                                    <template v-if="testPreviewLoading && testPreviewFile === file">
+                                        <span class="loading loading-spinner loading-xs mr-1"></span>
+                                        Teste...
+                                    </template>
+                                    <template v-else>
+                                        Anonymisierung testen
+                                    </template>
+                                </button>
+                            </div>
                         </li>
                     </ul>
                 </div>
