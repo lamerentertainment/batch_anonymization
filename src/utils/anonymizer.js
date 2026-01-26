@@ -304,13 +304,14 @@ class AnonymizerService {
                 return;
             }
 
-            // Skip entities in exclusion list
-            if (isExcluded(entity.name)) {
-                return;
-            }
-
             // Split entity name into words
             const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
+
+            // Skip entire entity if ANY word is in the exclusion list
+            const hasExcludedWord = words.some(w => isExcluded(w));
+            if (hasExcludedWord || isExcluded(entity.name)) {
+                return;
+            }
 
             if (words.length > 1) {
                 // Multi-word entity: replace full match with sequence of placeholders
