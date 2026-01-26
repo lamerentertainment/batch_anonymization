@@ -138,6 +138,27 @@
                             De-Anonymisieren
                         </button>
                     </div>
+                    
+                    <!-- Threshold Control -->
+                    <div v-if="mode === 'anonymize'" class="form-control w-full">
+                        <label class="label pb-1 cursor-pointer">
+                            <span class="label-text text-xs">Erkennungsschwelle (Threshold)</span>
+                            <span class="label-text-alt font-mono">{{ threshold }}</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            min="0.05" 
+                            max="0.8" 
+                            step="0.05" 
+                            v-model.number="threshold" 
+                            class="range range-xs range-primary" 
+                        />
+                        <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
+                            <span>mehr</span>
+                            <span>weniger</span>
+                        </div>
+                    </div>
+
                     <button 
                         v-if="mode === 'anonymize'" 
                         @click="getEntities" 
@@ -1121,6 +1142,7 @@ export default {
             savedInputText: '',
             newEntityName: '',
             newEntityType: 'person',
+            threshold: 0.1,
             entities: [],
             mode: 'anonymize', // 'anonymize' or 'pseudonymize'
             selectedModel: 'quantized', // 'quantized' or 'full'
@@ -1193,14 +1215,14 @@ export default {
             restrictedSelectedLabels: [], // Will be populated with all availableLabels in mounted()
             unrestrictedSelectedLabels: [ // Default selected labels for unrestricted mode
                 "person", "organization", "phone number",
-                "email", "address", "credit card number", "social security number",
+                "email", "address", "credit card number", 
                 "iban"
             ],
             selectedLabels: [], // Will be set dynamically based on mode
             // Mandatory labels that cannot be deselected in restricted mode
             mandatoryLabels: [
                 "person", "organization", "address", "phone number",
-                "email", "social security number", "credit card number", "iban"
+                "email", "credit card number", "iban"
             ],
             // Toast for info messages (enhanced - same as PromptLibraryModal)
             toastMessage: null,
@@ -2098,7 +2120,7 @@ export default {
                             const results = await this.gliner.inference({
                                 texts: [chunk],
                                 entities: this.selectedLabels,
-                                threshold: 0.1,
+                                threshold: this.threshold,
                             });
 
                             // results is an array of arrays - get the first text's results
@@ -2640,7 +2662,7 @@ export default {
             this.selectedLabels = [
                 "person", "location", "organization", "date", "time", 
                 "phone number", "email", "address", "credit card number", 
-                "social security number", "date of birth", "mobile phone number"
+                 "date of birth", "mobile phone number"
             ];
         },
         applySettings() {

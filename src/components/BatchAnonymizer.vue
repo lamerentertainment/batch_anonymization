@@ -156,6 +156,26 @@
                     </div>
                 </div>
 
+                <!-- Threshold Control -->
+                <div class="px-4 pb-2">
+                     <label class="label pb-1 cursor-pointer">
+                        <span class="label-text text-xs">Erkennungsschwelle (Threshold)</span>
+                        <span class="label-text-alt font-mono">{{ threshold }}</span>
+                    </label>
+                    <input 
+                        type="range" 
+                        min="0.05" 
+                        max="0.8" 
+                        step="0.05" 
+                        v-model.number="threshold" 
+                        class="range range-xs range-primary" 
+                    />
+                    <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
+                        <span>mehr</span>
+                        <span>weniger</span>
+                    </div>
+                </div>
+
                 <!-- Start Processing Button -->
                 <div class="p-4 border-t border-base-300">
                     <button
@@ -330,7 +350,10 @@ export default {
             processedCount: 0,
 
             // Output files
-            outputFiles: []
+            outputFiles: [],
+            
+            // Configuration
+            threshold: 0.1
         };
     },
     computed: {
@@ -527,7 +550,8 @@ export default {
                     // Detect entities
                     const entities = await anonymizerService.detectEntities(
                         result.text,
-                        this.selectedLabels
+                        this.selectedLabels,
+                        this.threshold
                     );
 
                     // Anonymize text

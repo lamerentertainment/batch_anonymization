@@ -78,7 +78,6 @@ export const DEFAULT_SELECTED_LABELS = [
     "address",
     "iban",
     "credit card number",
-    "social security number"
 ];
 
 /**
@@ -101,7 +100,7 @@ class AnonymizerService {
      * @param {Function} onProgress - Progress callback (0-100)
      * @returns {Promise<void>}
      */
-    async initialize(onProgress = () => {}) {
+    async initialize(onProgress = () => { }) {
         if (this.isInitialized) {
             return;
         }
@@ -207,7 +206,7 @@ class AnonymizerService {
      * @param {string[]} labels - Entity labels to detect
      * @returns {Promise<Array<{id: number, name: string, type: string}>>}
      */
-    async detectEntities(text, labels = DEFAULT_SELECTED_LABELS) {
+    async detectEntities(text, labels = DEFAULT_SELECTED_LABELS, threshold = 0.1) {
         if (!this.isInitialized || !this.gliner) {
             throw new Error('Anonymizer not initialized. Call initialize() first.');
         }
@@ -224,7 +223,7 @@ class AnonymizerService {
             const results = await this.gliner.inference({
                 texts: [chunk],
                 entities: labels,
-                threshold: 0.1,
+                threshold: threshold,
             });
 
             const chunkEntities = results[0].map((ent) => ({
