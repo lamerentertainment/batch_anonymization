@@ -97,17 +97,37 @@
                         <li
                             v-for="(file, index) in inputFiles"
                             :key="index"
-                            class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm"
+                            class="relative"
+                            @mouseenter="hoveredFileIndex = index"
+                            @mouseleave="hoveredFileIndex = null"
                         >
-                            <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
-                            <span class="flex-1 truncate" :title="file.relativePath || file.name">
-                                {{ file.relativePath || file.name }}
-                            </span>
+                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm">
+                                <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
+                                <span class="flex-1 truncate" :title="file.relativePath || file.name">
+                                    {{ file.relativePath || file.name }}
+                                </span>
+                                <button
+                                    @click="removeInputFile(index)"
+                                    class="btn btn-ghost btn-xs btn-square text-error"
+                                >
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                            <!-- Test Button on Hover -->
                             <button
-                                @click="removeInputFile(index)"
-                                class="btn btn-ghost btn-xs btn-square text-error"
+                                v-if="hoveredFileIndex === index && modelStatus === 'ready'"
+                                @click.stop="testAnonymization(file)"
+                                class="absolute left-0 right-0 -bottom-7 z-10
+                                       btn btn-xs btn-primary shadow-lg"
+                                :disabled="testPreviewLoading"
                             >
-                                <XMarkIcon class="w-4 h-4" />
+                                <template v-if="testPreviewLoading && testPreviewFile === file">
+                                    <span class="loading loading-spinner loading-xs mr-1"></span>
+                                    Teste...
+                                </template>
+                                <template v-else>
+                                    Anonymisierung testen
+                                </template>
                             </button>
                         </li>
                     </ul>
@@ -324,6 +344,89 @@
                 </div>
             </section>
         </main>
+
+        <!-- Test Preview Modal -->
+        <div
+            v-if="showTestModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @click.self="closeTestModal"
+        >
+            <div class="bg-base-100 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b border-base-300 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold">Test-Vorschau: Anonymisierung</h3>
+                        <p class="text-sm text-base-content/60">
+                            {{ testPreviewFile?.relativePath || testPreviewFile?.name }}
+                            <span v-if="testPreviewResult" class="ml-2">
+                                ({{ testPreviewResult.wordCount }} von {{ testPreviewResult.totalWords }} Wörtern)
+                            </span>
+                        </p>
+                    </div>
+                    <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="px-6 py-4 overflow-y-auto flex-1">
+                    <!-- Loading State -->
+                    <div v-if="testPreviewLoading" class="flex items-center justify-center py-12">
+                        <span class="loading loading-spinner loading-lg text-primary"></span>
+                        <span class="ml-3 text-base-content/60">Anonymisiere Text...</span>
+                    </div>
+
+                    <!-- Error State -->
+                    <div v-else-if="testPreviewError" class="alert alert-error">
+                        <ExclamationCircleIcon class="w-6 h-6" />
+                        <span>Fehler: {{ testPreviewError }}</span>
+                    </div>
+
+                    <!-- Result -->
+                    <div v-else-if="testPreviewResult">
+                        <!-- Statistics -->
+                        <div class="mb-4 p-3 bg-base-200 rounded-lg flex flex-wrap gap-4 text-sm">
+                            <span>
+                                <strong class="text-primary">{{ testPreviewResult.entities.length }}</strong> Entitäten gefunden
+                            </span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Threshold: <strong>{{ threshold }}</strong></span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong></span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Labels: <strong>{{ selectedLabels.length }}</strong></span>
+                        </div>
+
+                        <!-- Anonymized Text with Highlighting -->
+                        <div
+                            class="p-4 border border-base-300 rounded-lg bg-base-200/50
+                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto"
+                            v-html="highlightedAnonymizedText"
+                        ></div>
+
+                        <!-- Legend -->
+                        <div class="mt-4 flex gap-2 flex-wrap text-xs">
+                            <span class="font-medium text-base-content/60 mr-2">Legende:</span>
+                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded">person</span>
+                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded">email</span>
+                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded">phone</span>
+                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded">address</span>
+                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded">iban/kreditkarte</span>
+                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
+                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
+                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 border-t border-base-300 flex justify-end gap-2">
+                    <button @click="closeTestModal" class="btn btn-ghost">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -384,7 +487,20 @@ export default {
             processedCount: 0,
 
             // Output files
-            outputFiles: []
+            outputFiles: [],
+
+            // Test preview state
+            showTestModal: false,
+            testPreviewFile: null,
+            testPreviewLoading: false,
+            testPreviewResult: null,
+            testPreviewError: null,
+            hoveredFileIndex: null,
+
+            // Anonymization options
+            anonymizePartialWords: true,
+            minCharacterThreshold: 0,
+            threshold: 0.3
         };
     },
     computed: {
@@ -396,6 +512,42 @@ export default {
         processingProgress() {
             if (this.inputFiles.length === 0) return 0;
             return Math.round((this.processedCount / this.inputFiles.length) * 100);
+        },
+        highlightedAnonymizedText() {
+            if (!this.testPreviewResult) return '';
+
+            let text = this.escapeHtml(this.testPreviewResult.anonymizedText);
+
+            // Color mapping by entity type
+            const colorMap = {
+                'person': 'background-color: #fef08a; color: #713f12;',
+                'email': 'background-color: #bfdbfe; color: #1e3a8a;',
+                'email address': 'background-color: #bfdbfe; color: #1e3a8a;',
+                'phone': 'background-color: #bbf7d0; color: #14532d;',
+                'phone number': 'background-color: #bbf7d0; color: #14532d;',
+                'mobile phone number': 'background-color: #bbf7d0; color: #14532d;',
+                'address': 'background-color: #e9d5ff; color: #581c87;',
+                'street': 'background-color: #e9d5ff; color: #581c87;',
+                'postal code': 'background-color: #e9d5ff; color: #581c87;',
+                'iban': 'background-color: #fecaca; color: #7f1d1d;',
+                'credit card number': 'background-color: #fecaca; color: #7f1d1d;',
+                'bank account number': 'background-color: #fecaca; color: #7f1d1d;',
+                'organization': 'background-color: #fbcfe8; color: #831843;',
+                'location': 'background-color: #99f6e4; color: #134e4a;',
+                'date': 'background-color: #fed7aa; color: #7c2d12;',
+                'time': 'background-color: #fed7aa; color: #7c2d12;'
+            };
+
+            // Regex for placeholders: [id_type] or [id_type_letter]
+            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_[a-z])?\]/gi;
+
+            text = text.replace(placeholderRegex, (match, id, type) => {
+                const normalizedType = type.toLowerCase().trim();
+                const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
+                return `<span style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600;">${match}</span>`;
+            });
+
+            return text;
         }
     },
     mounted() {
@@ -631,6 +783,74 @@ export default {
             a.download = 'anonymisierte_dateien.zip';
             a.click();
             URL.revokeObjectURL(url);
+        },
+
+        // Test anonymization preview methods
+        async testAnonymization(file) {
+            this.testPreviewFile = file;
+            this.testPreviewLoading = true;
+            this.testPreviewError = null;
+            this.testPreviewResult = null;
+            this.showTestModal = true;
+
+            try {
+                // Extract text from file
+                const result = await processFile(file);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                const fullText = result.text;
+
+                // Limit to first 1000 words
+                const words = fullText.split(/\s+/);
+                const limitedText = words.slice(0, 1000).join(' ');
+
+                // Detect entities with current settings
+                const entities = await anonymizerService.detectEntities(
+                    limitedText,
+                    this.selectedLabels,
+                    this.threshold
+                );
+
+                // Anonymize text with current options
+                const anonymizedText = anonymizerService.anonymizeText(
+                    limitedText,
+                    entities,
+                    {
+                        anonymizePartialWords: this.anonymizePartialWords,
+                        minCharacterThreshold: this.minCharacterThreshold
+                    }
+                );
+
+                // Store result
+                this.testPreviewResult = {
+                    originalText: limitedText,
+                    anonymizedText: anonymizedText,
+                    entities: entities,
+                    wordCount: Math.min(words.length, 1000),
+                    totalWords: words.length
+                };
+
+            } catch (error) {
+                console.error('Test anonymization error:', error);
+                this.testPreviewError = error.message;
+            } finally {
+                this.testPreviewLoading = false;
+            }
+        },
+
+        closeTestModal() {
+            this.showTestModal = false;
+            this.testPreviewResult = null;
+            this.testPreviewError = null;
+            this.testPreviewFile = null;
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     }
 };
