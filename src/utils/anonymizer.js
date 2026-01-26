@@ -299,8 +299,8 @@ class AnonymizerService {
         entities.forEach(entity => {
             if (!entity.name) return;
 
-            // Skip entities below character threshold
-            if (minCharacterThreshold > 0 && entity.name.length <= minCharacterThreshold) {
+            // Skip entities below character threshold (entities must have at least this many characters)
+            if (minCharacterThreshold > 0 && entity.name.length < minCharacterThreshold) {
                 return;
             }
 
