@@ -100,17 +100,38 @@
                         <li
                             v-for="(file, index) in inputFiles"
                             :key="index"
-                            class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm"
+                            class="relative"
+                            @mouseenter="hoveredFileIndex = index"
+                            @mouseleave="hoveredFileIndex = null"
                         >
-                            <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
-                            <span class="flex-1 truncate" :title="file.relativePath || file.name">
-                                {{ file.relativePath || file.name }}
-                            </span>
+                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm">
+                                <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
+                                <span class="flex-1 truncate" :title="file.relativePath || file.name">
+                                    {{ file.relativePath || file.name }}
+                                </span>
+                                <button
+                                    @click="removeInputFile(index)"
+                                    class="btn btn-ghost btn-xs btn-square text-error"
+                                >
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                            <!-- Test Button Overlay on Hover -->
                             <button
-                                @click="removeInputFile(index)"
-                                class="btn btn-ghost btn-xs btn-square text-error"
+                                v-if="hoveredFileIndex === index && modelStatus === 'ready'"
+                                @click.stop="testAnonymization(file)"
+                                class="absolute inset-0 z-10 flex items-center justify-center
+                                       bg-primary/90 text-primary-content rounded text-sm font-medium
+                                       hover:bg-primary transition-colors"
+                                :disabled="testPreviewLoading"
                             >
-                                <XMarkIcon class="w-4 h-4" />
+                                <template v-if="testPreviewLoading && testPreviewFile === file">
+                                    <span class="loading loading-spinner loading-xs mr-2"></span>
+                                    Teste...
+                                </template>
+                                <template v-else>
+                                    🧪 Anonymisierung testen
+                                </template>
                             </button>
                         </li>
                     </ul>
@@ -357,6 +378,108 @@
                 </div>
             </section>
         </main>
+
+        <!-- Test Preview Modal -->
+        <div
+            v-if="showTestModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @click.self="closeTestModal"
+        >
+            <div class="bg-base-100 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b border-base-300 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold">Test-Vorschau: Anonymisierung</h3>
+                        <p class="text-sm text-base-content/60">
+                            {{ testPreviewFile?.relativePath || testPreviewFile?.name }}
+                            <span v-if="testPreviewResult" class="ml-2">
+                                ({{ testPreviewResult.wordCount }} von {{ testPreviewResult.totalWords }} Wörtern)
+                            </span>
+                        </p>
+                    </div>
+                    <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="px-6 py-4 overflow-y-auto flex-1">
+                    <!-- Loading State -->
+                    <div v-if="testPreviewLoading" class="flex items-center justify-center py-12">
+                        <span class="loading loading-spinner loading-lg text-primary mr-3"></span>
+                        <span class="text-base-content/60">Anonymisiere Text...</span>
+                    </div>
+
+                    <!-- Error State -->
+                    <div v-else-if="testPreviewError" class="alert alert-error">
+                        <span>Fehler: {{ testPreviewError }}</span>
+                    </div>
+
+                    <!-- Result -->
+                    <div v-else-if="testPreviewResult">
+                        <!-- Statistics -->
+                        <div class="mb-4 p-3 bg-base-200 rounded flex gap-4 text-sm flex-wrap">
+                            <span><strong>{{ testPreviewResult.entities.length }}</strong> Entitäten gefunden</span>
+                            <span class="text-base-content/30">|</span>
+                            <span>Threshold: <strong>{{ threshold }}</strong></span>
+                            <span class="text-base-content/30">|</span>
+                            <span>Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong></span>
+                        </div>
+
+                        <!-- Anonymized Text with Highlighting -->
+                        <div
+                            class="p-4 border border-base-300 rounded bg-base-50
+                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-64 overflow-y-auto"
+                            v-html="highlightedAnonymizedText"
+                        ></div>
+
+                        <!-- Legend -->
+                        <div class="mt-3 flex gap-2 flex-wrap text-xs">
+                            <span class="px-2 py-1 rounded" style="background-color: #fef08a;">person</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #bfdbfe;">email</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #bbf7d0;">phone</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #e9d5ff;">address</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #fecaca;">iban</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #fbcfe8;">organization</span>
+                            <span class="px-2 py-1 rounded" style="background-color: #fed7aa;">andere</span>
+                        </div>
+
+                        <!-- Anonymized Words List -->
+                        <div v-if="testPreviewResult.anonymizedWords && testPreviewResult.anonymizedWords.length > 0" class="mt-6">
+                            <h4 class="font-semibold text-sm mb-2">
+                                Anonymisierte Wörter
+                                <span class="font-normal text-base-content/60">(Klicken um zur Negativliste hinzuzufügen)</span>
+                            </h4>
+                            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-base-200 rounded">
+                                <button
+                                    v-for="(wordInfo, idx) in testPreviewResult.anonymizedWords"
+                                    :key="idx"
+                                    @click="addToExclusionList(wordInfo.word)"
+                                    class="px-2 py-1 rounded text-xs font-medium transition-all
+                                           hover:ring-2 hover:ring-primary hover:scale-105 cursor-pointer
+                                           flex items-center gap-1"
+                                    :style="getWordStyle(wordInfo.type)"
+                                    :title="'Typ: ' + wordInfo.type + ' | Klicken um zur Negativliste hinzuzufügen'"
+                                >
+                                    <span>{{ wordInfo.word }}</span>
+                                    <span class="opacity-60 text-[10px]">+</span>
+                                </button>
+                            </div>
+                            <p class="text-xs text-base-content/50 mt-2">
+                                {{ testPreviewResult.anonymizedWords.length }} eindeutige Wörter anonymisiert
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 border-t border-base-300 flex justify-end gap-2">
+                    <button @click="closeTestModal" class="btn btn-ghost">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -428,7 +551,15 @@ export default {
             processedCount: 0,
 
             // Output files
-            outputFiles: []
+            outputFiles: [],
+
+            // Test preview state
+            showTestModal: false,
+            testPreviewFile: null,
+            testPreviewLoading: false,
+            testPreviewResult: null,
+            testPreviewError: null,
+            hoveredFileIndex: null
         };
     },
     computed: {
@@ -440,6 +571,41 @@ export default {
         processingProgress() {
             if (this.inputFiles.length === 0) return 0;
             return Math.round((this.processedCount / this.inputFiles.length) * 100);
+        },
+        highlightedAnonymizedText() {
+            if (!this.testPreviewResult) return '';
+
+            let text = this.escapeHtml(this.testPreviewResult.anonymizedText);
+
+            // Color mapping by entity type
+            const colorMap = {
+                'person': 'background-color: #fef08a; color: #713f12;',
+                'email': 'background-color: #bfdbfe; color: #1e3a8a;',
+                'email address': 'background-color: #bfdbfe; color: #1e3a8a;',
+                'phone': 'background-color: #bbf7d0; color: #14532d;',
+                'phone number': 'background-color: #bbf7d0; color: #14532d;',
+                'mobile phone number': 'background-color: #bbf7d0; color: #14532d;',
+                'address': 'background-color: #e9d5ff; color: #581c87;',
+                'street': 'background-color: #e9d5ff; color: #581c87;',
+                'postal code': 'background-color: #e9d5ff; color: #581c87;',
+                'iban': 'background-color: #fecaca; color: #991b1b;',
+                'credit card number': 'background-color: #fecaca; color: #991b1b;',
+                'bank account': 'background-color: #fecaca; color: #991b1b;',
+                'organization': 'background-color: #fbcfe8; color: #831843;',
+                'location': 'background-color: #99f6e4; color: #115e59;',
+                'date': 'background-color: #fed7aa; color: #9a3412;'
+            };
+
+            // Regex for placeholders: [id_type] or [id_type_letter]
+            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_[a-z])?\]/gi;
+
+            text = text.replace(placeholderRegex, (match, id, type) => {
+                const normalizedType = type.toLowerCase().trim();
+                const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #9a3412;';
+                return `<span style="${style} padding: 2px 4px; border-radius: 3px; font-weight: 500;">${match}</span>`;
+            });
+
+            return text;
         }
     },
     mounted() {
@@ -760,6 +926,177 @@ export default {
             a.download = 'anonymisierte_dateien.zip';
             a.click();
             URL.revokeObjectURL(url);
+        },
+
+        // Test anonymization preview methods
+        async testAnonymization(file) {
+            this.testPreviewFile = file;
+            this.testPreviewLoading = true;
+            this.testPreviewError = null;
+            this.testPreviewResult = null;
+            this.showTestModal = true;
+
+            try {
+                // Extract text from file
+                const result = await processFile(file);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                // Limit to first 1000 words
+                const words = result.text.split(/\s+/);
+                const limitedText = words.slice(0, 1000).join(' ');
+
+                // Detect entities with current settings
+                const entities = await anonymizerService.detectEntities(
+                    limitedText,
+                    this.selectedLabels,
+                    this.threshold
+                );
+
+                // Anonymize text with current options
+                const anonymizedText = anonymizerService.anonymizeText(limitedText, entities, {
+                    anonymizePartialWords: this.anonymizePartialWords,
+                    minCharacterThreshold: this.minCharacterThreshold,
+                    exclusionList: this.parseExclusionList()
+                });
+
+                // Extract unique anonymized words from entities
+                const anonymizedWords = this.extractAnonymizedWords(limitedText, entities);
+
+                // Store result
+                this.testPreviewResult = {
+                    originalText: limitedText,
+                    anonymizedText: anonymizedText,
+                    entities: entities,
+                    anonymizedWords: anonymizedWords,
+                    wordCount: Math.min(words.length, 1000),
+                    totalWords: words.length
+                };
+
+            } catch (error) {
+                this.testPreviewError = error.message;
+            } finally {
+                this.testPreviewLoading = false;
+            }
+        },
+
+        extractAnonymizedWords(text, entities) {
+            const exclusionList = this.parseExclusionList().map(w => w.toLowerCase());
+            const wordMap = new Map(); // Use Map to track unique words with their types
+
+            entities.forEach(entity => {
+                const entityText = text.substring(entity.start, entity.end);
+
+                // Check min character threshold
+                if (entityText.length < this.minCharacterThreshold) {
+                    return;
+                }
+
+                // Split entity into individual words
+                const entityWords = entityText.split(/\s+/).filter(w => w.length > 0);
+
+                entityWords.forEach(word => {
+                    // Clean the word (remove punctuation at start/end)
+                    const cleanWord = word.replace(/^[^\w\u00C0-\u017F]+|[^\w\u00C0-\u017F]+$/g, '');
+
+                    if (cleanWord.length === 0) return;
+
+                    // Check if word is in exclusion list
+                    if (exclusionList.includes(cleanWord.toLowerCase())) {
+                        return;
+                    }
+
+                    // Check min character threshold for individual word
+                    if (cleanWord.length < this.minCharacterThreshold) {
+                        return;
+                    }
+
+                    // Add to map (use lowercase as key to avoid duplicates)
+                    const key = cleanWord.toLowerCase();
+                    if (!wordMap.has(key)) {
+                        wordMap.set(key, {
+                            word: cleanWord,
+                            type: entity.label
+                        });
+                    }
+                });
+            });
+
+            // Convert to array and sort alphabetically
+            return Array.from(wordMap.values()).sort((a, b) =>
+                a.word.toLowerCase().localeCompare(b.word.toLowerCase())
+            );
+        },
+
+        closeTestModal() {
+            this.showTestModal = false;
+            this.testPreviewResult = null;
+            this.testPreviewError = null;
+            this.testPreviewFile = null;
+        },
+
+        addToExclusionList(word) {
+            if (!word || word.trim() === '') return;
+
+            const trimmedWord = word.trim();
+
+            // Check if word already exists in exclusion list
+            const currentWords = this.parseExclusionList();
+            const wordExists = currentWords.some(w =>
+                w.toLowerCase() === trimmedWord.toLowerCase()
+            );
+
+            if (wordExists) {
+                // Word already in list, maybe show a notification
+                return;
+            }
+
+            // Add word to exclusion list
+            if (this.exclusionList.trim() === '') {
+                this.exclusionList = trimmedWord;
+            } else {
+                this.exclusionList = this.exclusionList.trim() + ', ' + trimmedWord;
+            }
+
+            // Save to localStorage
+            this.saveExclusionList();
+
+            // Remove word from displayed list
+            if (this.testPreviewResult && this.testPreviewResult.anonymizedWords) {
+                this.testPreviewResult.anonymizedWords = this.testPreviewResult.anonymizedWords.filter(
+                    w => w.word.toLowerCase() !== trimmedWord.toLowerCase()
+                );
+            }
+        },
+
+        getWordStyle(type) {
+            const colorMap = {
+                'person': { backgroundColor: '#fef08a', color: '#713f12' },
+                'email': { backgroundColor: '#bfdbfe', color: '#1e3a8a' },
+                'email address': { backgroundColor: '#bfdbfe', color: '#1e3a8a' },
+                'phone': { backgroundColor: '#bbf7d0', color: '#14532d' },
+                'phone number': { backgroundColor: '#bbf7d0', color: '#14532d' },
+                'mobile phone number': { backgroundColor: '#bbf7d0', color: '#14532d' },
+                'address': { backgroundColor: '#e9d5ff', color: '#581c87' },
+                'street': { backgroundColor: '#e9d5ff', color: '#581c87' },
+                'postal code': { backgroundColor: '#e9d5ff', color: '#581c87' },
+                'iban': { backgroundColor: '#fecaca', color: '#991b1b' },
+                'credit card number': { backgroundColor: '#fecaca', color: '#991b1b' },
+                'bank account': { backgroundColor: '#fecaca', color: '#991b1b' },
+                'organization': { backgroundColor: '#fbcfe8', color: '#831843' },
+                'location': { backgroundColor: '#99f6e4', color: '#115e59' },
+                'date': { backgroundColor: '#fed7aa', color: '#9a3412' }
+            };
+
+            const normalizedType = type.toLowerCase().trim();
+            return colorMap[normalizedType] || { backgroundColor: '#fed7aa', color: '#9a3412' };
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     }
 };
