@@ -156,19 +156,53 @@
                     </div>
                 </div>
 
+                <!-- Anonymization Options -->
+                <div class="p-4 border-t border-base-300 space-y-3">
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-2">
+                            <input
+                                type="checkbox"
+                                v-model="anonymizePartialWords"
+                                class="checkbox checkbox-sm checkbox-primary"
+                            >
+                            <span class="label-text text-sm">Einzelne Wörter anonymisieren</span>
+                        </label>
+                        <p class="text-xs text-base-content/50 ml-6">
+                            Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
+                        </p>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text text-sm">Minimale Zeichenlänge</span>
+                        </label>
+                        <input
+                            type="number"
+                            v-model.number="minCharacterThreshold"
+                            min="0"
+                            max="50"
+                            class="input input-sm input-bordered w-full"
+                            placeholder="0 = keine Beschränkung"
+                        >
+                        <p class="text-xs text-base-content/50 mt-1">
+                            Entitäten mit weniger Zeichen werden nicht anonymisiert
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Threshold Control -->
                 <div class="px-4 pb-2">
                      <label class="label pb-1 cursor-pointer">
                         <span class="label-text text-xs">Erkennungsschwelle (Threshold)</span>
                         <span class="label-text-alt font-mono">{{ threshold }}</span>
                     </label>
-                    <input 
-                        type="range" 
-                        min="0.05" 
-                        max="0.8" 
-                        step="0.05" 
-                        v-model.number="threshold" 
-                        class="range range-xs range-primary" 
+                    <input
+                        type="range"
+                        min="0.05"
+                        max="0.8"
+                        step="0.05"
+                        v-model.number="threshold"
+                        class="range range-xs range-primary"
                     />
                     <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
                         <span>mehr</span>
@@ -350,10 +384,7 @@ export default {
             processedCount: 0,
 
             // Output files
-            outputFiles: [],
-            
-            // Configuration
-            threshold: 0.1
+            outputFiles: []
         };
     },
     computed: {
@@ -550,8 +581,7 @@ export default {
                     // Detect entities
                     const entities = await anonymizerService.detectEntities(
                         result.text,
-                        this.selectedLabels,
-                        this.threshold
+                        this.selectedLabels
                     );
 
                     // Anonymize text
