@@ -302,9 +302,8 @@ class AnonymizerService {
             // Split entity name into words
             const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
 
-            // Skip entire entity if ANY word is in the exclusion list
-            const hasExcludedWord = words.some(w => isExcluded(w));
-            if (hasExcludedWord || isExcluded(entity.name)) {
+            // Skip entire entity only if the FULL name matches an excluded term
+            if (isExcluded(entity.name)) {
                 return;
             }
 
@@ -313,11 +312,17 @@ class AnonymizerService {
                 const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
                 const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
                 const sequence = words
-                    .map((_, idx) => `[${entity.id}_${entity.type}_${letters[idx] || String(idx + 1)}]`)
+                    .map((w, idx) => {
+                        // If individual word is excluded, keep it. Otherwise make placeholder.
+                        if (isExcluded(w)) return w;
+                        return `[${entity.id}_${entity.type}_${letters[idx] || String(idx + 1)}]`;
+                    })
                     .join(' ');
                 anonymized = anonymized.replace(fullPattern, sequence);
             } else if (words.length === 1) {
-                // Single word entity
+                // Single word entity: Check exclusion before replacing
+                if (isExcluded(words[0])) return;
+
                 const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
                 anonymized = anonymized.replace(singleWordPattern, `[${entity.id}_${entity.type}]`);
             }
