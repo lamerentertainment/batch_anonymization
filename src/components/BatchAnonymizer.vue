@@ -526,6 +526,37 @@
                                 Keine Wörter anonymisiert
                             </p>
                         </div>
+
+                        <!-- Found Entities List -->
+                        <div class="mt-6 p-4 bg-base-200 rounded-lg">
+                             <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-semibold text-sm">Gefundene Entitäten & Platzhalter</h4>
+                            </div>
+                            <div class="overflow-x-auto max-h-60 bg-base-100 rounded-lg border border-base-300">
+                                <table class="table table-xs w-full table-pin-rows">
+                                    <thead>
+                                        <tr class="bg-base-200">
+                                            <th>Original</th>
+                                            <th>Typ</th>
+                                            <th>Platzhalter</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
+                                            <td class="font-medium max-w-[200px] truncate" :title="entity.name">{{ entity.name }}</td>
+                                            <td><span class="badge badge-ghost badge-outline badge-sm text-[10px]">{{ entity.type }}</span></td>
+                                            <td class="font-mono text-xs text-base-content/70 select-all">[{{ entity.id }}_{{ entity.type.toLowerCase() }}]</td>
+                                            <td>
+                                                <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">
+                                                    {{ getEntityStatus(entity).label }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -718,6 +749,12 @@ export default {
             return Array.from(wordsMap.values()).sort((a, b) =>
                 a.word.toLowerCase().localeCompare(b.word.toLowerCase())
             );
+        },
+        sortedEntities() {
+            if (!this.testPreviewResult || !this.testPreviewResult.entities) return [];
+            return [...this.testPreviewResult.entities].sort((a, b) =>
+                a.name.localeCompare(b.name)
+            );
         }
     },
     mounted() {
@@ -767,6 +804,26 @@ export default {
                 .split(',')
                 .map(word => word.trim())
                 .filter(word => word.length > 0);
+        },
+        getEntityStatus(entity) {
+            // Check exclusion list
+            const exclusionList = this.parseExclusionList();
+            if (exclusionList.length > 0) {
+                 const entityWords = entity.name.toLowerCase().split(/\s+/);
+                 const isExcluded = entityWords.some(word =>
+                     exclusionList.some(excl => excl.toLowerCase() === word)
+                 );
+                 if (isExcluded) return { code: 'excluded', label: 'Negativliste', class: 'text-warning' };
+            }
+
+            // Check length
+            if (this.anonymizePartialWords && this.minCharacterThreshold > 0) {
+                 if (entity.name.length < this.minCharacterThreshold) {
+                     return { code: 'skipped', label: 'Zu kurz', class: 'text-base-content/50' };
+                 }
+            }
+
+            return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
         },
         addToExclusionList(word) {
             if (!word || word.trim() === '') return;
