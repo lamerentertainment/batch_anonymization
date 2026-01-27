@@ -167,7 +167,7 @@
                 <!-- Group 1: Detection Settings -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
                     <MagnifyingGlassIcon class="w-4 h-4" />
-                    <h3 class="font-bold text-sm">Entitäterkennungs-Einstellungen</h3>
+                    <h3 class="font-bold text-sm">Einstellungen für die automatische Erkennung von PII-Entitäten (persönlich identifizierbare Information)</h3>
                 </div>
                 <div class="p-4 border-b border-base-300 space-y-4">
                     <div class="border border-base-300 rounded-lg overflow-hidden">
@@ -176,7 +176,7 @@
                             <label class="label pb-1 cursor-pointer">
                                 <div class="flex items-center gap-2">
                                     <SignalIcon class="w-4 h-4" />
-                                    <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold)</span>
+                                    <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold) - ein tiefer Wert bedeutet Über-Anonymiserung, ein hoher Wert bedeutet Unter-Anonymiserung</span>
                                 </div>
                                 <span class="label-text-alt font-mono">{{ threshold }}</span>
                             </label>
@@ -266,7 +266,7 @@
                                 :class="{ 'opacity-50': !anonymizePartialWords }"
                             >
                             <p class="text-xs text-base-content/50 mt-1">
-                                Entitäten mit weniger Zeichen werden nicht anonymisiert
+                                Entitätsbestandteile mit weniger Zeichen werden nicht anonymisiert
                             </p>
                         </div>
                     </div>
@@ -275,7 +275,7 @@
                 <!-- Group 3: Exclusion List -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
                     <NoSymbolIcon class="w-4 h-4" />
-                    <h3 class="font-bold text-sm">Negativliste (Entitäten, die trotz Erkennung nie anonymisiert werden)</h3>
+                    <h3 class="font-bold text-sm">Negativliste (Entitätsbestandteile, die trotz [fehlerhafter] Erkennung als Entität nie anonymisiert werden)</h3>
                 </div>
                 <div class="px-4 pb-4">
                     <div class="border border-base-300 rounded-lg p-3">
@@ -457,22 +457,43 @@
                     <div v-else-if="testPreviewResult">
                         <!-- Statistics -->
                         <div class="mb-4 p-3 bg-base-200 rounded-lg flex flex-wrap gap-4 text-sm">
+                            <!-- 1. Total Entities -->
                             <span>
                                 <strong class="text-primary">{{ testPreviewResult.entities.length }}</strong> Entitäten gefunden
                             </span>
                             <span class="text-base-content/40">|</span>
-                            <span>Threshold: <strong>{{ threshold }}</strong></span>
-                            <span class="text-base-content/40">|</span>
-                            <span>Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong></span>
-                            <span class="text-base-content/40">|</span>
+                            
+                            <!-- 2. Labels -->
                             <span>Labels: <strong>{{ selectedLabels.length }}</strong></span>
-                            <span v-if="testPreviewResult.exclusionListCount > 0" class="text-base-content/40">|</span>
-                            <span v-if="testPreviewResult.exclusionListCount > 0" :title="'Negativliste: ' + exclusionList">
-                                Negativliste: <strong class="text-warning">{{ testPreviewResult.exclusionListCount }}</strong> Wörter
-                                <span v-if="testPreviewResult.excludedEntitiesCount > 0" class="text-success">
-                                    ({{ testPreviewResult.excludedEntitiesCount }} übersprungen)
+                            <span class="text-base-content/40">|</span>
+
+                            <!-- 3. Einzelne Wörter -->
+                            <span>
+                                Einzelne Wörter: 
+                                <strong :class="anonymizePartialWords ? 'text-success' : 'text-base-content/60'">
+                                    {{ anonymizePartialWords ? 'An' : 'Aus' }}
+                                </strong>
+                            </span>
+                            <span class="text-base-content/40">|</span>
+
+                            <!-- 4. Min. Zeichen -->
+                            <span>
+                                Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong>
+                                <span v-if="testPreviewResult.skippedShortEntitiesCount > 0" class="text-warning ml-1">
+                                    ({{ testPreviewResult.skippedShortEntitiesCount }} übersprungen)
                                 </span>
                             </span>
+
+                            <!-- 5. Negativliste -->
+                            <template v-if="testPreviewResult.exclusionListCount > 0">
+                                <span class="text-base-content/40">|</span>
+                                <span :title="'Negativliste: ' + exclusionList">
+                                    Negativliste: <strong class="text-warning">{{ testPreviewResult.exclusionListCount }}</strong> Wörter
+                                    <span v-if="testPreviewResult.excludedEntitiesCount > 0" class="text-success">
+                                        ({{ testPreviewResult.excludedEntitiesCount }} übersprungen)
+                                    </span>
+                                </span>
+                            </template>
                         </div>
 
                         <!-- Anonymized Text with Highlighting -->
@@ -1181,6 +1202,18 @@ export default {
                     );
                 });
 
+                // Count how many entities would be skipped due to length
+                let skippedShortEntitiesCount = 0;
+                if (this.anonymizePartialWords && this.minCharacterThreshold > 0) {
+                    skippedShortEntitiesCount = entities.filter(entity => {
+                        // If already excluded by blacklist, don't count here to avoid double counting
+                        const isExcluded = excludedEntities.some(e => e.id === entity.id);
+                        if (isExcluded) return false;
+                        
+                        return entity.name.length < this.minCharacterThreshold;
+                    }).length;
+                }
+
                 // Anonymize text with current options including exclusion list
                 const anonymizedText = anonymizerService.anonymizeText(
                     limitedText,
@@ -1200,7 +1233,8 @@ export default {
                     wordCount: Math.min(words.length, 1000),
                     totalWords: words.length,
                     exclusionListCount: exclusionList.length,
-                    excludedEntitiesCount: excludedEntities.length
+                    excludedEntitiesCount: excludedEntities.length,
+                    skippedShortEntitiesCount: skippedShortEntitiesCount
                 };
 
             } catch (error) {
