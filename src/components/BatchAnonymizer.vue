@@ -164,6 +164,9 @@
                     </h2>
                 </div>
 
+                <!-- Scrollable Settings Area -->
+                <div class="flex-1 overflow-y-auto">
+
                 <!-- Group 1: Detection Settings -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
                     <MagnifyingGlassIcon class="w-4 h-4" />
@@ -233,7 +236,7 @@
                 <!-- Group 2: Partial Anonymization Options -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
                     <AdjustmentsHorizontalIcon class="w-4 h-4" />
-                    <h3 class="font-bold text-sm">Handhabung von Entitätsbestandteilen (Entitäten, welche aus mehreren Bestandteilen bestehen)</h3>
+                    <h3 class="font-bold text-sm">Handhabung von alleinstehenden Entitätsbestandteilen (Entitäten können aus mehreren Bestandteilen bestehen, welche im Text einzeln vorkommen können. "Vater", "von", "Max" sind die Bestandteile der erkannten PII-Entität "Vater von Max")</h3>
                 </div>
                 <div class="px-4 pb-4">
                      <div class="border border-base-300 rounded-lg p-3 space-y-2">
@@ -253,7 +256,7 @@
 
                         <div class="form-control">
                             <label class="label p-0 py-1">
-                                <span class="label-text text-sm">Minimale Zeichenlänge für die Anonymisierung alleinstehenden Entitätsbestandteilen</span>
+                                <span class="label-text text-sm">Minimale Zeichenlänge für die Anonymisierung von alleinstehenden Entitätsbestandteilen</span>
                             </label>
                             <input
                                 type="number"
@@ -294,6 +297,8 @@
                 </div>
 
 
+
+                </div>
 
                 <!-- Start Processing Button -->
                 <div class="p-4 border-t border-base-300">
