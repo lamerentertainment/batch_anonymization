@@ -104,35 +104,34 @@
                             @mouseenter="hoveredFileIndex = index"
                             @mouseleave="hoveredFileIndex = null"
                         >
-                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm">
+                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm min-h-[40px]">
                                 <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
-                                <span class="flex-1 truncate" :title="file.relativePath || file.name">
+                                <span class="flex-1 truncate select-none" :title="file.relativePath || file.name">
                                     {{ file.relativePath || file.name }}
                                 </span>
+                                
+                                <!-- Test Button (inline) -->
+                                <button
+                                    v-if="(hoveredFileIndex === index || (testPreviewLoading && testPreviewFile === file)) && modelStatus === 'ready'"
+                                    @click.stop="testAnonymization(file)"
+                                    class="btn btn-xs btn-primary animate-fadeIn"
+                                    :disabled="testPreviewLoading"
+                                    title="Anonymisierung testen"
+                                >
+                                    <template v-if="testPreviewLoading && testPreviewFile === file">
+                                        <span class="loading loading-spinner loading-xs"></span>
+                                    </template>
+                                    <template v-else>
+                                        Testen
+                                    </template>
+                                </button>
+
                                 <button
                                     @click="removeInputFile(index)"
                                     class="btn btn-ghost btn-xs btn-square text-error"
+                                    title="Datei entfernen"
                                 >
                                     <XMarkIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                            <!-- Test Button Overlay on Hover -->
-                            <div
-                                v-if="hoveredFileIndex === index && modelStatus === 'ready'"
-                                class="absolute inset-0 flex items-center justify-center bg-base-200/90 rounded"
-                            >
-                                <button
-                                    @click.stop="testAnonymization(file)"
-                                    class="btn btn-xs btn-primary"
-                                    :disabled="testPreviewLoading"
-                                >
-                                    <template v-if="testPreviewLoading && testPreviewFile === file">
-                                        <span class="loading loading-spinner loading-xs mr-1"></span>
-                                        Teste...
-                                    </template>
-                                    <template v-else>
-                                        Anonymisierung testen
-                                    </template>
                                 </button>
                             </div>
                         </li>
