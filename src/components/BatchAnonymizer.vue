@@ -478,9 +478,21 @@
                         <!-- Anonymized Text with Highlighting -->
                         <div
                             class="p-4 border border-base-300 rounded-lg bg-base-200/50
-                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto"
+                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto cursor-text"
                             v-html="highlightedAnonymizedText"
+                            @mouseover="handleTextMouseOver"
+                            @mouseout="handleTextMouseOut"
+                            @mousemove="handleTextMouseMove"
                         ></div>
+
+                        <!-- Custom Tooltip -->
+                        <div
+                            v-if="hoverTooltip.visible"
+                            class="fixed z-[100] px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full"
+                            :style="{ top: (hoverTooltip.y - 8) + 'px', left: hoverTooltip.x + 'px' }"
+                        >
+                            Original: <span class="font-bold">{{ hoverTooltip.text }}</span>
+                        </div>
 
                         <!-- Legend -->
                         <div class="mt-4 flex gap-2 flex-wrap text-xs items-center">
@@ -657,7 +669,16 @@ export default {
             testPreviewLoading: false,
             testPreviewResult: null,
             testPreviewError: null,
+            testPreviewError: null,
             hoveredFileIndex: null,
+
+            // Tooltip state
+            hoverTooltip: {
+                visible: false,
+                x: 0,
+                y: 0,
+                text: ''
+            },
 
             // Anonymization options
 
@@ -711,9 +732,10 @@ export default {
                 const normalizedType = type.toLowerCase().trim();
                 const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
                 const originalValue = entityMap[id] || 'Unbekannt';
-                // Escape quotes for the title attribute
+                // Escape quotes for the data attribute
                 const escapedOriginal = originalValue.replace(/"/g, '&quot;');
-                return `<span style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;" title="Original: ${escapedOriginal}">${match}</span>`;
+                
+                return `<span class="anonymized-token" data-original="${escapedOriginal}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${match}</span>`;
             });
 
             return text;
@@ -1200,6 +1222,27 @@ export default {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        },
+        handleTextMouseOver(e) {
+            const target = e.target.closest('.anonymized-token');
+            if (target && target.dataset.original) {
+                this.hoverTooltip.text = target.dataset.original;
+                this.hoverTooltip.visible = true;
+                this.hoverTooltip.x = e.clientX;
+                this.hoverTooltip.y = e.clientY;
+            }
+        },
+        handleTextMouseOut(e) {
+            const target = e.target.closest('.anonymized-token');
+            if (target) {
+                this.hoverTooltip.visible = false;
+            }
+        },
+        handleTextMouseMove(e) {
+            if (this.hoverTooltip.visible) {
+                this.hoverTooltip.x = e.clientX;
+                this.hoverTooltip.y = e.clientY;
+            }
         }
     }
 };
