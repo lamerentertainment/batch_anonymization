@@ -253,7 +253,7 @@
 
                         <div class="form-control">
                             <label class="label p-0 py-1">
-                                <span class="label-text text-sm">Minimale Zeichenlänge</span>
+                                <span class="label-text text-sm">Minimale Zeichenlänge für die Anonymisierung alleinstehenden Entitätsbestandteilen</span>
                             </label>
                             <input
                                 type="number"
@@ -266,7 +266,7 @@
                                 :class="{ 'opacity-50': !anonymizePartialWords }"
                             >
                             <p class="text-xs text-base-content/50 mt-1">
-                                Entitätsbestandteile mit weniger Zeichen werden nicht anonymisiert
+                                Entitätsbestandteile mit weniger Zeichen werden nicht anonymisiert (Bei Wert 2 wird z.B. eine alleinstehende "5" nicht anonymisiert, wenn "Landenbergstrasse 5" als PII-Entität erkannt wird)
                             </p>
                         </div>
                     </div>
