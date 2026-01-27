@@ -179,22 +179,26 @@
                             <label class="label pb-1 cursor-pointer">
                                 <div class="flex items-center gap-2">
                                     <SignalIcon class="w-4 h-4" />
-                                    <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold) - ein tiefer Wert bedeutet Über-Anonymiserung, ein hoher Wert bedeutet Unter-Anonymiserung</span>
+                                    <span class="label-text text-xs font-semibold">Anonymisierungsstärke (1 - Threshold)</span>
                                 </div>
-                                <span class="label-text-alt font-mono">{{ threshold }}</span>
+                                <span class="label-text-alt font-mono">{{ anonymizationStrength }}</span>
                             </label>
                             <input
                                 type="range"
-                                min="0.05"
-                                max="0.8"
+                                min="0.2"
+                                max="0.95"
                                 step="0.05"
-                                v-model.number="threshold"
+                                v-model.number="anonymizationStrength"
                                 class="range range-xs range-primary"
                             />
                             <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
-                                <span>mehr</span>
-                                <span>weniger</span>
+                                <span>weniger (konservativ)</span>
+                                <span>mehr (aggressiv)</span>
                             </div>
+                            <p class="text-[10px] text-base-content/40 mt-1 px-1">
+                                Ein hoher Wert bedeutet Über-Anonymisierung (viele false Positive Fehler: Es werden Entitäten anonymiisert, die keine PII enthalten).
+                                Ein niedriger Wert bedeutet Unter-Anonymisierung (viele false Negative Fehler: Es werden Entitäten nicht anonymisiert, die PII enthalten).
+                            </p>
                         </div>
 
                         <!-- Entity Selection Header -->
@@ -722,6 +726,17 @@ export default {
         processingProgress() {
             if (this.inputFiles.length === 0) return 0;
             return Math.round((this.processedCount / this.inputFiles.length) * 100);
+        },
+        anonymizationStrength: {
+            get() {
+                // Display inverted: 1 - threshold
+                // Round to 2 decimals to avoid float artifacts
+                return Math.round((1 - this.threshold) * 100) / 100;
+            },
+            set(value) {
+                // Convert back to threshold: 1 - value
+                this.threshold = Math.round((1 - value) * 100) / 100;
+            }
         },
         highlightedAnonymizedText() {
             if (!this.testPreviewResult) return '';
