@@ -165,100 +165,130 @@
                     </h2>
                 </div>
 
-                <!-- Quick Select Buttons -->
-                <div class="p-4 border-b border-base-300 flex gap-2 flex-wrap">
-                    <button @click="selectAllLabels" class="btn btn-xs btn-outline">Alle</button>
-                    <button @click="selectCommonLabels" class="btn btn-xs btn-outline">Häufige</button>
-                    <button @click="deselectAllLabels" class="btn btn-xs btn-outline">Keine</button>
+                <!-- Group 1: Detection Settings -->
+                <div class="px-4 pb-1 pt-2 flex items-center gap-2">
+                    <TagIcon class="w-4 h-4" />
+                    <h3 class="font-bold text-sm">Entitäterkennungs-Einstellungen</h3>
                 </div>
-
-                <!-- Entity Checkboxes -->
-                <div class="flex-1 overflow-y-auto p-4">
-                    <div class="space-y-1">
-                        <label
-                            v-for="label in availableLabels"
-                            :key="label"
-                            class="flex items-center gap-2 p-2 rounded hover:bg-base-200 cursor-pointer"
-                        >
+                <div class="p-4 border-b border-base-300 space-y-4">
+                    <div class="border border-base-300 rounded-lg overflow-hidden">
+                        <!-- Threshold Control -->
+                        <div class="px-4 pt-4 pb-2 bg-base-100/50">
+                             <label class="label pb-1 cursor-pointer">
+                                <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold)</span>
+                                <span class="label-text-alt font-mono">{{ threshold }}</span>
+                            </label>
                             <input
-                                type="checkbox"
-                                :value="label"
-                                v-model="selectedLabels"
-                                class="checkbox checkbox-sm checkbox-primary"
-                            >
-                            <span class="text-sm capitalize">{{ formatLabel(label) }}</span>
-                        </label>
+                                type="range"
+                                min="0.05"
+                                max="0.8"
+                                step="0.05"
+                                v-model.number="threshold"
+                                class="range range-xs range-primary"
+                            />
+                            <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
+                                <span>mehr</span>
+                                <span>weniger</span>
+                            </div>
+                        </div>
+
+                        <!-- Entity Selection Header -->
+                        <div class="px-4 pt-4 pb-1">
+                            <span class="label-text text-xs font-semibold">zu anonymisierende Kategorien</span>
+                            
+                            <!-- Quick Select Buttons -->
+                            <div class="flex gap-2 flex-wrap mb-2">
+                                <button @click="selectAllLabels" class="btn btn-xs btn-outline">Alle</button>
+                                <button @click="selectCommonLabels" class="btn btn-xs btn-outline">Häufige</button>
+                                <button @click="deselectAllLabels" class="btn btn-xs btn-outline">Keine</button>
+                            </div>
+                        </div>
+
+                        <!-- Entity Checkboxes -->
+                        <div class="h-48 overflow-y-auto px-4 pb-4 bg-base-100">
+                            <div class="space-y-1">
+                                <label
+                                    v-for="label in availableLabels"
+                                    :key="label"
+                                    class="flex items-center gap-2 p-2 rounded hover:bg-base-200 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :value="label"
+                                        v-model="selectedLabels"
+                                        class="checkbox checkbox-sm checkbox-primary"
+                                    >
+                                    <span class="text-sm capitalize">{{ formatLabel(label) }}</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Anonymization Options -->
-                <div class="p-4 border-t border-base-300 space-y-3">
-                    <div class="form-control">
-                        <label class="label cursor-pointer justify-start gap-2">
+                <!-- Group 2: Partial Anonymization Options -->
+                <div class="px-4 pb-1 pt-2 flex items-center gap-2">
+                    <AdjustmentsHorizontalIcon class="w-4 h-4" />
+                    <h3 class="font-bold text-sm">Handhabung von Enitätsbestandteilen (Enitäten, welche aus mehreren Bestandteilen bestehen)</h3>
+                </div>
+                <div class="px-4 pb-4">
+                     <div class="border border-base-300 rounded-lg p-3 space-y-2">
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-2 p-0">
+                                <input
+                                    type="checkbox"
+                                    v-model="anonymizePartialWords"
+                                    class="checkbox checkbox-sm checkbox-primary"
+                                >
+                                <span class="label-text text-sm font-semibold">Einzelne Wörter anonymisieren</span>
+                            </label>
+                            <p class="text-xs text-base-content/50 ml-6 mt-1">
+                                Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
+                            </p>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label p-0 py-1">
+                                <span class="label-text text-sm">Minimale Zeichenlänge</span>
+                            </label>
                             <input
-                                type="checkbox"
-                                v-model="anonymizePartialWords"
-                                class="checkbox checkbox-sm checkbox-primary"
+                                type="number"
+                                v-model.number="minCharacterThreshold"
+                                min="0"
+                                max="50"
+                                class="input input-sm input-bordered w-full"
+                                placeholder="0 = keine Beschränkung"
+                                :disabled="!anonymizePartialWords"
+                                :class="{ 'opacity-50': !anonymizePartialWords }"
                             >
-                            <span class="label-text text-sm">Einzelne Wörter anonymisieren</span>
-                        </label>
-                        <p class="text-xs text-base-content/50 ml-6">
-                            Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
-                        </p>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-sm">Minimale Zeichenlänge</span>
-                        </label>
-                        <input
-                            type="number"
-                            v-model.number="minCharacterThreshold"
-                            min="0"
-                            max="50"
-                            class="input input-sm input-bordered w-full"
-                            placeholder="0 = keine Beschränkung"
-                        >
-                        <p class="text-xs text-base-content/50 mt-1">
-                            Entitäten mit weniger Zeichen werden nicht anonymisiert
-                        </p>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text text-sm">Negativliste (Ausnahmen)</span>
-                        </label>
-                        <textarea
-                            v-model="exclusionList"
-                            @input="saveExclusionList"
-                            class="textarea textarea-sm textarea-bordered w-full h-20 text-xs"
-                            placeholder="Wörter durch Komma trennen, z.B.: Berlin, Deutschland, Max"
-                        ></textarea>
-                        <p class="text-xs text-base-content/50 mt-1">
-                            Diese Wörter werden nie anonymisiert
-                        </p>
+                            <p class="text-xs text-base-content/50 mt-1">
+                                Entitäten mit weniger Zeichen werden nicht anonymisiert
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Threshold Control -->
-                <div class="px-4 pb-2">
-                     <label class="label pb-1 cursor-pointer">
-                        <span class="label-text text-xs">Erkennungsschwelle (Threshold)</span>
-                        <span class="label-text-alt font-mono">{{ threshold }}</span>
-                    </label>
-                    <input
-                        type="range"
-                        min="0.05"
-                        max="0.8"
-                        step="0.05"
-                        v-model.number="threshold"
-                        class="range range-xs range-primary"
-                    />
-                    <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
-                        <span>mehr</span>
-                        <span>weniger</span>
+                <!-- Group 3: Exclusion List -->
+                <div class="px-4 pb-1 pt-2 flex items-center gap-2">
+                    <NoSymbolIcon class="w-4 h-4" />
+                    <h3 class="font-bold text-sm">Negativliste (Entitäten, die trotz Erkennung nie anonymisiert werden)</h3>
+                </div>
+                <div class="px-4 pb-4">
+                    <div class="border border-base-300 rounded-lg p-3">
+                        <div class="form-control">
+                            <textarea
+                                v-model="exclusionList"
+                                @input="saveExclusionList"
+                                class="textarea textarea-sm textarea-bordered w-full h-24 text-xs leading-relaxed"
+                                placeholder="Wörter durch Komma trennen, z.B.: Berlin, Deutschland, Max"
+                            ></textarea>
+                            <p class="text-xs text-base-content/50 mt-1">
+                                Diese Wörter werden nie anonymisiert
+                            </p>
+                        </div>
                     </div>
                 </div>
+
+
 
                 <!-- Start Processing Button -->
                 <div class="p-4 border-t border-base-300">
@@ -518,7 +548,9 @@ import {
     PlayIcon,
     CheckCircleIcon,
     ExclamationCircleIcon,
-    ClockIcon
+    ClockIcon,
+    AdjustmentsHorizontalIcon,
+    NoSymbolIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -539,7 +571,9 @@ export default {
         PlayIcon,
         CheckCircleIcon,
         ExclamationCircleIcon,
-        ClockIcon
+        ClockIcon,
+        AdjustmentsHorizontalIcon,
+        NoSymbolIcon
     },
     data() {
         return {
@@ -559,7 +593,7 @@ export default {
             // Anonymization options
             anonymizePartialWords: true,
             minCharacterThreshold: 0,
-            threshold: 0.1,
+            threshold: 0.3,
             exclusionList: '',
 
             // Model status
@@ -584,9 +618,7 @@ export default {
             hoveredFileIndex: null,
 
             // Anonymization options
-            anonymizePartialWords: true,
-            minCharacterThreshold: 0,
-            threshold: 0.3
+
         };
     },
     computed: {

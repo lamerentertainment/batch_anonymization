@@ -299,11 +299,6 @@ class AnonymizerService {
         entities.forEach(entity => {
             if (!entity.name) return;
 
-            // Skip entities below character threshold (entities must have at least this many characters)
-            if (minCharacterThreshold > 0 && entity.name.length < minCharacterThreshold) {
-                return;
-            }
-
             // Split entity name into words
             const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
 
@@ -330,6 +325,11 @@ class AnonymizerService {
             // Replace remaining individual words (only if anonymizePartialWords is true)
             if (anonymizePartialWords) {
                 words.forEach((w, idx) => {
+                    // Check min length for partial words
+                    if (minCharacterThreshold > 0 && w.length < minCharacterThreshold) {
+                        return;
+                    }
+
                     // Skip individual words that are in the exclusion list
                     if (isExcluded(w)) {
                         return;
