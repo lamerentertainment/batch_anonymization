@@ -160,22 +160,25 @@
             >
                 <div class="p-4 border-b border-base-300">
                     <h2 class="font-semibold text-lg flex items-center gap-2">
-                        <TagIcon class="w-5 h-5" />
+                        <Cog6ToothIcon class="w-5 h-5" />
                          Anonymisierungseinstellungen
                     </h2>
                 </div>
 
                 <!-- Group 1: Detection Settings -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
-                    <TagIcon class="w-4 h-4" />
+                    <MagnifyingGlassIcon class="w-4 h-4" />
                     <h3 class="font-bold text-sm">Entitäterkennungs-Einstellungen</h3>
                 </div>
                 <div class="p-4 border-b border-base-300 space-y-4">
                     <div class="border border-base-300 rounded-lg overflow-hidden">
                         <!-- Threshold Control -->
                         <div class="px-4 pt-4 pb-2 bg-base-100/50">
-                             <label class="label pb-1 cursor-pointer">
-                                <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold)</span>
+                            <label class="label pb-1 cursor-pointer">
+                                <div class="flex items-center gap-2">
+                                    <SignalIcon class="w-4 h-4" />
+                                    <span class="label-text text-xs font-semibold">Erkennungsschwelle (Threshold)</span>
+                                </div>
                                 <span class="label-text-alt font-mono">{{ threshold }}</span>
                             </label>
                             <input
@@ -194,7 +197,10 @@
 
                         <!-- Entity Selection Header -->
                         <div class="px-4 pt-4 pb-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <TagIcon class="w-3 h-3" />
                             <span class="label-text text-xs font-semibold">zu anonymisierende Kategorien</span>
+                        </div>
                             
                             <!-- Quick Select Buttons -->
                             <div class="flex gap-2 flex-wrap mb-2">
@@ -228,7 +234,7 @@
                 <!-- Group 2: Partial Anonymization Options -->
                 <div class="px-4 pb-1 pt-2 flex items-center gap-2">
                     <AdjustmentsHorizontalIcon class="w-4 h-4" />
-                    <h3 class="font-bold text-sm">Handhabung von Enitätsbestandteilen (Enitäten, welche aus mehreren Bestandteilen bestehen)</h3>
+                    <h3 class="font-bold text-sm">Handhabung von Entitätsbestandteilen (Entitäten, welche aus mehreren Bestandteilen bestehen)</h3>
                 </div>
                 <div class="px-4 pb-4">
                      <div class="border border-base-300 rounded-lg p-3 space-y-2">
@@ -239,7 +245,7 @@
                                     v-model="anonymizePartialWords"
                                     class="checkbox checkbox-sm checkbox-primary"
                                 >
-                                <span class="label-text text-sm font-semibold">Einzelne Wörter anonymisieren</span>
+                                <span class="label-text text-sm font-semibold">Einzelne Wörter (Entitätsbestandteile) anonymisieren</span>
                             </label>
                             <p class="text-xs text-base-content/50 ml-6 mt-1">
                                 Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
@@ -550,7 +556,10 @@ import {
     ExclamationCircleIcon,
     ClockIcon,
     AdjustmentsHorizontalIcon,
-    NoSymbolIcon
+    NoSymbolIcon,
+    Cog6ToothIcon,
+    MagnifyingGlassIcon,
+    SignalIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -573,7 +582,10 @@ export default {
         ExclamationCircleIcon,
         ClockIcon,
         AdjustmentsHorizontalIcon,
-        NoSymbolIcon
+        NoSymbolIcon,
+        Cog6ToothIcon,
+        MagnifyingGlassIcon,
+        SignalIcon
     },
     data() {
         return {
