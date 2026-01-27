@@ -72,6 +72,8 @@ export const AVAILABLE_LABELS = [
  */
 export const DEFAULT_SELECTED_LABELS = [
     "person",
+    "location",
+    "street",
     "organization",
     "phone number",
     "email",
