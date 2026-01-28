@@ -96,7 +96,7 @@ class AnonymizerService {
         this.isInitialized = false;
         this.isInitializing = false;
         this.inferenceCount = 0;
-        this.maxInferencesBeforeReset = 50; // Reset model after N inferences to prevent accumulation
+        this.maxInferencesBeforeReset = 1; // Reset model after N inferences to prevent accumulation
     }
 
     /**
