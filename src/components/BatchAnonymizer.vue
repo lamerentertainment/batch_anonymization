@@ -1104,6 +1104,10 @@ export default {
                 outputFile.status = 'processing';
                 this.currentProcessingFile = outputFile.inputFile.relativePath || outputFile.inputFile.name;
 
+                // Variables scoped to allow garbage collection
+                let extractedText = null;
+                let entities = null;
+
                 try {
                     // Extract text from file
                     const result = await processFile(outputFile.inputFile);
@@ -1111,15 +1115,17 @@ export default {
                         throw new Error(result.error);
                     }
 
+                    extractedText = result.text;
+
                     // Detect entities
-                    const entities = await anonymizerService.detectEntities(
-                        result.text,
+                    entities = await anonymizerService.detectEntities(
+                        extractedText,
                         this.selectedLabels,
                         this.threshold
                     );
 
                     // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(result.text, entities, {
+                    const anonymizedText = anonymizerService.anonymizeText(extractedText, entities, {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
                         exclusionList: this.parseExclusionList()
@@ -1132,6 +1138,18 @@ export default {
                     console.error(`Error processing ${outputFile.inputFile.name}:`, error);
                     outputFile.status = 'error';
                     outputFile.error = error.message;
+                } finally {
+                    // CRITICAL: Explicitly release memory after each file
+                    // This prevents memory accumulation during batch processing
+                    extractedText = null;
+                    entities = null;
+
+                    // Release inference memory between files
+                    await anonymizerService.releaseInferenceMemory();
+
+                    // Small delay to allow garbage collection to run
+                    // This is especially important for large documents
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
 
                 this.processedCount++;
@@ -1250,6 +1268,8 @@ export default {
                 this.testPreviewError = error.message;
             } finally {
                 this.testPreviewLoading = false;
+                // Release inference memory after test
+                await anonymizerService.releaseInferenceMemory();
             }
         },
 

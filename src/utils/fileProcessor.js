@@ -80,8 +80,18 @@ export function validateFile(file) {
 async function extractTextFromTxt(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error('Fehler beim Lesen der TXT-Datei'));
+        reader.onload = (e) => {
+            const text = e.target.result;
+            // FileReader doesn't need explicit cleanup, but we null the handler
+            reader.onload = null;
+            reader.onerror = null;
+            resolve(text);
+        };
+        reader.onerror = () => {
+            reader.onload = null;
+            reader.onerror = null;
+            reject(new Error('Fehler beim Lesen der TXT-Datei'));
+        };
         reader.readAsText(file);
     });
 }
@@ -93,14 +103,29 @@ async function extractTextFromTxt(file) {
  */
 async function extractTextFromPdf(file) {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
     let fullText = '';
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
+    try {
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            try {
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            } finally {
+                // Cleanup page resources to prevent memory accumulation
+                page.cleanup();
+            }
+        }
+    } finally {
+        // CRITICAL: Destroy the PDF document to free memory
+        // This releases all internal buffers, canvases, and page data
+        await pdf.destroy();
+
+        // Also destroy the loading task to release any pending resources
+        loadingTask.destroy();
     }
 
     return fullText.trim();
@@ -112,9 +137,14 @@ async function extractTextFromPdf(file) {
  * @returns {Promise<string>}
  */
 async function extractTextFromDocx(file) {
-    const arrayBuffer = await file.arrayBuffer();
+    let arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
+    const text = result.value;
+
+    // Clear the arrayBuffer reference to allow GC
+    arrayBuffer = null;
+
+    return text;
 }
 
 /**

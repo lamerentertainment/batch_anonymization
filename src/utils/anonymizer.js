@@ -81,7 +81,9 @@ export const DEFAULT_SELECTED_LABELS = [
 ];
 
 /**
- * Maximum text chunk length for Gliner processing
+ * Maximum text chunk length for Gliner processing.
+ * IMPORTANT: This is kept consistent to avoid ONNX tensor shape variations
+ * which can cause memory issues and "out of bounds" errors.
  */
 const MAX_CHUNK_LENGTH = 12000;
 
@@ -93,6 +95,8 @@ class AnonymizerService {
         this.gliner = null;
         this.isInitialized = false;
         this.isInitializing = false;
+        this.inferenceCount = 0;
+        this.maxInferencesBeforeReset = 50; // Reset model after N inferences to prevent accumulation
     }
 
     /**
@@ -219,12 +223,40 @@ class AnonymizerService {
         const allEntities = [];
         let entityId = 1;
 
-        for (const chunk of chunks) {
-            const results = await this.gliner.inference({
-                texts: [chunk],
-                entities: labels,
-                threshold: threshold,
-            });
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+
+            // Track inference count to detect potential memory accumulation
+            this.inferenceCount++;
+
+            let results;
+            try {
+                results = await this.gliner.inference({
+                    texts: [chunk],
+                    entities: labels,
+                    threshold: threshold,
+                });
+            } catch (error) {
+                // If we get an out-of-bounds or memory error, try resetting the model
+                if (error.message && (
+                    error.message.includes('out of bounds') ||
+                    error.message.includes('memory') ||
+                    error.message.includes('OOM') ||
+                    error.message.includes('allocation')
+                )) {
+                    console.warn('Memory-related error detected, attempting model reset...', error.message);
+                    await this.resetModel();
+
+                    // Retry the inference after reset
+                    results = await this.gliner.inference({
+                        texts: [chunk],
+                        entities: labels,
+                        threshold: threshold,
+                    });
+                } else {
+                    throw error;
+                }
+            }
 
             const chunkEntities = results[0].map((ent) => ({
                 id: entityId++,
@@ -233,7 +265,16 @@ class AnonymizerService {
             }));
 
             allEntities.push(...chunkEntities);
+
+            // Explicitly clear results reference to help GC
+            results = null;
+
+            // Clear the chunk reference from the array to allow GC
+            chunks[i] = null;
         }
+
+        // Clear chunks array
+        chunks.length = 0;
 
         // Deduplicate entities
         return this.deduplicateEntities(allEntities);
@@ -355,6 +396,87 @@ class AnonymizerService {
      */
     isReady() {
         return this.isInitialized && this.gliner !== null;
+    }
+
+    /**
+     * Release memory between batch operations.
+     * This helps prevent memory accumulation during sequential processing.
+     * Note: The model stays loaded, only inference caches are cleared.
+     */
+    async releaseInferenceMemory() {
+        // Check if we should do a full model reset based on inference count
+        if (this.inferenceCount >= this.maxInferencesBeforeReset) {
+            console.log(`Inference count (${this.inferenceCount}) reached threshold, performing model reset...`);
+            await this.resetModel();
+            return;
+        }
+
+        // Trigger garbage collection hint (if available in browser)
+        if (typeof window !== 'undefined' && window.gc) {
+            try {
+                window.gc();
+            } catch (e) {
+                // Ignore - gc() is typically only available in debug mode
+            }
+        }
+
+        // The Gliner library may have internal caches - this is a signal
+        // to release them. Currently Gliner doesn't expose a cache clear method,
+        // but calling this between files gives the JS engine a chance to GC.
+        return Promise.resolve();
+    }
+
+    /**
+     * Reset the model by destroying and reinitializing it.
+     * This is a drastic measure to clear accumulated memory from ONNX Runtime.
+     */
+    async resetModel() {
+        console.log('Resetting Gliner model to clear accumulated memory...');
+
+        // Destroy the current instance
+        await this.destroy();
+
+        // Small delay to allow cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Reinitialize
+        await this.initialize(() => {});
+
+        // Reset inference counter
+        this.inferenceCount = 0;
+
+        console.log('Model reset complete');
+    }
+
+    /**
+     * Completely destroy the Gliner instance and release all memory.
+     * After calling this, initialize() must be called again before use.
+     */
+    async destroy() {
+        if (this.gliner) {
+            // If Gliner has a dispose/destroy method, call it
+            if (typeof this.gliner.dispose === 'function') {
+                await this.gliner.dispose();
+            } else if (typeof this.gliner.destroy === 'function') {
+                await this.gliner.destroy();
+            }
+
+            this.gliner = null;
+        }
+
+        this.isInitialized = false;
+        this.isInitializing = false;
+
+        // Trigger garbage collection hint
+        if (typeof window !== 'undefined' && window.gc) {
+            try {
+                window.gc();
+            } catch (e) {
+                // Ignore
+            }
+        }
+
+        console.log('Anonymizer destroyed and memory released');
     }
 }
 
