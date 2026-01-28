@@ -636,6 +636,7 @@ import {
 import JSZip from 'jszip';
 import { processFile, validateFile, getFileNameWithoutExtension, SUPPORTED_EXTENSIONS } from '../utils/fileProcessor.js';
 import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '../utils/anonymizer.js';
+import batchStorage from '../utils/batchStorage.js';
 
 export default {
     name: 'BatchAnonymizer',
@@ -709,7 +710,10 @@ export default {
                 text: ''
             },
 
-            // Anonymization options
+            // Batch processing with reload (for memory management)
+            isBatchMode: false,           // True when processing with page reloads
+            batchState: null,             // Current batch state from IndexedDB
+            isResumingBatch: false,       // True when resuming after reload
 
         };
     },
@@ -808,21 +812,25 @@ export default {
             );
         }
     },
-    mounted() {
+    async mounted() {
         // Load saved widths
         const savedLeft = localStorage.getItem('batchAnonymizer_leftPanelWidth');
         const savedCenter = localStorage.getItem('batchAnonymizer_centerPanelWidth');
         if (savedLeft) this.leftPanelWidth = parseInt(savedLeft);
         if (savedCenter) this.centerPanelWidth = parseInt(savedCenter);
 
-        // Preload the anonymization model on page load
-        this.initializeModel();
         // Load exclusion list from localStorage
         this.loadExclusionList();
 
         // Add global listeners for drag safety (in case mouse leaves window)
         window.addEventListener('mouseup', this.stopResize);
         window.addEventListener('mousemove', this.handleMouseMove);
+
+        // Check if there's a batch in progress (after page reload)
+        await this.checkAndResumeBatch();
+
+        // Preload the anonymization model on page load
+        this.initializeModel();
     },
     beforeUnmount() {
         window.removeEventListener('mouseup', this.stopResize);
@@ -1046,9 +1054,13 @@ export default {
         removeInputFile(index) {
             this.inputFiles.splice(index, 1);
         },
-        clearInputFiles() {
+        async clearInputFiles() {
             this.inputFiles = [];
             this.outputFiles = [];
+            // Also clear any stored batch data
+            await batchStorage.clearAll();
+            this.isBatchMode = false;
+            this.isResumingBatch = false;
         },
 
         // Entity selection methods
@@ -1063,6 +1075,76 @@ export default {
         },
         deselectAllLabels() {
             this.selectedLabels = [];
+        },
+
+        // Check if there's a batch in progress after page reload
+        async checkAndResumeBatch() {
+            try {
+                const state = await batchStorage.getBatchState();
+
+                if (state && state.isRunning) {
+                    console.log('Found batch in progress, resuming...', state);
+                    this.isResumingBatch = true;
+                    this.isBatchMode = true;
+                    this.batchState = state;
+
+                    // Restore settings from saved state
+                    if (state.settings) {
+                        this.selectedLabels = state.settings.selectedLabels || [...DEFAULT_SELECTED_LABELS];
+                        this.threshold = state.settings.threshold || 0.3;
+                        this.anonymizePartialWords = state.settings.anonymizePartialWords !== false;
+                        this.minCharacterThreshold = state.settings.minCharacterThreshold || 0;
+                        // exclusionList is loaded from localStorage separately
+                    }
+
+                    // Load completed results into outputFiles
+                    const results = await batchStorage.getResults();
+                    const pendingFiles = await batchStorage.getPendingFiles();
+
+                    this.processedCount = results.length;
+                    this.outputFiles = [];
+
+                    // Add completed results
+                    results.forEach(r => {
+                        this.outputFiles.push({
+                            inputFile: { name: r.fileName, relativePath: r.fileName },
+                            outputName: r.outputName,
+                            status: r.status,
+                            content: r.content,
+                            entitiesFound: r.entitiesFound,
+                            error: r.error
+                        });
+                    });
+
+                    // Add pending files as "pending" status
+                    pendingFiles.filter(f => !f.processed).forEach(f => {
+                        const baseName = getFileNameWithoutExtension(f.relativePath || f.name);
+                        this.outputFiles.push({
+                            inputFile: { name: f.name, relativePath: f.relativePath },
+                            outputName: baseName + '.txt',
+                            status: 'pending',
+                            content: null,
+                            entitiesFound: 0,
+                            error: null
+                        });
+                    });
+
+                    // Wait for model to be ready, then process next file
+                    this.isProcessing = true;
+                    await this.initializeModel();
+
+                    if (this.modelStatus === 'ready') {
+                        await this.processNextFileWithReload();
+                    } else {
+                        console.error('Model failed to initialize during batch resume');
+                        this.isProcessing = false;
+                        this.isResumingBatch = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking batch state:', error);
+                this.isResumingBatch = false;
+            }
         },
 
         // Processing methods
@@ -1080,13 +1162,13 @@ export default {
             }
 
             this.isProcessing = true;
+            this.isBatchMode = true;
             this.processedCount = 0;
             this.outputFiles = [];
 
-            // Initialize output file entries
+            // Initialize output file entries for UI
             this.inputFiles.forEach(file => {
                 const baseName = getFileNameWithoutExtension(file.relativePath || file.name);
-                // Preserve folder structure in output name
                 const outputName = baseName + '.txt';
                 this.outputFiles.push({
                     inputFile: file,
@@ -1098,66 +1180,148 @@ export default {
                 });
             });
 
-            // Process files sequentially
-            for (let i = 0; i < this.outputFiles.length; i++) {
-                const outputFile = this.outputFiles[i];
-                outputFile.status = 'processing';
-                this.currentProcessingFile = outputFile.inputFile.relativePath || outputFile.inputFile.name;
+            // Store all files and settings in IndexedDB for reload persistence
+            const settings = {
+                selectedLabels: this.selectedLabels,
+                threshold: this.threshold,
+                anonymizePartialWords: this.anonymizePartialWords,
+                minCharacterThreshold: this.minCharacterThreshold
+                // exclusionList is stored separately in localStorage
+            };
 
-                // Variables scoped to allow garbage collection
-                let extractedText = null;
-                let entities = null;
+            try {
+                await batchStorage.startBatch(this.inputFiles, settings);
+                console.log('Batch started, files stored in IndexedDB');
 
-                try {
-                    // Extract text from file
-                    const result = await processFile(outputFile.inputFile);
-                    if (!result.success) {
-                        throw new Error(result.error);
-                    }
+                // Process first file, then reload
+                await this.processNextFileWithReload();
+            } catch (error) {
+                console.error('Failed to start batch:', error);
+                this.isProcessing = false;
+                this.isBatchMode = false;
+            }
+        },
 
-                    extractedText = result.text;
+        // Process the next file and reload page afterwards
+        async processNextFileWithReload() {
+            const nextFile = await batchStorage.getNextFile();
 
-                    // Detect entities
-                    entities = await anonymizerService.detectEntities(
-                        extractedText,
-                        this.selectedLabels,
-                        this.threshold
-                    );
-
-                    // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(extractedText, entities, {
-                        anonymizePartialWords: this.anonymizePartialWords,
-                        minCharacterThreshold: this.minCharacterThreshold,
-                        exclusionList: this.parseExclusionList()
-                    });
-
-                    outputFile.content = anonymizedText;
-                    outputFile.entitiesFound = entities.length;
-                    outputFile.status = 'completed';
-                } catch (error) {
-                    console.error(`Error processing ${outputFile.inputFile.name}:`, error);
-                    outputFile.status = 'error';
-                    outputFile.error = error.message;
-                } finally {
-                    // CRITICAL: Explicitly release memory after each file
-                    // This prevents memory accumulation during batch processing
-                    extractedText = null;
-                    entities = null;
-
-                    // Release inference memory between files
-                    await anonymizerService.releaseInferenceMemory();
-
-                    // Delay to allow garbage collection to run
-                    // This is important because ONNX Runtime Web does not support
-                    // proper session cleanup, so we rely on JS GC
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-
-                this.processedCount++;
+            if (!nextFile) {
+                // All files processed - finish batch
+                await this.finishBatch();
+                return;
             }
 
+            const state = await batchStorage.getBatchState();
+            this.currentProcessingFile = nextFile.relativePath || nextFile.name;
+
+            // Update UI to show current file processing
+            const currentIndex = state.currentIndex;
+            if (this.outputFiles[currentIndex]) {
+                this.outputFiles[currentIndex].status = 'processing';
+            }
+
+            let result = {
+                fileName: nextFile.name,
+                outputName: getFileNameWithoutExtension(nextFile.relativePath || nextFile.name) + '.txt',
+                content: null,
+                entitiesFound: 0,
+                status: 'completed',
+                error: null
+            };
+
+            try {
+                // Create a File-like object from the stored ArrayBuffer
+                const blob = new Blob([nextFile.data], { type: nextFile.type || 'application/octet-stream' });
+                const file = new File([blob], nextFile.name, { type: nextFile.type });
+                file.relativePath = nextFile.relativePath;
+
+                // Extract text from file
+                const extracted = await processFile(file);
+                if (!extracted.success) {
+                    throw new Error(extracted.error);
+                }
+
+                // Detect entities
+                const entities = await anonymizerService.detectEntities(
+                    extracted.text,
+                    this.selectedLabels,
+                    this.threshold
+                );
+
+                // Anonymize text
+                const anonymizedText = anonymizerService.anonymizeText(extracted.text, entities, {
+                    anonymizePartialWords: this.anonymizePartialWords,
+                    minCharacterThreshold: this.minCharacterThreshold,
+                    exclusionList: this.parseExclusionList()
+                });
+
+                result.content = anonymizedText;
+                result.entitiesFound = entities.length;
+                result.status = 'completed';
+
+            } catch (error) {
+                console.error(`Error processing ${nextFile.name}:`, error);
+                result.status = 'error';
+                result.error = error.message;
+            }
+
+            // Store result and mark file as processed
+            await batchStorage.markFileProcessed(nextFile.id, result);
+
+            // Check if there are more files
+            const updatedState = await batchStorage.getBatchState();
+            if (updatedState.currentIndex >= updatedState.totalFiles) {
+                // All files done - finish without reload
+                await this.finishBatch();
+            } else {
+                // More files to process - reload page to clear ONNX memory
+                console.log(`File ${updatedState.currentIndex}/${updatedState.totalFiles} done, reloading...`);
+                window.location.reload();
+            }
+        },
+
+        // Finish the batch and show results
+        async finishBatch() {
+            console.log('Batch processing complete');
+
+            // Load all results
+            const results = await batchStorage.getResults();
+
+            // Update outputFiles with final results
+            this.outputFiles = results.map(r => ({
+                inputFile: { name: r.fileName, relativePath: r.fileName },
+                outputName: r.outputName,
+                status: r.status,
+                content: r.content,
+                entitiesFound: r.entitiesFound,
+                error: r.error
+            }));
+
+            this.processedCount = results.length;
+
+            // Mark batch as complete (but don't clear yet - user needs to download)
+            await batchStorage.completeBatch();
+
             this.isProcessing = false;
+            this.isBatchMode = false;
+            this.isResumingBatch = false;
             this.currentProcessingFile = '';
+        },
+
+        // Cancel ongoing batch
+        async cancelBatch() {
+            await batchStorage.cancelBatch();
+            this.isProcessing = false;
+            this.isBatchMode = false;
+            this.isResumingBatch = false;
+            this.outputFiles = [];
+            this.processedCount = 0;
+        },
+
+        // Clear batch data after download
+        async clearBatchData() {
+            await batchStorage.clearAll();
         },
 
         // Download methods
