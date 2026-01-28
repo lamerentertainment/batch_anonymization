@@ -1147,9 +1147,10 @@ export default {
                     // Release inference memory between files
                     await anonymizerService.releaseInferenceMemory();
 
-                    // Small delay to allow garbage collection to run
-                    // This is especially important for large documents
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                    // Delay to allow garbage collection to run
+                    // This is important because ONNX Runtime Web does not support
+                    // proper session cleanup, so we rely on JS GC
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
 
                 this.processedCount++;
