@@ -640,6 +640,8 @@ import {
 import JSZip from 'jszip';
 import { processFile, validateFile, getFileNameWithoutExtension, SUPPORTED_EXTENSIONS } from '../utils/fileProcessor.js';
 import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '../utils/anonymizer.js';
+import iframeAnonymizer from '../utils/iframeAnonymizer.js';
+import modelCache from '../utils/modelCache.js';
 
 export default {
     name: 'BatchAnonymizer',
@@ -915,7 +917,7 @@ export default {
             this.saveExclusionList();
         },
 
-        // Initialize model
+        // Initialize model (ensure it's cached)
         async initializeModel() {
             if (this.modelStatus === 'ready' || this.modelStatus === 'loading') {
                 return;
@@ -924,15 +926,23 @@ export default {
             try {
                 this.modelStatus = 'loading';
                 this.modelProgress = 0;
-                await anonymizerService.initialize((progress) => {
-                    this.modelProgress = progress;
-                });
+                
+                // Only download/cache the model, don't load into memory in main thread
+                const modelPath = "./models/gliner_multi_pii-v1/onnx/model_fp16.onnx";
+                await modelCache.getOrDownloadModel(
+                    modelPath, 
+                    'quantized', 
+                    (progress) => {
+                        this.modelProgress = progress;
+                    }
+                );
+                
                 this.modelStatus = 'ready';
-                console.log('Model preloaded successfully');
+                console.log('Model cached successfully');
             } catch (error) {
                 this.modelStatus = 'error';
                 this.modelError = error.message;
-                console.error('Failed to preload model:', error);
+                console.error('Failed to cache model:', error);
             }
         },
         // Layout resizing methods
@@ -1127,7 +1137,7 @@ export default {
                     }
 
                     // Detect entities
-                    const entities = await anonymizerService.detectEntities(
+                    const entities = await iframeAnonymizer.detectEntities(
                         result.text,
                         this.selectedLabels,
                         this.threshold
@@ -1208,7 +1218,7 @@ export default {
                 const limitedText = words.slice(0, 1000).join(' ');
 
                 // Detect entities with current settings
-                const entities = await anonymizerService.detectEntities(
+                const entities = await iframeAnonymizer.detectEntities(
                     limitedText,
                     this.selectedLabels,
                     this.threshold

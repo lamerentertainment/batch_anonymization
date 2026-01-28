@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLiNER Worker</title>
+</head>
+
+<body>
+    <div id="status">Idle</div>
+    <script>
+        // Global error handler to catch import errors or early failures
+        window.onerror = function (message, source, lineno, colno, error) {
+            console.error('[GLiNER iframe error]', message, error);
+            const errMsg = error ? error.message : message;
+            // Try to notify parent
+            try {
+                window.parent.postMessage({
+                    type: 'ERROR',
+                    error: `Iframe Error: ${errMsg}`
+                }, '*');
+            } catch (e) {
+                console.error('Failed to report error to parent', e);
+            }
+            document.getElementById('status').textContent = 'Error: ' + errMsg;
+        };
+
+        // Ping parent to say HTML is loaded (helps debug path issues)
+        window.parent.postMessage({ type: 'HTML_LOADED' }, '*');
+    </script>
+    <script type="module" src="/src/worker/worker.js"></script>
+</body>
+
+</html>
