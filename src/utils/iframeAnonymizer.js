@@ -6,7 +6,7 @@
 class IframeAnonymizer {
     constructor() {
         this.workerUrl = '/gliner-worker.html';
-        this.timeout = 120000; // 2 minutes timeout
+        this.timeout = 300000; // 5 minutes timeout
     }
 
     /**

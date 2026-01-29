@@ -192,7 +192,7 @@
                                 class="range range-xs range-primary"
                             />
                             <div class="w-full flex justify-between text-[10px] px-1 text-base-content/50">
-                                <span>weniger (konservativ)</span>
+                                <span>weniger (lasch)</span>
                                 <span>mehr (aggressiv)</span>
                             </div>
                             <p class="text-[10px] text-base-content/40 mt-1 px-1">
