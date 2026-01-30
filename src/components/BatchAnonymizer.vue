@@ -634,7 +634,7 @@
                                     </thead>
                                     <tbody>
                                         <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
-                                            <td class="font-medium max-w-[200px] truncate" :title="entity.name">{{ entity.name }}</td>
+                                            <td class="font-medium max-w-[200px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
                                             <td><span class="badge badge-ghost badge-outline badge-sm text-[10px]">{{ entity.type }}</span></td>
                                             <td class="font-mono text-xs text-base-content/70 select-all">[{{ entity.id }}_{{ entity.type.toLowerCase() }}]</td>
                                             <td>
@@ -1470,6 +1470,29 @@ export default {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        },
+        formatEntityName(entity) {
+            const exclusionList = this.parseExclusionList();
+            if (exclusionList.length === 0) return this.escapeHtml(entity.name);
+
+            // Split by spaces and hyphens to find words, but preserve separators for reconstruction
+            // We use capturing group in split to keep separators
+            const parts = entity.name.split(/(\s+|-)/);
+            
+            const formattedParts = parts.map(part => {
+                // Skip separators/whitespace for checking
+                if (!part.trim() || /^[\s-]+$/.test(part)) return this.escapeHtml(part);
+                
+                // Check if word is in exclusion list (case insensitive)
+                const isExcluded = exclusionList.some(excl => excl.toLowerCase() === part.toLowerCase());
+                
+                if (isExcluded) {
+                    return `<span class="line-through decoration-wavy decoration-error/50 text-base-content/60" title="In Negativliste">${this.escapeHtml(part)}</span>`;
+                }
+                return this.escapeHtml(part);
+            });
+            
+            return formattedParts.join('');
         },
         handleTextMouseOver(e) {
             const target = e.target.closest('.anonymized-token');
