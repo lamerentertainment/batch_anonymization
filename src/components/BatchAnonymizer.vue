@@ -569,7 +569,7 @@
                             class="fixed z-[100] px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full"
                             :style="{ top: (hoverTooltip.y - 8) + 'px', left: hoverTooltip.x + 'px' }"
                         >
-                            Original: <span class="font-bold">{{ hoverTooltip.text }}</span>
+                            Original: <span class="font-bold" v-html="hoverTooltip.text"></span>
                         </div>
 
                         <!-- Legend -->
@@ -820,17 +820,75 @@ export default {
                 'time': 'background-color: #fed7aa; color: #7c2d12;'
             };
 
-            // Regex for placeholders: [id_type] or [id_type_letter]
-            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_[a-z])?\]/gi;
+            // Regex for placeholders: [id_type] or [id_type_suffix]
+            // Updated to capture suffix (group 3) which can be a letter or number
+            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_([a-z0-9]+))?\]/gi;
 
-            text = text.replace(placeholderRegex, (match, id, type) => {
+            text = text.replace(placeholderRegex, (match, id, type, suffix) => {
                 const normalizedType = type.toLowerCase().trim();
                 const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
                 const originalValue = entityMap[id] || 'Unbekannt';
-                // Escape quotes for the data attribute
+                
+                let originalHtml = originalValue;
+                
+                // If we have a suffix, try to highlight the specific part
+                if (suffix) {
+                    try {
+                        let wordIndex = -1;
+                        
+                        // Check if suffix is a number (1-based index)
+                        if (/^\d+$/.test(suffix)) {
+                            wordIndex = parseInt(suffix, 10) - 1;
+                        } 
+                        // Check if suffix is a letter (a=0, b=1, etc.)
+                        else if (/^[a-z]$/.test(suffix)) {
+                            wordIndex = suffix.charCodeAt(0) - 97; // 'a' is 97
+                        }
+                        
+                        if (wordIndex >= 0) {
+                            // Split original value into words to finding the correct one to underline
+                            // We use a regex that matches words but keeps delimiters so we can reconstruct
+                            // This is a "best effort" approach as re-tokenizing perfectly matching the backend might be hard
+                            // The anonymizer uses: split(/\s+|-/) which consumes delimiters.
+                            
+                            // Let's try to just split by space/hyphen to find the word, but we need to reconstruct the string with delimiters...
+                            // Actually, let's just use a simple split/join approach for visual representation.
+                            // If we can't perfectly reconstruct separators, spaces are usually fine for the tooltip.
+                             
+                            const words = originalValue.split(/(\s+|-)/);
+                            // The split above with capturing group keeps separators.
+                            // e.g. "Hans-Peter" -> ["Hans", "-", "Peter"]
+                            // e.g. "Hans Peter" -> ["Hans", " ", "Peter"]
+                            // e.g. "Hans   Peter" -> ["Hans", "   ", "Peter"]
+                            
+                            // We need to count "real" words to match the index
+                            let currentWordCount = 0;
+                            const markedParts = words.map(part => {
+                                // Check if this part is a "word" (not only whitespace/separator)
+                                if (part.trim().length > 0 && !/^[\s-]+$/.test(part)) {
+                                    if (currentWordCount === wordIndex) {
+                                        currentWordCount++;
+                                        return `<span style="text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px;">${part}</span>`;
+                                    }
+                                    currentWordCount++;
+                                }
+                                return part;
+                            });
+                            
+                            originalHtml = markedParts.join('');
+                        }
+                    } catch (e) {
+                         console.warn("Error processing suffix for tooltip:", e);
+                    }
+                }
+
+                // Escape quotes for the data attribute - careful not to escape the HTML we just built
+                // Actually, we can't put complex HTML safely into a data attribute without encoding.
+                // We'll URL-encode the HTML string.
+                const encodedOriginalHtml = encodeURIComponent(originalHtml);
                 const escapedOriginal = originalValue.replace(/"/g, '&quot;');
                 
-                return `<span class="anonymized-token" data-original="${escapedOriginal}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${match}</span>`;
+                return `<span class="anonymized-token" data-original="${escapedOriginal}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${match}</span>`;
             });
 
             return text;
@@ -1415,11 +1473,19 @@ export default {
         },
         handleTextMouseOver(e) {
             const target = e.target.closest('.anonymized-token');
-            if (target && target.dataset.original) {
-                this.hoverTooltip.text = target.dataset.original;
-                this.hoverTooltip.visible = true;
-                this.hoverTooltip.x = e.clientX;
-                this.hoverTooltip.y = e.clientY;
+            if (target) {
+                if (target.dataset.originalHtml) {
+                     this.hoverTooltip.text = decodeURIComponent(target.dataset.originalHtml);
+                } else if (target.dataset.original) {
+                    // Fallback to plain text if no HTML version
+                    this.hoverTooltip.text = this.escapeHtml(target.dataset.original);
+                }
+                
+                if (this.hoverTooltip.text) {
+                    this.hoverTooltip.visible = true;
+                    this.hoverTooltip.x = e.clientX;
+                    this.hoverTooltip.y = e.clientY;
+                }
             }
         },
         handleTextMouseOut(e) {
