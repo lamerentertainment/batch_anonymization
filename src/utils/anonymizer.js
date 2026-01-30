@@ -322,8 +322,13 @@ class AnonymizerService {
                     .join(' ');
                 anonymized = anonymized.replace(fullPattern, sequence);
             } else if (words.length === 1) {
-                // Single word entity: Check exclusion before replacing
+                // Single word entity: Check exclusion and min length before replacing
                 if (isExcluded(words[0])) return;
+
+                // Check min length for single word entities
+                if (minCharacterThreshold > 0 && words[0].length < minCharacterThreshold) {
+                    return;
+                }
 
                 const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
                 anonymized = anonymized.replace(singleWordPattern, `[${entity.id}_${entity.type}]`);
