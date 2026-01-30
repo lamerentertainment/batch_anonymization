@@ -113,16 +113,30 @@
                                 <!-- Test Button (inline) -->
                                 <button
                                     v-if="(hoveredFileIndex === index || (testPreviewLoading && testPreviewFile === file)) && modelStatus === 'ready'"
-                                    @click.stop="testAnonymization(file)"
+                                    @click.stop="testAnonymization(file, false)"
                                     class="btn btn-xs btn-primary animate-fadeIn"
                                     :disabled="testPreviewLoading"
                                     title="Anonymisierung testen"
                                 >
-                                    <template v-if="testPreviewLoading && testPreviewFile === file">
+                                    <template v-if="testPreviewLoading && testPreviewFile === file && !isFullTest">
                                         <span class="loading loading-spinner loading-xs"></span>
                                     </template>
                                     <template v-else>
-                                        Testen
+                                        Anonymisierung testen (1000 Zeichen)
+                                    </template>
+                                </button>
+                                <button
+                                    v-if="(hoveredFileIndex === index || (testPreviewLoading && testPreviewFile === file)) && modelStatus === 'ready'"
+                                    @click.stop="testAnonymization(file, true)"
+                                    class="btn btn-xs btn-outline btn-primary animate-fadeIn ml-1"
+                                    :disabled="testPreviewLoading"
+                                    title="Volle Datei anonymisieren und prüfen"
+                                >
+                                    <template v-if="testPreviewLoading && testPreviewFile === file && isFullTest">
+                                        <span class="loading loading-spinner loading-xs"></span>
+                                    </template>
+                                    <template v-else>
+                                        Datei komplett anonymisieren
                                     </template>
                                 </button>
 
@@ -663,7 +677,7 @@ import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '..
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
 import modelCache from '../utils/modelCache.js';
 
-const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten,Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Staatsanwaltschaft, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
+const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Staatsanwaltschaft, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
 
 export default {
     name: 'BatchAnonymizer',
@@ -728,6 +742,7 @@ export default {
             testPreviewResult: null,
             testPreviewError: null,
             testPreviewError: null,
+            isFullTest: false,
             hoveredFileIndex: null,
 
             // Tooltip state
@@ -1265,8 +1280,9 @@ export default {
         },
 
         // Test anonymization preview methods
-        async testAnonymization(file) {
+        async testAnonymization(file, full = false) {
             this.testPreviewFile = file;
+            this.isFullTest = full;
             this.testPreviewLoading = true;
             this.testPreviewError = null;
             this.testPreviewResult = null;
@@ -1280,10 +1296,16 @@ export default {
                 }
 
                 const fullText = result.text;
+                let words = fullText.split(/\s+/);
+                let limitedText = fullText;
 
-                // Limit to first 1000 words
-                const words = fullText.split(/\s+/);
-                const limitedText = words.slice(0, 1000).join(' ');
+                // Limit to first 1000 words only if not full test
+                if (!full) {
+                    if (words.length > 1000) {
+                        words = words.slice(0, 1000);
+                        limitedText = words.join(' ');
+                    }
+                }
 
                 // Detect entities with current settings
                 const entities = await iframeAnonymizer.detectEntities(
@@ -1331,8 +1353,8 @@ export default {
                     originalText: limitedText,
                     anonymizedText: anonymizedText,
                     entities: entities,
-                    wordCount: Math.min(words.length, 1000),
-                    totalWords: words.length,
+                    wordCount: words.length,
+                    totalWords: fullText.split(/\s+/).length,
                     exclusionListCount: exclusionList.length,
                     excludedEntitiesCount: excludedEntities.length,
                     skippedShortEntitiesCount: skippedShortEntitiesCount
