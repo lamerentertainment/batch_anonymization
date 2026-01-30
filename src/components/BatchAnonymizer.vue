@@ -296,9 +296,29 @@
                                 class="textarea textarea-sm textarea-bordered w-full h-24 text-xs leading-relaxed"
                                 placeholder="Wörter durch Komma trennen, z.B.: Berlin, Deutschland, Max"
                             ></textarea>
-                            <p class="text-xs text-base-content/50 mt-1">
-                                Diese Wörter werden nie anonymisiert
-                            </p>
+                            <div class="flex flex-wrap justify-between items-center mt-1 gap-2">
+                                <p class="text-xs text-base-content/50">
+                                    Diese Wörter werden nie anonymisiert
+                                </p>
+                                <div class="flex gap-2">
+                                    <button 
+                                        v-if="isCustomExclusionList" 
+                                        @click="mergeDefaultExclusionList" 
+                                        class="btn btn-xs btn-outline btn-info"
+                                        title="Fügt fehlende Wörter aus der Standard-Liste hinzu"
+                                    >
+                                        + Standard
+                                    </button>
+                                    <button 
+                                        v-if="isCustomExclusionList" 
+                                        @click="resetExclusionList" 
+                                        class="btn btn-xs btn-outline btn-error"
+                                        title="Setzt die Liste auf den Standard zurück (löscht eigene Änderungen)"
+                                    >
+                                        Zurücksetzen
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -643,6 +663,8 @@ import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '..
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
 import modelCache from '../utils/modelCache.js';
 
+const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten,Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Staatsanwaltschaft, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
+
 export default {
     name: 'BatchAnonymizer',
     components: {
@@ -684,6 +706,7 @@ export default {
             minCharacterThreshold: 0,
             threshold: 0.3,
             exclusionList: '',
+            isCustomExclusionList: false,
 
             // Model status
             modelStatus: 'idle', // 'idle', 'loading', 'ready', 'error'
@@ -849,7 +872,19 @@ export default {
         // Exclusion list methods
         saveExclusionList() {
             try {
+                // Determine if the current list is different from the default
+                const current = this.exclusionList.trim();
+                const defaultList = DEFAULT_EXCLUSION_LIST.trim();
+                
+                // Simple string comparison might fail if order changes, but for now strict equality is a good baseline for "customized"
+                // A better approach for "isCustom" is if it was saved to localStorage. A saved list implies customization preference.
+                // But we want to show reset only if it differs? 
+                // Let's rely on content. 
+                // To be robust: normalize (split, sort, join) could work, but user formatting matters too.
+                // Let's stick to: if it's saved, it's custom. If we reset, we remove from local storage.
+                
                 localStorage.setItem('anonymizer_exclusion_list', this.exclusionList);
+                this.isCustomExclusionList = true;
             } catch (error) {
                 console.error('Failed to save exclusion list to localStorage:', error);
             }
@@ -859,9 +894,42 @@ export default {
                 const saved = localStorage.getItem('anonymizer_exclusion_list');
                 if (saved) {
                     this.exclusionList = saved;
+                    this.isCustomExclusionList = true;
+                } else {
+                    // Load default
+                    this.exclusionList = DEFAULT_EXCLUSION_LIST;
+                    this.isCustomExclusionList = false;
                 }
             } catch (error) {
                 console.error('Failed to load exclusion list from localStorage:', error);
+                // Fallback to default on error
+                this.exclusionList = DEFAULT_EXCLUSION_LIST;
+            }
+        },
+        resetExclusionList() {
+            this.exclusionList = DEFAULT_EXCLUSION_LIST;
+            this.isCustomExclusionList = false;
+            localStorage.removeItem('anonymizer_exclusion_list');
+        },
+        mergeDefaultExclusionList() {
+            const currentWords = this.parseExclusionList();
+            const defaultWords = DEFAULT_EXCLUSION_LIST.split(',').map(w => w.trim()).filter(w => w.length > 0);
+            
+            // Set for case-insensitive uniqueness check
+            const existingLower = new Set(currentWords.map(w => w.toLowerCase()));
+            
+            let addedCount = 0;
+            defaultWords.forEach(word => {
+                if (!existingLower.has(word.toLowerCase())) {
+                    currentWords.push(word);
+                    existingLower.add(word.toLowerCase());
+                    addedCount++;
+                }
+            });
+            
+            if (addedCount > 0) {
+                this.exclusionList = currentWords.join(', ');
+                this.saveExclusionList();
             }
         },
         parseExclusionList() {
