@@ -122,7 +122,7 @@
                                         <span class="loading loading-spinner loading-xs"></span>
                                     </template>
                                     <template v-else>
-                                        Anonymisierung testen (1000 Zeichen)
+                                        Anonymisierung testen (ca. 2000 Zeichen)
                                     </template>
                                 </button>
                                 <button
@@ -688,7 +688,7 @@ import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '..
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
 import modelCache from '../utils/modelCache.js';
 
-const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Täter, Täterin, Täters, Vollzugsbehörde, Strafbehörden, Behörden, Oberstaatsanwaltschaft, Staatsanwaltschaft, Staatsanwalt, Staatsanwältin, Bundesgerichts, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
+const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Täter, Täterin, Täters, Vollzugsbehörde, Strafbehörden, Behörden, Oberstaatsanwaltschaft, Staatsanwaltschaft, Staatsanwalt, Staatsanwältin, Bundesgerichts, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, /, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
 
 export default {
     name: 'BatchAnonymizer',
@@ -1307,14 +1307,20 @@ export default {
                 }
 
                 const fullText = result.text;
-                let words = fullText.split(/\s+/);
                 let limitedText = fullText;
 
-                // Limit to first 1000 words only if not full test
+                // Limit to first ~2000 characters only if not full test
+                // (Button says 1000, but we give a bit more context while keeping performance)
                 if (!full) {
-                    if (words.length > 1000) {
-                        words = words.slice(0, 1000);
-                        limitedText = words.join(' ');
+                    const charLimit = 2000;
+                    if (fullText.length > charLimit) {
+                         // Cut at limit
+                        limitedText = fullText.slice(0, charLimit);
+                        // Try to cut at the last space to avoid cutting words in half
+                        const lastSpace = limitedText.lastIndexOf(' ');
+                        if (lastSpace > 0) {
+                            limitedText = limitedText.slice(0, lastSpace) + '...';
+                        }
                     }
                 }
 
@@ -1364,7 +1370,7 @@ export default {
                     originalText: limitedText,
                     anonymizedText: anonymizedText,
                     entities: entities,
-                    wordCount: words.length,
+                    wordCount: limitedText.split(/\s+/).length,
                     totalWords: fullText.split(/\s+/).length,
                     exclusionListCount: exclusionList.length,
                     excludedEntitiesCount: excludedEntities.length,
