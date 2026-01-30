@@ -480,9 +480,20 @@
                             </span>
                         </p>
                     </div>
-                    <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
-                        <XMarkIcon class="w-5 h-5" />
-                    </button>
+                    <div class="flex items-center gap-2">
+                         <button
+                            v-if="testPreviewResult"
+                            @click="downloadTestResult"
+                            class="btn btn-ghost btn-sm"
+                            title="Anonymisierten Text herunterladen"
+                        >
+                            <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
+                            Download
+                        </button>
+                        <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
+                            <XMarkIcon class="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Modal Body -->
@@ -677,7 +688,7 @@ import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '..
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
 import modelCache from '../utils/modelCache.js';
 
-const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Staatsanwaltschaft, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
+const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, Bezirksrichter, Kriminalrichter, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Kriminalgericht, Kriminalgerichts, Täter, Täterin, Täters, Vollzugsbehörde, Strafbehörden, Behörden, Oberstaatsanwaltschaft, Staatsanwaltschaft, Staatsanwalt, Staatsanwältin, Bundesgerichts, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Zeugin, Zeuge, Zeugen der, die, das, von, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
 
 export default {
     name: 'BatchAnonymizer',
@@ -1366,6 +1377,22 @@ export default {
             } finally {
                 this.testPreviewLoading = false;
             }
+        },
+
+        downloadTestResult() {
+            if (!this.testPreviewResult || !this.testPreviewResult.anonymizedText) return;
+
+            const originalName = this.testPreviewFile?.name || 'text';
+            const baseName = getFileNameWithoutExtension(originalName);
+            const fileName = `${baseName}_preview_anonymized.txt`;
+
+            const blob = new Blob([this.testPreviewResult.anonymizedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
         },
 
         closeTestModal() {
