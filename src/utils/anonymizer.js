@@ -285,7 +285,8 @@ class AnonymizerService {
             anonymizePartialWords = true,
             minCharacterThreshold = 0,
             exclusionList = [],
-            courtStyle = false
+            courtStyle = false,
+            courtEntityMappings = {} // User-defined entity merging mappings
         } = options;
 
         // Normalize exclusion list to lowercase for case-insensitive comparison
@@ -326,11 +327,46 @@ class AnonymizerService {
                 }
             });
 
+            // Help function to get canonical entity name, following mappings
+            const getCanonicalName = (name) => {
+                let current = name;
+                // Prevent infinite loops just in case of cyclic mappings
+                let visited = new Set();
+                while (courtEntityMappings[current] && !visited.has(current)) {
+                    visited.add(current);
+                    current = courtEntityMappings[current];
+                }
+                return current;
+            };
+
+            // Keep track of canonical name to courtId mapping
+            const canonicalCourtIds = {};
+
+            // First pass: populate canonicalCourtIds with existing courtIds from entities
+            entities.forEach(entity => {
+                if (entity.courtId) {
+                    const type = entity.type ? entity.type.toLowerCase() : '';
+                    if (type === 'person' || type === 'organization') {
+                        const canonical = getCanonicalName(entity.name);
+                        canonicalCourtIds[canonical] = entity.courtId;
+                    }
+                }
+            });
+
+            // Second pass: assign court IDs ensuring mapped entities share the same ID
             entities.forEach(entity => {
                 const type = entity.type ? entity.type.toLowerCase() : '';
                 if (type === 'person' || type === 'organization') {
+                    const canonical = getCanonicalName(entity.name);
+
                     if (!entity.courtId) {
-                        entity.courtId = getCourtIdentifier(courtCounter++);
+                        if (canonicalCourtIds[canonical]) {
+                            entity.courtId = canonicalCourtIds[canonical];
+                        } else {
+                            const newId = getCourtIdentifier(courtCounter++);
+                            entity.courtId = newId;
+                            canonicalCourtIds[canonical] = newId;
+                        }
                     }
                 }
             });

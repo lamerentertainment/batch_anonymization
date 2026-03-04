@@ -620,6 +620,38 @@
 
                             <!-- Actions (Only when pinned) -->
                             <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
+                                <!-- Merge (Zusammenlegen) for court style -->
+                                <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')">
+                                    <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300">
+                                        <div class="font-bold mb-1">Zusammengelegt mit:</div>
+                                        <div class="flex justify-between items-center gap-2">
+                                            <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
+                                            <button @click.stop="unmergeEntity(hoverTooltip.entityName)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
+                                                <XMarkIcon class="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div v-else class="form-control w-full">
+                                        <label class="label p-0 pb-1">
+                                            <span class="label-text-alt text-base-content/70">Zusammenlegen mit:</span>
+                                        </label>
+                                        <select 
+                                            class="select select-bordered select-xs w-full text-base-content" 
+                                            @change="mergeEntity(hoverTooltip.entityName, $event.target.value); $event.target.value = ''"
+                                        >
+                                            <option value="" disabled selected>Entität auswählen...</option>
+                                            <option 
+                                                v-for="target in getMergeSuggestions(hoverTooltip.entityName, hoverTooltip.entityType)" 
+                                                :key="target" 
+                                                :value="target"
+                                            >
+                                                {{ target }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
+
                                 <!-- Surgical Word Buttons -->
                                 <div class="flex flex-wrap gap-1">
                                     <button 
@@ -898,6 +930,7 @@ export default {
                 y: 0,
                 text: '',
                 entityName: '',
+                entityType: '',
                 word: '',
                 isPinned: false
             },
@@ -909,6 +942,7 @@ export default {
             courtStyle: false,
             anonymizeFilenames: true,
             sessionRemovedEntities: [],
+            courtEntityMappings: {},
             
             // Manual selection / Hover menu
             manualEntities: [], // List of strings manually marked for anonymization
@@ -1068,7 +1102,7 @@ export default {
                     specificWord = specificWordFound;
                 }
 
-                return `<span class="anonymized-token" data-entity-id="${id}" data-original="${escapedOriginal}" data-specific-word="${specificWord.replace(/"/g, '&quot;')}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
+                return `<span class="anonymized-token" data-entity-id="${id}" data-entity-type="${normalizedType}" data-original="${escapedOriginal}" data-specific-word="${specificWord.replace(/"/g, '&quot;')}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
             });
 
             return text;
@@ -1583,7 +1617,8 @@ export default {
                 anonymizePartialWords: this.anonymizePartialWords,
                 minCharacterThreshold: this.minCharacterThreshold,
                 exclusionList: exclusionList,
-                courtStyle: this.courtStyle
+                courtStyle: this.courtStyle,
+                courtEntityMappings: this.courtEntityMappings
             };
 
             const anonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
@@ -1848,6 +1883,68 @@ export default {
             this.hoverTooltip.isPinned = false;
         },
 
+        getMergeSuggestions(entityName, entityType) {
+            if (!this.testPreviewResult || !this.testPreviewResult.entities || !entityName || !entityType) return [];
+            
+            const words = entityName.toLowerCase().split(/[\s,;-]+/).filter(w => w.length > 0);
+            
+            let targets = new Set();
+            this.testPreviewResult.entities.forEach(e => {
+                const targetName = e.name;
+                const targetType = e.type ? e.type.toLowerCase() : '';
+                
+                // Only suggest entities of the same type and not the current entity itself
+                if (targetName !== entityName && targetType === entityType.toLowerCase()) {
+                    // Prevent circular mapping (simple check: don't suggest an entity that maps to this one)
+                    if (this.courtEntityMappings[targetName] !== entityName) {
+                        targets.add(targetName);
+                    }
+                }
+            });
+            
+            return Array.from(targets).sort((a, b) => {
+                const aLower = a.toLowerCase();
+                const bLower = b.toLowerCase();
+                const nameLower = entityName.toLowerCase();
+                
+                // 1. Exact Substring match
+                const aContains = aLower.includes(nameLower) || nameLower.includes(aLower);
+                const bContains = bLower.includes(nameLower) || nameLower.includes(bLower);
+                
+                if (aContains && !bContains) return -1;
+                if (!aContains && bContains) return 1;
+                
+                // 2. Word overlap
+                const aWords = aLower.split(/[\s,;-]+/).filter(w => w.length > 0);
+                const aShared = words.filter(w => aWords.includes(w)).length;
+                
+                const bWords = bLower.split(/[\s,;-]+/).filter(w => w.length > 0);
+                const bShared = words.filter(w => bWords.includes(w)).length;
+                
+                if (aShared !== bShared) return bShared - aShared;
+                
+                // 3. Alphabetical fallback
+                return a.localeCompare(b);
+            });
+        },
+        mergeEntity(source, target) {
+            if (!source || !target) return;
+            this.courtEntityMappings[source] = target;
+            
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
+        },
+        unmergeEntity(source) {
+            if (!source) return;
+            delete this.courtEntityMappings[source];
+            
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
+        },
         escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1894,6 +1991,7 @@ export default {
                 }
                 
                 this.hoverTooltip.entityName = target.dataset.original || '';
+                this.hoverTooltip.entityType = target.dataset.entityType || '';
                 this.hoverTooltip.word = target.dataset.specificWord || '';
 
                 if (this.hoverTooltip.text) {
@@ -1945,6 +2043,7 @@ export default {
                     this.hoverTooltip.text = this.escapeHtml(target.dataset.original);
                 }
                 this.hoverTooltip.entityName = target.dataset.original || '';
+                this.hoverTooltip.entityType = target.dataset.entityType || '';
                 this.hoverTooltip.word = target.dataset.specificWord || '';
                 
                 // Lock position to current mousepos (or center of element?)
