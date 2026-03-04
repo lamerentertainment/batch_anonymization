@@ -602,8 +602,8 @@
                         <!-- Custom Tooltip -->
                         <div
                             v-if="hoverTooltip.visible"
-                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px] transition-all duration-200"
-                            :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl' : ''"
+                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                            :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                             :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
                             @mouseenter="handleTooltipMouseEnter"
                             @mouseleave="handleTooltipMouseLeave"
@@ -1510,7 +1510,8 @@ export default {
             const { 
                 truncateLimit = null, 
                 includeHtml = false,
-                preDetectedEntities = null // Allow passing already detected entities
+                preDetectedEntities = null, // Allow passing already detected entities
+                isPreview = false
             } = options;
 
             // Extract text from file
@@ -1592,7 +1593,7 @@ export default {
 
             // For previews, we also need a tagged version for the highlighting system
             let displayAnonymizedText = anonymizedText;
-            if (truncateLimit) {
+            if (isPreview) {
                 displayAnonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
                     ...anonymizerOptions,
                     testPreviewMode: true
@@ -1608,7 +1609,7 @@ export default {
                     testPreviewMode: false
                 });
                 
-                if (truncateLimit) {
+                if (isPreview) {
                     displayAnonymizedHtml = anonymizerService.anonymizeText(processingHtml, sessionFilteredEntities, {
                         ...anonymizerOptions,
                         testPreviewMode: true
@@ -1755,7 +1756,8 @@ export default {
                 const result = await this.anonymizeFile(file, { 
                     truncateLimit: full ? null : 2000, 
                     includeHtml: true,
-                    preDetectedEntities: useCache ? this.testPreviewDetectedEntities : null
+                    preDetectedEntities: useCache ? this.testPreviewDetectedEntities : null,
+                    isPreview: true
                 });
 
                 // Update cache if we performed a new detection
