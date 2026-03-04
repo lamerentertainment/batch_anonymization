@@ -1455,21 +1455,39 @@ export default {
                 return res + ".________";
             };
 
+            const courtIdMap = new Map();
+            if (this.courtStyle) {
+                let courtCounter = 0;
+                this.entities.forEach(entity => {
+                    const type = entity.type ? entity.type.toLowerCase() : '';
+                    if (type === 'person' || type === 'organization') {
+                        if (!courtIdMap.has(entity.id)) {
+                            courtIdMap.set(entity.id, getCourtIdentifier(courtCounter++));
+                        }
+                    }
+                });
+            }
+
             this.entities.forEach(entity => {
                 if (!entity.name) return;
                 const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
 
                 if (this.courtStyle) {
-                    const courtId = getCourtIdentifier(entity.id - 1);
-                    let suffixStr = '';
-                    if (entity.type.toLowerCase() === 'organization') {
-                        const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
-                        const lastWord = words[words.length - 1];
-                        if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
-                            suffixStr = ' ' + lastWord;
+                    let courtReplacement = "________";
+                    const type = entity.type ? entity.type.toLowerCase() : '';
+                    
+                    if (type === 'person' || type === 'organization') {
+                        const courtId = courtIdMap.get(entity.id);
+                        let suffixStr = '';
+                        if (type === 'organization') {
+                            const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                            const lastWord = words[words.length - 1];
+                            if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                                suffixStr = ' ' + lastWord;
+                            }
                         }
+                        courtReplacement = courtId + suffixStr;
                     }
-                    const courtReplacement = courtId + suffixStr;
                     
                     const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
                     const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
@@ -1515,6 +1533,19 @@ export default {
                 return res + ".________";
             };
 
+            const courtIdMap = new Map();
+            if (this.courtStyle) {
+                let courtCounter = 0;
+                this.entities.forEach(entity => {
+                    const type = entity.type ? entity.type.toLowerCase() : '';
+                    if (type === 'person' || type === 'organization') {
+                        if (!courtIdMap.has(entity.id)) {
+                            courtIdMap.set(entity.id, getCourtIdentifier(courtCounter++));
+                        }
+                    }
+                });
+            }
+
             // For each entity, first replace the full multi-word span with a single placeholder (id_type)
             // Then, replace remaining partial word occurrences with suffixed placeholders (id_type_a, id_type_b, ...)
             this.entities.forEach(entity => {
@@ -1529,16 +1560,22 @@ export default {
                 const letters = 'abcdefghijklmnopqrstuvwxyz';
 
                 if (this.courtStyle) {
-                    const courtId = getCourtIdentifier(entity.id - 1);
-                    let suffixStr = '';
-                    if (entity.type.toLowerCase() === 'organization') {
-                        const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
-                        const lastWord = words[words.length - 1];
-                        if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
-                            suffixStr = ' ' + lastWord;
+                    let courtReplacement = "________";
+                    const type = entity.type ? entity.type.toLowerCase() : '';
+                    
+                    if (type === 'person' || type === 'organization') {
+                        const courtId = courtIdMap.get(entity.id);
+                        let suffixStr = '';
+                        if (type === 'organization') {
+                            const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                            const lastWord = words[words.length - 1];
+                            if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                                suffixStr = ' ' + lastWord;
+                            }
                         }
+                        courtReplacement = `${courtId}${suffixStr}`;
                     }
-                    const courtReplacement = `<span class="badge badge-outline">${courtId}${suffixStr}</span>`;
+                    courtReplacement = `<span class="badge badge-outline">${courtReplacement}</span>`;
                     
                     const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
                     const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
