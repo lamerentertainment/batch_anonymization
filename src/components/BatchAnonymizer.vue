@@ -162,6 +162,14 @@
                         <label class="label cursor-pointer justify-start gap-2 p-0">
                             <input
                                 type="checkbox"
+                                v-model="anonymizeFilenames"
+                                class="checkbox checkbox-xs checkbox-primary"
+                            >
+                            <span class="label-text text-xs font-semibold">Dateinamen der Output-Dateien anonymisieren (anon-text-########)</span>
+                        </label>
+                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                            <input
+                                type="checkbox"
                                 v-model="courtStyle"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
@@ -728,7 +736,14 @@
                                         <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
                                             <td class="font-medium max-w-[200px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
                                             <td><span class="badge badge-ghost badge-outline badge-sm text-[10px]">{{ entity.type }}</span></td>
-                                            <td class="font-mono text-xs text-base-content/70 select-all">[{{ entity.id }}_{{ entity.type.toLowerCase() }}]</td>
+                                            <td class="font-mono text-xs text-base-content/70 select-all">
+                                                <template v-if="courtStyle && (entity.type.toLowerCase() === 'person' || entity.type.toLowerCase() === 'organization')">
+                                                    {{ entity.courtId || '...' }}
+                                                </template>
+                                                <template v-else>
+                                                    [{{ entity.id }}_{{ entity.type.toLowerCase() }}]
+                                                </template>
+                                            </td>
                                             <td>
                                                 <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">
                                                     {{ getEntityStatus(entity).label }}
@@ -892,6 +907,7 @@ export default {
             // Anonymization options
             convertWordToMarkdown: true,
             courtStyle: false,
+            anonymizeFilenames: true,
             sessionRemovedEntities: [],
             
             // Manual selection / Hover menu
@@ -943,10 +959,10 @@ export default {
             });
 
             let text = '';
-            if (this.testPreviewResult.anonymizedHtml) {
-                text = this.testPreviewResult.anonymizedHtml;
+            if (this.testPreviewResult.displayAnonymizedHtml) {
+                text = this.testPreviewResult.displayAnonymizedHtml;
             } else {
-                text = this.escapeHtml(this.testPreviewResult.anonymizedText);
+                text = this.escapeHtml(this.testPreviewResult.displayAnonymizedText);
             }
 
             // Color mapping by entity type
@@ -1562,31 +1578,55 @@ export default {
             const exclusionList = this.parseExclusionList();
 
             // Anonymize plain text
-            const anonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
+            const anonymizerOptions = {
                 anonymizePartialWords: this.anonymizePartialWords,
                 minCharacterThreshold: this.minCharacterThreshold,
                 exclusionList: exclusionList,
-                courtStyle: this.courtStyle,
-                testPreviewMode: !!truncateLimit // Use preview mode markers if truncating
+                courtStyle: this.courtStyle
+            };
+
+            const anonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
+                ...anonymizerOptions,
+                testPreviewMode: false
             });
+
+            // For previews, we also need a tagged version for the highlighting system
+            let displayAnonymizedText = anonymizedText;
+            if (truncateLimit) {
+                displayAnonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
+                    ...anonymizerOptions,
+                    testPreviewMode: true
+                });
+            }
 
             // Anonymize HTML if requested
             let anonymizedHtml = null;
+            let displayAnonymizedHtml = null;
             if (processingHtml) {
                 anonymizedHtml = anonymizerService.anonymizeText(processingHtml, sessionFilteredEntities, {
-                    anonymizePartialWords: this.anonymizePartialWords,
-                    minCharacterThreshold: this.minCharacterThreshold,
-                    exclusionList: exclusionList,
-                    courtStyle: this.courtStyle,
-                    testPreviewMode: !!truncateLimit
+                    ...anonymizerOptions,
+                    testPreviewMode: false
                 });
+                
+                if (truncateLimit) {
+                    displayAnonymizedHtml = anonymizerService.anonymizeText(processingHtml, sessionFilteredEntities, {
+                        ...anonymizerOptions,
+                        testPreviewMode: true
+                    });
+                } else {
+                    displayAnonymizedHtml = anonymizedHtml;
+                }
+            } else {
+                displayAnonymizedHtml = null;
             }
 
             return {
                 originalText: processingText,
                 originalHtml: processingHtml,
                 anonymizedText,
+                displayAnonymizedText,
                 anonymizedHtml,
+                displayAnonymizedHtml,
                 entities,
                 sessionFilteredEntities,
                 exclusionList,
@@ -1618,7 +1658,13 @@ export default {
                 const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
                 // Preserve folder structure in output name
                 const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
-                const outputName = baseName + ext;
+                let outputName = baseName + ext;
+                
+                if (this.anonymizeFilenames) {
+                    const randomNum = Math.floor(10000000 + Math.random() * 90000000);
+                    outputName = `anon-text-${randomNum}${ext}`;
+                }
+
                 this.outputFiles.push({
                     inputFile: file,
                     outputName: outputName,
@@ -1748,8 +1794,10 @@ export default {
                 // Store result
                 this.testPreviewResult = {
                     originalText: result.originalText,
-                    anonymizedText: result.anonymizedText,
+                    anonymizedText: result.anonymizedText, // Clean version for download
+                    displayAnonymizedText: result.displayAnonymizedText, // Tagged version for highlights
                     anonymizedHtml: result.anonymizedHtml,
+                    displayAnonymizedHtml: result.displayAnonymizedHtml,
                     entities: result.entities,
                     wordCount: result.originalText.split(/\s+/).length,
                     totalWords: result.fullTextLength > 0 ? Math.round((result.fullTextLength / result.originalText.length) * (result.originalText.split(/\s+/).length)) : 0, 
@@ -1774,7 +1822,12 @@ export default {
             const baseName = getFileNameWithoutExtension(originalName);
             const isDocx = originalName.toLowerCase().endsWith('.docx') || originalName.toLowerCase().endsWith('.doc');
             const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
-            const fileName = `${baseName}_preview_anonymized${ext}`;
+            let fileName = `${baseName}_preview_anonymized${ext}`;
+
+            if (this.anonymizeFilenames) {
+                const randomNum = Math.floor(10000000 + Math.random() * 90000000);
+                fileName = `anon-text-${randomNum}_preview_anonymized${ext}`;
+            }
 
             const blob = new Blob([this.testPreviewResult.anonymizedText], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
