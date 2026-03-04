@@ -527,7 +527,9 @@
                     <!-- Loading State -->
                     <div v-if="testPreviewLoading" class="flex items-center justify-center py-12">
                         <span class="loading loading-spinner loading-lg text-primary"></span>
-                        <span class="ml-3 text-base-content/60">Anonymisiere Text...</span>
+                        <span class="ml-3 text-base-content/60">
+                            {{ testPreviewAdjusting ? 'Anonymisierung wird angepasst...' : 'Anonymisiere Text...' }}
+                        </span>
                     </div>
 
                     <!-- Error State -->
@@ -624,18 +626,17 @@
                                 <button
                                     v-for="item in uniqueAnonymizedWords"
                                     :key="item.word"
-                                    @click="addToExclusionList(item.word)"
-                                    :disabled="item.isInExclusionList"
-                                    class="px-2 py-1 text-xs rounded-full border transition-all"
+                                    @click="toggleExclusionList(item.word)"
+                                    class="px-2 py-1 text-xs rounded-full border transition-all cursor-pointer"
                                     :class="item.isInExclusionList
-                                        ? 'bg-base-300 text-base-content/40 border-base-300 cursor-not-allowed line-through'
-                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
+                                        ? 'bg-base-300 text-base-content/40 border-base-300 line-through hover:bg-error/20 hover:text-error hover:border-error'
+                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary'"
                                     :title="item.isInExclusionList
-                                        ? 'Bereits in der Negativliste'
+                                        ? `Klicken um '${item.word}' von der Negativliste zu entfernen`
                                         : `Klicken um '${item.word}' zur Negativliste hinzuzufügen`"
                                 >
                                     {{ item.word }}
-                                    <span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                                    <span v-if="item.isInExclusionList" class="ml-1 text-error">✕</span>
                                 </button>
                             </div>
                             <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
@@ -792,7 +793,8 @@ export default {
 
             // Anonymization options
             convertWordToMarkdown: true,
-            courtStyle: false
+            courtStyle: false,
+            testPreviewAdjusting: false
 
         };
     },
@@ -853,19 +855,22 @@ export default {
                 'time': 'background-color: #fed7aa; color: #7c2d12;'
             };
 
-            // Regex for placeholders: [id_type] or [id_type_suffix]
-            // Updated to capture suffix (group 3) which can be a letter or number
-            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_([a-z0-9]+))?\]/gi;
+            // Regex for placeholders: [id_type] or [id_type_suffix] or [id_type_court_REPLACEMENT]
+            // Updated to capture court style replacement and regular suffixes
+            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_(court_.+?)|_([a-z0-9]+))?\]/gi;
 
-            text = text.replace(placeholderRegex, (match, id, type, suffix) => {
+            text = text.replace(placeholderRegex, (match, id, type, courtReplacementRaw, suffix) => {
                 const normalizedType = type.toLowerCase().trim();
                 const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
                 const originalValue = entityMap[id] || 'Unbekannt';
                 
                 let originalHtml = originalValue;
+                let displayString = match;
                 
-                // If we have a suffix, try to highlight the specific part
-                if (suffix) {
+                // If it's a court style replacement, use the raw text instead of the bracket match
+                if (courtReplacementRaw && courtReplacementRaw.startsWith('court_')) {
+                    displayString = courtReplacementRaw.substring(6); // remove 'court_'
+                } else if (suffix) {
                     try {
                         let wordIndex = -1;
                         
@@ -921,7 +926,7 @@ export default {
                 const encodedOriginalHtml = encodeURIComponent(originalHtml);
                 const escapedOriginal = originalValue.replace(/"/g, '&quot;');
                 
-                return `<span class="anonymized-token" data-original="${escapedOriginal}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${match}</span>`;
+                return `<span class="anonymized-token" data-original="${escapedOriginal}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
             });
 
             return text;
@@ -1114,28 +1119,38 @@ export default {
 
             return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
         },
-        addToExclusionList(word) {
+        toggleExclusionList(word) {
             if (!word || word.trim() === '') return;
 
             const cleanWord = word.trim();
             const currentExclusions = this.parseExclusionList();
 
             // Check if word already exists (case-insensitive)
-            const alreadyExists = currentExclusions.some(
+            const existingIndex = currentExclusions.findIndex(
                 w => w.toLowerCase() === cleanWord.toLowerCase()
             );
 
-            if (alreadyExists) return;
-
-            // Add word to exclusion list
-            if (this.exclusionList.trim() === '') {
-                this.exclusionList = cleanWord;
+            if (existingIndex >= 0) {
+                // Remove word
+                currentExclusions.splice(existingIndex, 1);
+                this.exclusionList = currentExclusions.join(', ');
             } else {
-                this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
+                // Add word
+                if (this.exclusionList.trim() === '') {
+                    this.exclusionList = cleanWord;
+                } else {
+                    this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
+                }
             }
 
             // Save to localStorage
             this.saveExclusionList();
+            
+            // Re-run preview test if currently in preview modal
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
         },
 
         // Initialize model (ensure it's cached)
@@ -1426,7 +1441,12 @@ export default {
             this.isFullTest = full;
             this.testPreviewLoading = true;
             this.testPreviewError = null;
-            this.testPreviewResult = null;
+            
+            // Only clear result if we're not just adjusting the current one
+            if (!this.testPreviewAdjusting) {
+                this.testPreviewResult = null;
+            }
+            
             this.showTestModal = true;
 
             try {
@@ -1496,7 +1516,8 @@ export default {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
                         exclusionList: exclusionList,
-                        courtStyle: this.courtStyle
+                        courtStyle: this.courtStyle,
+                        testPreviewMode: true
                     }
                 );
 
@@ -1509,7 +1530,8 @@ export default {
                             anonymizePartialWords: this.anonymizePartialWords,
                             minCharacterThreshold: this.minCharacterThreshold,
                             exclusionList: exclusionList,
-                            courtStyle: this.courtStyle
+                            courtStyle: this.courtStyle,
+                            testPreviewMode: true
                         }
                     );
                 }
@@ -1532,6 +1554,7 @@ export default {
                 this.testPreviewError = error.message;
             } finally {
                 this.testPreviewLoading = false;
+                this.testPreviewAdjusting = false;
             }
         },
 

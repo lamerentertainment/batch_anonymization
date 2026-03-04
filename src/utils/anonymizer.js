@@ -350,6 +350,10 @@ class AnonymizerService {
                     courtReplacement = courtId + suffixStr;
                 }
 
+                if (options.testPreviewMode) {
+                    courtReplacement = `[${entity.id}_${entity.type}_court_${courtReplacement}]`;
+                }
+
                 const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
                 const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
                 anonymized = anonymized.replace(fullPattern, courtReplacement);
