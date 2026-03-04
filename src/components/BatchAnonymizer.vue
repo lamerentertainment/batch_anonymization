@@ -791,8 +791,14 @@ export default {
             testPreviewLoading: false,
             testPreviewResult: null,
             testPreviewError: null,
-            testPreviewError: null,
+            testPreviewDetectedEntities: null, // Cache for detected entities
+            testPreviewCachedParams: {        // Cache key parameters
+                file: null,
+                threshold: 0,
+                labels: []
+            },
             isFullTest: false,
+            testPreviewAdjusting: false,
             hoveredFileIndex: null,
 
             // Tooltip state
@@ -1113,7 +1119,9 @@ export default {
         },
         getEntityStatus(entity) {
             // Check session removed list (highest priority)
-            if (this.sessionRemovedEntities.includes(entity.name)) {
+            // Use case-insensitive and trimmed comparison
+            const cleanEntityName = entity.name.trim().toLowerCase();
+            if (this.sessionRemovedEntities.some(name => name.trim().toLowerCase() === cleanEntityName)) {
                  return { code: 'removed', label: 'Gelöscht (Sitzung)', class: 'text-error' };
             }
 
@@ -1137,7 +1145,9 @@ export default {
             return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
         },
         toggleSessionRemovedEntity(name) {
-            const index = this.sessionRemovedEntities.indexOf(name);
+            const cleanName = name.trim().toLowerCase();
+            const index = this.sessionRemovedEntities.findIndex(n => n.trim().toLowerCase() === cleanName);
+            
             if (index > -1) {
                 this.sessionRemovedEntities.splice(index, 1);
             } else {
@@ -1146,6 +1156,8 @@ export default {
             
             // Re-run preview test if currently in preview modal
             if (this.showTestModal && this.testPreviewResult) {
+                // Set adjusting flag to true so the modal doesn't clear/flicker
+                this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
         },
@@ -1357,6 +1369,93 @@ export default {
         },
 
         // Processing methods
+        async anonymizeFile(file, options = {}) {
+            const { 
+                truncateLimit = null, 
+                includeHtml = false,
+                preDetectedEntities = null // Allow passing already detected entities
+            } = options;
+
+            // Extract text from file
+            const result = await processFile(file, { convertWordToMarkdown: this.convertWordToMarkdown });
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+
+            const fullText = result.text;
+            let processingText = fullText;
+            let processingHtml = includeHtml ? (result.html || null) : null;
+
+            // Truncate if requested (for previews)
+            if (truncateLimit && fullText.length > truncateLimit) {
+                processingText = fullText.slice(0, truncateLimit);
+                const lastSpace = processingText.lastIndexOf(' ');
+                if (lastSpace > 0) {
+                    processingText = processingText.slice(0, lastSpace) + '...';
+                }
+                if (processingHtml) {
+                    processingHtml = this.truncateHtml(processingHtml, truncateLimit);
+                }
+            }
+
+            // Detect entities (use pre-detected if available, otherwise detect)
+            let entities = [];
+            if (preDetectedEntities) {
+                entities = preDetectedEntities;
+            } else {
+                entities = await iframeAnonymizer.detectEntities(
+                    processingText,
+                    this.selectedLabels,
+                    this.threshold
+                );
+            }
+
+            // Filter out entities removed in this session
+            // Use case-insensitive and trimmed comparison
+            const sessionFilteredEntities = entities.filter(entity => {
+                const cleanEntityName = entity.name.trim().toLowerCase();
+                return !this.sessionRemovedEntities.some(removed => 
+                    removed.trim().toLowerCase() === cleanEntityName
+                );
+            });
+
+            // Get current exclusion list
+            const exclusionList = this.parseExclusionList();
+
+            // Anonymize plain text
+            const anonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {
+                anonymizePartialWords: this.anonymizePartialWords,
+                minCharacterThreshold: this.minCharacterThreshold,
+                exclusionList: exclusionList,
+                courtStyle: this.courtStyle,
+                testPreviewMode: !!truncateLimit // Use preview mode markers if truncating
+            });
+
+            // Anonymize HTML if requested
+            let anonymizedHtml = null;
+            if (processingHtml) {
+                anonymizedHtml = anonymizerService.anonymizeText(processingHtml, sessionFilteredEntities, {
+                    anonymizePartialWords: this.anonymizePartialWords,
+                    minCharacterThreshold: this.minCharacterThreshold,
+                    exclusionList: exclusionList,
+                    courtStyle: this.courtStyle,
+                    testPreviewMode: !!truncateLimit
+                });
+            }
+
+            return {
+                originalText: processingText,
+                originalHtml: processingHtml,
+                anonymizedText,
+                anonymizedHtml,
+                entities,
+                sessionFilteredEntities,
+                exclusionList,
+                fullTextLength: fullText.length
+            };
+        },
+
+        // Processing methods
         async startProcessing() {
             if (!this.canStartProcessing) return;
 
@@ -1398,34 +1497,10 @@ export default {
                 this.currentProcessingFile = outputFile.inputFile.relativePath || outputFile.inputFile.name;
 
                 try {
-                    // Extract text from file
-                    const result = await processFile(outputFile.inputFile, { convertWordToMarkdown: this.convertWordToMarkdown });
-                    if (!result.success) {
-                        throw new Error(result.error);
-                    }
-
-                    // Detect entities
-                    const entities = await iframeAnonymizer.detectEntities(
-                        result.text,
-                        this.selectedLabels,
-                        this.threshold
-                    );
-
-                    // Filter out entities removed in this session
-                    const filteredEntities = entities.filter(entity => 
-                        !this.sessionRemovedEntities.includes(entity.name)
-                    );
-
-                    // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(result.text, filteredEntities, {
-                        anonymizePartialWords: this.anonymizePartialWords,
-                        minCharacterThreshold: this.minCharacterThreshold,
-                        exclusionList: this.parseExclusionList(),
-                        courtStyle: this.courtStyle
-                    });
-
-                    outputFile.content = anonymizedText;
-                    outputFile.entitiesFound = entities.length;
+                    const result = await this.anonymizeFile(outputFile.inputFile, { includeHtml: false });
+                    
+                    outputFile.content = result.anonymizedText;
+                    outputFile.entitiesFound = result.entities.length;
                     outputFile.status = 'completed';
                 } catch (error) {
                     console.error(`Error processing ${outputFile.inputFile.name}:`, error);
@@ -1485,107 +1560,62 @@ export default {
             this.showTestModal = true;
 
             try {
-                // Extract text from file
-                const result = await processFile(file, { convertWordToMarkdown: this.convertWordToMarkdown });
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
+                // Determine if we can use cached detection results
+                const useCache = this.testPreviewDetectedEntities && 
+                                 this.testPreviewCachedParams.file === file &&
+                                 this.testPreviewCachedParams.threshold === this.threshold &&
+                                 this.testPreviewCachedParams.isFullTest === full &&
+                                 JSON.stringify(this.testPreviewCachedParams.labels) === JSON.stringify(this.selectedLabels);
 
-                const fullText = result.text;
-                let limitedText = fullText;
-                let limitedHtml = result.html || null;
-
-                // Limit to first ~2000 characters only if not full test
-                // (Button says 1000, but we give a bit more context while keeping performance)
-                if (!full) {
-                    const charLimit = 2000;
-                    if (fullText.length > charLimit) {
-                         // Cut at limit
-                        limitedText = fullText.slice(0, charLimit);
-                        // Try to cut at the last space to avoid cutting words in half
-                        const lastSpace = limitedText.lastIndexOf(' ');
-                        if (lastSpace > 0) {
-                            limitedText = limitedText.slice(0, lastSpace) + '...';
-                        }
-                    }
-                    if (limitedHtml) { 
-                        limitedHtml = this.truncateHtml(limitedHtml, charLimit);
-                    }
-                }
-
-                // Detect entities with current settings
-                const entities = await iframeAnonymizer.detectEntities(
-                    limitedText,
-                    this.selectedLabels,
-                    this.threshold
-                );
-
-                // Filter out entities removed in this session for the ACTUAL anonymization
-                const sessionFilteredEntities = entities.filter(entity => 
-                    !this.sessionRemovedEntities.includes(entity.name)
-                );
-
-                // Get current exclusion list
-                const exclusionList = this.parseExclusionList();
-
-                // Count how many entities would be excluded (from the already session-filtered list)
-                const excludedEntities = sessionFilteredEntities.filter(entity => {
-                    const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
-                    return entityWords.some(word =>
-                        exclusionList.some(excl => excl.toLowerCase() === word)
-                    );
+                const result = await this.anonymizeFile(file, { 
+                    truncateLimit: full ? null : 2000, 
+                    includeHtml: true,
+                    preDetectedEntities: useCache ? this.testPreviewDetectedEntities : null
                 });
 
-                // Count how many entities would be skipped due to length
+                // Update cache if we performed a new detection
+                if (!useCache) {
+                    this.testPreviewDetectedEntities = result.entities;
+                    this.testPreviewCachedParams = {
+                        file: file,
+                        threshold: this.threshold,
+                        labels: [...this.selectedLabels],
+                        isFullTest: full
+                    };
+                }
+
+                // Calculate statistics for the preview modal
+                const excludedEntitiesCount = result.sessionFilteredEntities.filter(entity => {
+                    const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
+                    return entityWords.some(word =>
+                        result.exclusionList.some(excl => excl.toLowerCase() === word)
+                    );
+                }).length;
+
                 let skippedShortEntitiesCount = 0;
                 if (this.anonymizePartialWords && this.minCharacterThreshold > 0) {
-                    skippedShortEntitiesCount = sessionFilteredEntities.filter(entity => {
-                        // If already excluded by blacklist, don't count here to avoid double counting
-                        const isExcluded = excludedEntities.some(e => e.id === entity.id);
+                    skippedShortEntitiesCount = result.sessionFilteredEntities.filter(entity => {
+                        // Check if already excluded by blacklist
+                        const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
+                        const isExcluded = entityWords.some(word =>
+                            result.exclusionList.some(excl => excl.toLowerCase() === word)
+                        );
                         if (isExcluded) return false;
                         
                         return entity.name.length < this.minCharacterThreshold;
                     }).length;
                 }
 
-                // Anonymize text with current options including exclusion list
-                const anonymizedText = anonymizerService.anonymizeText(
-                    limitedText,
-                    sessionFilteredEntities,
-                    {
-                        anonymizePartialWords: this.anonymizePartialWords,
-                        minCharacterThreshold: this.minCharacterThreshold,
-                        exclusionList: exclusionList,
-                        courtStyle: this.courtStyle,
-                        testPreviewMode: true
-                    }
-                );
-
-                let anonymizedHtml = null;
-                if (limitedHtml) {
-                    anonymizedHtml = anonymizerService.anonymizeText(
-                        limitedHtml,
-                        sessionFilteredEntities,
-                        {
-                            anonymizePartialWords: this.anonymizePartialWords,
-                            minCharacterThreshold: this.minCharacterThreshold,
-                            exclusionList: exclusionList,
-                            courtStyle: this.courtStyle,
-                            testPreviewMode: true
-                        }
-                    );
-                }
-
                 // Store result
                 this.testPreviewResult = {
-                    originalText: limitedText,
-                    anonymizedText: anonymizedText,
-                    anonymizedHtml: anonymizedHtml,
-                    entities: entities,
-                    wordCount: limitedText.split(/\s+/).length,
-                    totalWords: fullText.split(/\s+/).length,
-                    exclusionListCount: exclusionList.length,
-                    excludedEntitiesCount: excludedEntities.length,
+                    originalText: result.originalText,
+                    anonymizedText: result.anonymizedText,
+                    anonymizedHtml: result.anonymizedHtml,
+                    entities: result.entities,
+                    wordCount: result.originalText.split(/\s+/).length,
+                    totalWords: result.fullTextLength > 0 ? Math.round((result.fullTextLength / result.originalText.length) * (result.originalText.split(/\s+/).length)) : 0, 
+                    exclusionListCount: result.exclusionList.length,
+                    excludedEntitiesCount: excludedEntitiesCount,
                     skippedShortEntitiesCount: skippedShortEntitiesCount
                 };
 
