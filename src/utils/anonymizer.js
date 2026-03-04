@@ -309,14 +309,28 @@ class AnonymizerService {
             return res + ".________";
         };
 
-        const courtIdMap = new Map();
         if (courtStyle) {
             let courtCounter = 0;
+            // First pass: find highest existing court counter if any entities already have courtId
+            entities.forEach(entity => {
+                if (entity.courtId) {
+                    const match = entity.courtId.match(/^([A-Z]+)\./);
+                    if (match) {
+                        const idStr = match[1];
+                        let val = 0;
+                        for (let i = 0; i < idStr.length; i++) {
+                            val = val * 26 + (idStr.charCodeAt(i) - 64);
+                        }
+                        courtCounter = Math.max(courtCounter, val);
+                    }
+                }
+            });
+
             entities.forEach(entity => {
                 const type = entity.type ? entity.type.toLowerCase() : '';
                 if (type === 'person' || type === 'organization') {
-                    if (!courtIdMap.has(entity.id)) {
-                        courtIdMap.set(entity.id, getCourtIdentifier(courtCounter++));
+                    if (!entity.courtId) {
+                        entity.courtId = getCourtIdentifier(courtCounter++);
                     }
                 }
             });
@@ -339,7 +353,7 @@ class AnonymizerService {
                 const type = entity.type ? entity.type.toLowerCase() : '';
 
                 if (type === 'person' || type === 'organization') {
-                    const courtId = courtIdMap.get(entity.id);
+                    const courtId = entity.courtId || "________";
                     let suffixStr = '';
                     if (type === 'organization') {
                         const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
