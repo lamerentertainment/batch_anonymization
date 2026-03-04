@@ -337,7 +337,7 @@
                                 v-model="exclusionList"
                                 @input="saveExclusionList"
                                 class="textarea textarea-sm textarea-bordered w-full h-24 text-xs leading-relaxed"
-                                placeholder="Wörter durch Komma trennen, z.B.: Berlin, Deutschland, Max"
+                                placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland; Max"
                             ></textarea>
                             <div class="flex flex-wrap justify-between items-center mt-1 gap-2">
                                 <p class="text-xs text-base-content/50">
@@ -588,15 +588,64 @@
                             @mouseout="handleTextMouseOut"
                             @mousemove="handleTextMouseMove"
                             @mouseup="handleTextSelection"
+                            @click="handleTokenClick"
                         ></div>
 
                         <!-- Custom Tooltip -->
                         <div
                             v-if="hoverTooltip.visible"
-                            class="fixed z-[100] px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full"
-                            :style="{ top: (hoverTooltip.y - 8) + 'px', left: hoverTooltip.x + 'px' }"
+                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px] transition-all duration-200"
+                            :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl' : ''"
+                            :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
+                            @mouseenter="handleTooltipMouseEnter"
+                            @mouseleave="handleTooltipMouseLeave"
                         >
-                            Original: <span class="font-bold" v-html="hoverTooltip.text"></span>
+                            <!-- Unpin Button -->
+                            <button 
+                                v-if="hoverTooltip.isPinned"
+                                @click.stop="unpinTooltip"
+                                class="absolute top-1 right-1 btn btn-ghost btn-xs btn-square text-gray-400 hover:text-white"
+                                title="Anheften aufheben"
+                            >
+                                <XMarkIcon class="w-3 h-3" />
+                            </button>
+
+                            <!-- Actions (Only when pinned) -->
+                            <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
+                                <!-- Surgical Word Buttons -->
+                                <div class="flex flex-wrap gap-1">
+                                    <button 
+                                        v-for="word in getSurgicalWords(hoverTooltip.entityName)"
+                                        :key="word"
+                                        @click="addToExclusionList(word)"
+                                        class="btn btn-[10px] h-auto min-h-0 py-1 px-2 btn-outline gap-1"
+                                        :class="isWordExcluded(word) 
+                                            ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 line-through' 
+                                            : 'btn-warning'"
+                                        :title="isWordExcluded(word)
+                                            ? 'Klicken um \'' + word + '\' von der Negativliste zu entfernen'
+                                            : 'Klicken um \'' + word + '\' zur Negativliste hinzuzufügen'"
+                                    >
+                                        <NoSymbolIcon v-if="!isWordExcluded(word)" class="w-3 h-3" />
+                                        <CheckIcon v-else class="w-3 h-3" />
+                                        {{ word }}
+                                    </button>
+                                </div>
+                                
+                                <button 
+                                    @click="toggleSessionRemovedEntity(hoverTooltip.entityName)"
+                                    class="btn btn-xs btn-outline btn-error w-full gap-1 text-[10px]"
+                                    :title="'Ganze Entität \'' + hoverTooltip.entityName + '\' ignorieren'"
+                                >
+                                    <XMarkIcon class="w-3 h-3" />
+                                    Ganze Entität ignorieren
+                                </button>
+                            </div>
+                            
+                            <div :class="hoverTooltip.isPinned ? 'border-t border-gray-700 pt-1 mt-1' : ''">
+                                Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
+                                <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
+                            </div>
                         </div>
 
                         <!-- Legend -->
@@ -752,7 +801,7 @@ import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '..
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
 import modelCache from '../utils/modelCache.js';
 
-const DEFAULT_EXCLUSION_LIST = "Urteil, Beschluss, Verfügung, Art., Abs., lit., SchKG,OR, ZPO, StGB, StPO, VRG, VwVG, AIG, BetmG, ZGB, SVG, §, §§, Kanton, Kantons, Gerichtschreiberin, Gerichtsschreiber, Rekurs, Rekurrent, Rekurrentin, Rekurrenten, Klägerin, Kläger, Klage, Klägerschaft, Beklagte, Beklagter, Gesuchsteller, Gesuchstellers, Gesuchstellerin, Beschwerdeführer, Beschwerdeführerin, Beschwerde, Beschwerdeschrift, Präsident, Präsidentin, Präsidenten, Privatkläger, Privatklägers, Privatklägerin, Privatklägerinnen, Privatklägerschaft, Beschuldigte, Beschuldigter, Beschuldigten, Angeklagter, Angeklagte, Angeklagten, Person, Personen, Verteidiger, Verteidigerin, Verteidigers, Verteidigung, Bezirksgericht, Bezirksrichterin, BZGer, Bezirksrichter, Arbeitsgericht, Arbeitsgerichts, Kriminalrichter, KG, Kriminalrichterin, Kantonsrichterin, Kantonsrichter, Bezirksgerichts, Kantonsgericht, Kantonsgerichts, Obergericht, Obergerichts, OGer, Kriminalgericht, Kriminalgerichts, KGer, Täter, Täterin, Täters, Polizei, Kantonspolizei, Polizist, Polizistin, Polizisten, Polizeibeamte, Polizeibeamter, Polizeibeamten, Vollzugsbehörde, Strafbehörden, Behörden, Oberstaatsanwaltschaft, Staatsanwaltschaft, Staatsanwalt, Staatsanwältin, BGE, BGer, Bundesgerichts, Bundesgerichtes, Bundesgericht, Abteilung, Rechtsanwalt, Rechtsanwalts, Rechtsanwältin, Rechtsanwältinnen, Rechtsanwälte, RA, Eigentümer, Eigentümerin, Besitzer, Besitzerin, Arbeitgeber, Arbeitgeberin, Angestellter, Angestellte, Angestellten, Mitarbeiter, Mitarbeiterin, Mitarbeiterinnen, Schuldner, Schuldnerin, Gläubigerin, Gläubiger, Geschädigte, Geschädigter, Geschädigten, Auskunftsperson, Zeugin, Zeuge, Zeugen der, die, das, von, vom, und, für, als, zu, ein, in, im, am, zu, einer, eine, dies, dieser, diese, Schwester, Bruder, Sohn, Tochter, Familie, Mutter, Vater, Ehemann, Ehehfrau, Ehepartner, Ehegatten, er, sie, ihr, ihre, ihren, ihres, seine, seinen, seines, Partner, Partnerin, Partners, Partnerinnen, Auto, Stadt, E-Mail, E-Mails, eMail, eMails, Mail, Mails, Strassenverkehrsamt, Strafregister Friedensrichter, Friedensrichterin, Friedensrichters, Friedensrichteramt, Friedensrichteramts, Beil., Bel., fl.Akten, Akten, UA, bp, /, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12";
+const DEFAULT_EXCLUSION_LIST = "Urteil; Beschluss; Verfügung; Art.; Abs.; lit.; SchKG; OR; ZPO; StGB; StPO; VRG; VwVG; AIG; BetmG; ZGB; SVG; §; §§; Kanton; Kantons; Gerichtschreiberin; Gerichtsschreiber; Rekurs; Rekurrent; Rekurrentin; Rekurrenten; Klägerin; Kläger; Klage; Klägerschaft; Beklagte; Beklagter; Gesuchsteller; Gesuchstellers; Gesuchstellerin; Beschwerdeführer; Beschwerdeführerin; Beschwerde; Beschwerdeschrift; Präsident; Präsidentin; Präsidenten; Privatkläger; Privatklägers; Privatklägerin; Privatklägerinnen; Privatklägerschaft; Beschuldigte; Beschuldigter; Beschuldigten; Angeklagter; Angeklagte; Angeklagten; Person; Personen; Verteidiger; Verteidigerin; Verteidigers; Verteidigung; Bezirksgericht; Bezirksrichterin; BZGer; Bezirksrichter; Arbeitsgericht; Arbeitsgerichts; Kriminalrichter; KG; Kriminalrichterin; Kantonsrichterin; Kantonsrichter; Bezirksgerichts; Kantonsgericht; Kantonsgerichts; Obergericht; Obergerichts; OGer; Kriminalgericht; Kriminalgerichts; KGer; Täter; Täterin; Täters; Polizei; Kantonspolizei; Polizist; Polizistin; Polizisten; Polizeibeamte; Polizeibeamter; Polizeibeamten; Vollzugsbehörde; Strafbehörden; Behörden; Oberstaatsanwaltschaft; Staatsanwaltschaft; Staatsanwalt; Staatsanwältin; BGE; BGer; Bundesgerichts; Bundesgerichtes; Bundesgericht; Abteilung; Rechtsanwalt; Rechtsanwalts; Rechtsanwältin; Rechtsanwältinnen; Rechtsanwälte; RA; Eigentümer; Eigentümerin; Besitzer; Besitzerin; Arbeitgeber; Arbeitgeberin; Angestellter; Angestellte; Angestellten; Mitarbeiter; Mitarbeiterin; Mitarbeiterinnen; Schuldner; Schuldnerin; Gläubigerin; Gläubiger; Geschädigte; Geschädigter; Geschädigten; Auskunftsperson; Zeugin; Zeuge; Zeugen; der; die; das; von; vom; und; für; als; zu; ein; in; im; am; zu; einer; eine; dies; dieser; diese; Schwester; Bruder; Sohn; Tochter; Familie; Mutter; Vater; Ehemann; Ehehfrau; Ehepartner; Ehegatten; er; sie; ihr; ihre; ihren; ihres; seine; seinen; seines; Partner; Partnerin; Partners; Partnerinnen; Auto; Stadt; E-Mail; E-Mails; eMail; eMails; Mail; Mails; Strassenverkehrsamt; Strafregister; Friedensrichter; Friedensrichterin; Friedensrichters; Friedensrichteramt; Friedensrichteramts; Beil.; Bel.; fl.Akten; Akten; UA; bp; /; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12";
 
 export default {
     name: 'BatchAnonymizer',
@@ -832,8 +881,13 @@ export default {
                 visible: false,
                 x: 0,
                 y: 0,
-                text: ''
+                text: '',
+                entityName: '',
+                word: '',
+                isPinned: false
             },
+            hideTooltipTimeout: null,
+            isHoveringTooltip: false,
 
             // Anonymization options
             convertWordToMarkdown: true,
@@ -962,11 +1016,13 @@ export default {
                             
                             // We need to count "real" words to match the index
                             let currentWordCount = 0;
+                            let specificWordFound = '';
                             const markedParts = words.map(part => {
                                 // Check if this part is a "word" (not only whitespace/separator)
                                 if (part.trim().length > 0 && !/^[\s,;-]+$/.test(part)) {
                                     if (currentWordCount === wordIndex) {
                                         currentWordCount++;
+                                        specificWordFound = part;
                                         return `<span style="text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px;">${part}</span>`;
                                     }
                                     currentWordCount++;
@@ -975,6 +1031,9 @@ export default {
                             });
                             
                             originalHtml = markedParts.join('');
+                            if (specificWordFound) {
+                                // Store it in a way we can retrieve it
+                            }
                         }
                     } catch (e) {
                          console.warn("Error processing suffix for tooltip:", e);
@@ -987,7 +1046,13 @@ export default {
                 const encodedOriginalHtml = encodeURIComponent(originalHtml);
                 const escapedOriginal = originalValue.replace(/"/g, '&quot;');
                 
-                return `<span class="anonymized-token" data-original="${escapedOriginal}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
+                // Get the specific word if available
+                let specificWord = originalValue;
+                if (typeof specificWordFound !== 'undefined' && specificWordFound) {
+                    specificWord = specificWordFound;
+                }
+
+                return `<span class="anonymized-token" data-entity-id="${id}" data-original="${escapedOriginal}" data-specific-word="${specificWord.replace(/"/g, '&quot;')}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
             });
 
             return text;
@@ -1132,7 +1197,7 @@ export default {
         },
         mergeDefaultExclusionList() {
             const currentWords = this.parseExclusionList();
-            const defaultWords = DEFAULT_EXCLUSION_LIST.split(',').map(w => w.trim()).filter(w => w.length > 0);
+            const defaultWords = DEFAULT_EXCLUSION_LIST.split(';').map(w => w.trim()).filter(w => w.length > 0);
             
             // Set for case-insensitive uniqueness check
             const existingLower = new Set(currentWords.map(w => w.toLowerCase()));
@@ -1147,7 +1212,7 @@ export default {
             });
             
             if (addedCount > 0) {
-                this.exclusionList = currentWords.join(', ');
+                this.exclusionList = currentWords.join('; ');
                 this.saveExclusionList();
             }
         },
@@ -1156,7 +1221,7 @@ export default {
                 return [];
             }
             return this.exclusionList
-                .split(',')
+                .split(/[;,]/)
                 .map(word => word.trim())
                 .filter(word => word.length > 0);
         },
@@ -1205,37 +1270,37 @@ export default {
             }
         },
         addToExclusionList(word) {
-            if (!word || word.trim() === '') return;
+            if (!word || typeof word !== 'string' || word.trim() === '') return;
 
             const cleanWord = word.trim();
             const currentExclusions = this.parseExclusionList();
-
-            // Check if word already exists (case-insensitive)
+            
             const existingIndex = currentExclusions.findIndex(
-                w => w.toLowerCase() === cleanWord.toLowerCase()
+                excl => excl.toLowerCase() === cleanWord.toLowerCase()
             );
 
             if (existingIndex >= 0) {
                 // Remove word
                 currentExclusions.splice(existingIndex, 1);
-                this.exclusionList = currentExclusions.join(', ');
             } else {
                 // Add word
-                if (this.exclusionList.trim() === '') {
-                    this.exclusionList = cleanWord;
-                } else {
-                    this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
-                }
+                currentExclusions.push(cleanWord);
             }
+
+            // Re-join with primary delimiter (semicolon)
+            this.exclusionList = currentExclusions.join('; ');
 
             // Save to localStorage
             this.saveExclusionList();
             
             // Re-run preview test if currently in preview modal
-            if (this.showTestModal && this.testPreviewResult) {
-                this.testPreviewAdjusting = true;
-                this.testAnonymization(this.testPreviewFile, this.isFullTest);
-            }
+            // Use $nextTick to ensure exclusionList update is propagated
+            this.$nextTick(() => {
+                if (this.showTestModal && this.testPreviewResult) {
+                    this.testPreviewAdjusting = true;
+                    this.testAnonymization(this.testPreviewFile, this.isFullTest);
+                }
+            });
         },
 
         // Initialize model (ensure it's cached)
@@ -1395,6 +1460,19 @@ export default {
         clearInputFiles() {
             this.inputFiles = [];
             this.outputFiles = [];
+        },
+
+        // Helper to check if a word is in the exclusion list
+        isWordExcluded(word) {
+            if (!word) return false;
+            const currentExclusions = this.parseExclusionList();
+            return currentExclusions.some(excl => excl.toLowerCase() === word.trim().toLowerCase());
+        },
+
+        // Helper to get individual words for the hover menu
+        getSurgicalWords(fullName) {
+            if (!fullName) return [];
+            return fullName.split(/[\s,;-]+/).filter(w => w.trim().length > 0);
         },
 
         // Entity selection methods
@@ -1712,6 +1790,7 @@ export default {
             this.testPreviewResult = null;
             this.testPreviewError = null;
             this.testPreviewFile = null;
+            this.hoverTooltip.isPinned = false;
         },
 
         escapeHtml(text) {
@@ -1743,8 +1822,15 @@ export default {
             return formattedParts.join('');
         },
         handleTextMouseOver(e) {
+            if (this.hoverTooltip.isPinned) return;
             const target = e.target.closest('.anonymized-token');
             if (target) {
+                // Clear any pending hide timeout
+                if (this.hideTooltipTimeout) {
+                    clearTimeout(this.hideTooltipTimeout);
+                    this.hideTooltipTimeout = null;
+                }
+
                 if (target.dataset.originalHtml) {
                      this.hoverTooltip.text = decodeURIComponent(target.dataset.originalHtml);
                 } else if (target.dataset.original) {
@@ -1752,6 +1838,9 @@ export default {
                     this.hoverTooltip.text = this.escapeHtml(target.dataset.original);
                 }
                 
+                this.hoverTooltip.entityName = target.dataset.original || '';
+                this.hoverTooltip.word = target.dataset.specificWord || '';
+
                 if (this.hoverTooltip.text) {
                     this.hoverTooltip.visible = true;
                     this.hoverTooltip.x = e.clientX;
@@ -1760,13 +1849,64 @@ export default {
             }
         },
         handleTextMouseOut(e) {
+            if (this.hoverTooltip.isPinned) return;
             const target = e.target.closest('.anonymized-token');
             if (target) {
-                this.hoverTooltip.visible = false;
+                // Use a timeout to allow the user to move the mouse into the tooltip
+                this.hideTooltipTimeout = setTimeout(() => {
+                    if (!this.isHoveringTooltip && !this.hoverTooltip.isPinned) {
+                        this.hoverTooltip.visible = false;
+                    }
+                }, 200);
             }
         },
+        handleTooltipMouseEnter() {
+            if (this.hoverTooltip.isPinned) return;
+            this.isHoveringTooltip = true;
+            if (this.hideTooltipTimeout) {
+                clearTimeout(this.hideTooltipTimeout);
+                this.hideTooltipTimeout = null;
+            }
+        },
+        handleTooltipMouseLeave() {
+            if (this.hoverTooltip.isPinned) return;
+            this.isHoveringTooltip = false;
+            this.hoverTooltip.visible = false;
+        },
+        handleTokenClick(e) {
+            const target = e.target.closest('.anonymized-token');
+            if (target) {
+                // If clicking same token while pinned, just unpin (or do nothing? user said "fixed until clicked elsewhere")
+                // Let's stick to user's "fixed until weggeklickt" logic
+                
+                // Pin the tooltip at current position
+                this.hoverTooltip.isPinned = true;
+                this.hoverTooltip.visible = true;
+                
+                // Content should already be right from hover, but let's be sure
+                if (target.dataset.originalHtml) {
+                     this.hoverTooltip.text = decodeURIComponent(target.dataset.originalHtml);
+                } else if (target.dataset.original) {
+                    this.hoverTooltip.text = this.escapeHtml(target.dataset.original);
+                }
+                this.hoverTooltip.entityName = target.dataset.original || '';
+                this.hoverTooltip.word = target.dataset.specificWord || '';
+                
+                // Lock position to current mousepos (or center of element?)
+                // clientX/Y is fine as it's where the user clicked
+                this.hoverTooltip.x = e.clientX;
+                this.hoverTooltip.y = e.clientY;
+            } else {
+                // Unpin if clicking elsewhere in the preview
+                this.unpinTooltip();
+            }
+        },
+        unpinTooltip() {
+            this.hoverTooltip.isPinned = false;
+            this.hoverTooltip.visible = false;
+        },
         handleTextMouseMove(e) {
-            if (this.hoverTooltip.visible) {
+            if (this.hoverTooltip.visible && !this.hoverTooltip.isPinned) {
                 this.hoverTooltip.x = e.clientX;
                 this.hoverTooltip.y = e.clientY;
             }
