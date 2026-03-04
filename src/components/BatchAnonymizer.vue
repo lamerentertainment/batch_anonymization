@@ -884,13 +884,13 @@ export default {
                             // Split original value into words to finding the correct one to underline
                             // We use a regex that matches words but keeps delimiters so we can reconstruct
                             // This is a "best effort" approach as re-tokenizing perfectly matching the backend might be hard
-                            // The anonymizer uses: split(/\s+|-/) which consumes delimiters.
+                            // The anonymizer uses: split(/[\s,;-]+/) which consumes delimiters.
                             
-                            // Let's try to just split by space/hyphen to find the word, but we need to reconstruct the string with delimiters...
+                            // Let's try to just split by space/hyphen/comma/semicolon to find the word, but we need to reconstruct the string with delimiters...
                             // Actually, let's just use a simple split/join approach for visual representation.
                             // If we can't perfectly reconstruct separators, spaces are usually fine for the tooltip.
                              
-                            const words = originalValue.split(/(\s+|-)/);
+                            const words = originalValue.split(/([\s,;-]+)/);
                             // The split above with capturing group keeps separators.
                             // e.g. "Hans-Peter" -> ["Hans", "-", "Peter"]
                             // e.g. "Hans Peter" -> ["Hans", " ", "Peter"]
@@ -900,7 +900,7 @@ export default {
                             let currentWordCount = 0;
                             const markedParts = words.map(part => {
                                 // Check if this part is a "word" (not only whitespace/separator)
-                                if (part.trim().length > 0 && !/^[\s-]+$/.test(part)) {
+                                if (part.trim().length > 0 && !/^[\s,;-]+$/.test(part)) {
                                     if (currentWordCount === wordIndex) {
                                         currentWordCount++;
                                         return `<span style="text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px;">${part}</span>`;
@@ -937,7 +937,7 @@ export default {
 
             this.testPreviewResult.entities.forEach(entity => {
                 // Split entity name into individual words
-                const entityWords = entity.name.split(/\s+/).filter(w => w.trim().length > 0);
+                const entityWords = entity.name.split(/[\s,;-]+/).filter(w => w.trim().length > 0);
 
                 entityWords.forEach(word => {
                     const cleanWord = word.trim();
@@ -1100,7 +1100,7 @@ export default {
             // Check exclusion list
             const exclusionList = this.parseExclusionList();
             if (exclusionList.length > 0) {
-                 const entityWords = entity.name.toLowerCase().split(/\s+/);
+                 const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
                  const isExcluded = entityWords.some(word =>
                      exclusionList.some(excl => excl.toLowerCase() === word)
                  );
@@ -1487,7 +1487,7 @@ export default {
 
                 // Count how many entities would be excluded
                 const excludedEntities = entities.filter(entity => {
-                    const entityWords = entity.name.toLowerCase().split(/\s+/);
+                    const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
                     return entityWords.some(word =>
                         exclusionList.some(excl => excl.toLowerCase() === word)
                     );
@@ -1591,11 +1591,11 @@ export default {
 
             // Split by spaces and hyphens to find words, but preserve separators for reconstruction
             // We use capturing group in split to keep separators
-            const parts = entity.name.split(/(\s+|-)/);
+            const parts = entity.name.split(/([\s,;-]+)/);
             
             const formattedParts = parts.map(part => {
                 // Skip separators/whitespace for checking
-                if (!part.trim() || /^[\s-]+$/.test(part)) return this.escapeHtml(part);
+                if (!part.trim() || /^[\s,;-]+$/.test(part)) return this.escapeHtml(part);
                 
                 // Check if word is in exclusion list (case insensitive)
                 const isExcluded = exclusionList.some(excl => excl.toLowerCase() === part.toLowerCase());
