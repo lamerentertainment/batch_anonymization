@@ -527,9 +527,7 @@
                     <!-- Loading State -->
                     <div v-if="testPreviewLoading" class="flex items-center justify-center py-12">
                         <span class="loading loading-spinner loading-lg text-primary"></span>
-                        <span class="ml-3 text-base-content/60">
-                            {{ testPreviewAdjusting ? 'Anonymisierung wird angepasst...' : 'Anonymisiere Text...' }}
-                        </span>
+                        <span class="ml-3 text-base-content/60">Anonymisiere Text...</span>
                     </div>
 
                     <!-- Error State -->
@@ -626,17 +624,18 @@
                                 <button
                                     v-for="item in uniqueAnonymizedWords"
                                     :key="item.word"
-                                    @click="toggleExclusionList(item.word)"
-                                    class="px-2 py-1 text-xs rounded-full border transition-all cursor-pointer"
+                                    @click="addToExclusionList(item.word)"
+                                    :disabled="item.isInExclusionList"
+                                    class="px-2 py-1 text-xs rounded-full border transition-all"
                                     :class="item.isInExclusionList
-                                        ? 'bg-base-300 text-base-content/40 border-base-300 line-through hover:bg-error/20 hover:text-error hover:border-error'
-                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary'"
+                                        ? 'bg-base-300 text-base-content/40 border-base-300 cursor-not-allowed line-through'
+                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
                                     :title="item.isInExclusionList
-                                        ? `Klicken um '${item.word}' von der Negativliste zu entfernen`
+                                        ? 'Bereits in der Negativliste'
                                         : `Klicken um '${item.word}' zur Negativliste hinzuzufügen`"
                                 >
                                     {{ item.word }}
-                                    <span v-if="item.isInExclusionList" class="ml-1 text-error">✕</span>
+                                    <span v-if="item.isInExclusionList" class="ml-1">✓</span>
                                 </button>
                             </div>
                             <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
@@ -793,8 +792,7 @@ export default {
 
             // Anonymization options
             convertWordToMarkdown: true,
-            courtStyle: false,
-            testPreviewAdjusting: false
+            courtStyle: false
 
         };
     },
@@ -1119,38 +1117,28 @@ export default {
 
             return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
         },
-        toggleExclusionList(word) {
+        addToExclusionList(word) {
             if (!word || word.trim() === '') return;
 
             const cleanWord = word.trim();
             const currentExclusions = this.parseExclusionList();
 
             // Check if word already exists (case-insensitive)
-            const existingIndex = currentExclusions.findIndex(
+            const alreadyExists = currentExclusions.some(
                 w => w.toLowerCase() === cleanWord.toLowerCase()
             );
 
-            if (existingIndex >= 0) {
-                // Remove word
-                currentExclusions.splice(existingIndex, 1);
-                this.exclusionList = currentExclusions.join(', ');
+            if (alreadyExists) return;
+
+            // Add word to exclusion list
+            if (this.exclusionList.trim() === '') {
+                this.exclusionList = cleanWord;
             } else {
-                // Add word
-                if (this.exclusionList.trim() === '') {
-                    this.exclusionList = cleanWord;
-                } else {
-                    this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
-                }
+                this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
             }
 
             // Save to localStorage
             this.saveExclusionList();
-            
-            // Re-run preview test if currently in preview modal
-            if (this.showTestModal && this.testPreviewResult) {
-                this.testPreviewAdjusting = true;
-                this.testAnonymization(this.testPreviewFile, this.isFullTest);
-            }
         },
 
         // Initialize model (ensure it's cached)
@@ -1441,12 +1429,7 @@ export default {
             this.isFullTest = full;
             this.testPreviewLoading = true;
             this.testPreviewError = null;
-            
-            // Only clear result if we're not just adjusting the current one
-            if (!this.testPreviewAdjusting) {
-                this.testPreviewResult = null;
-            }
-            
+            this.testPreviewResult = null;
             this.showTestModal = true;
 
             try {
@@ -1554,7 +1537,6 @@ export default {
                 this.testPreviewError = error.message;
             } finally {
                 this.testPreviewLoading = false;
-                this.testPreviewAdjusting = false;
             }
         },
 

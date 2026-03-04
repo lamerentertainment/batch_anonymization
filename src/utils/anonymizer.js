@@ -325,8 +325,8 @@ class AnonymizerService {
         entities.forEach(entity => {
             if (!entity.name) return;
 
-            // Split entity name into words
-            const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
+            // Split entity name into words, excluding punctuation like commas
+            const words = entity.name.split(/[\s,;-]+/).filter(w => w && w.trim().length > 0);
 
             // Skip entire entity only if the FULL name matches an excluded term
             if (isExcluded(entity.name)) {
@@ -354,7 +354,7 @@ class AnonymizerService {
                     courtReplacement = `[${entity.id}_${entity.type}_court_${courtReplacement}]`;
                 }
 
-                const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                const fullJoined = words.map(w => escapeRegex(w)).join('[\\s,;-]+');
                 const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
                 anonymized = anonymized.replace(fullPattern, courtReplacement);
 
@@ -363,16 +363,27 @@ class AnonymizerService {
 
             if (words.length > 1) {
                 // Multi-word entity: replace full match with sequence of placeholders
-                const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                // Using capturing groups to preserve original separators (e.g., commas, hyphens)
+                const fullJoined = words.map(w => escapeRegex(w)).join('([\\s,;-]+)');
                 const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
-                const sequence = words
-                    .map((w, idx) => {
-                        // If individual word is excluded, keep it. Otherwise make placeholder.
-                        if (isExcluded(w)) return w;
-                        return `[${entity.id}_${entity.type}_${letters[idx] || String(idx + 1)}]`;
-                    })
-                    .join(' ');
-                anonymized = anonymized.replace(fullPattern, sequence);
+
+                anonymized = anonymized.replace(fullPattern, (match, ...args) => {
+                    let result = '';
+                    for (let i = 0; i < words.length; i++) {
+                        const w = words[i];
+                        if (isExcluded(w)) {
+                            result += w;
+                        } else {
+                            result += `[${entity.id}_${entity.type}_${letters[i] || String(i + 1)}]`;
+                        }
+
+                        // Add the captured separator back
+                        if (i < words.length - 1) {
+                            result += args[i]; // args[0] is first separator, args[1] is second, etc.
+                        }
+                    }
+                    return result;
+                });
             } else if (words.length === 1) {
                 // Single word entity: Check exclusion and min length before replacing
                 if (isExcluded(words[0])) return;
