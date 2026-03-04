@@ -329,7 +329,8 @@ class AnonymizerService {
             const words = entity.name.split(/[\s,;-]+/).filter(w => w && w.trim().length > 0);
 
             // Skip entire entity only if the FULL name matches an excluded term
-            if (isExcluded(entity.name)) {
+            // Manual entities bypass the exclusion list
+            if (entity.type !== 'manual' && isExcluded(entity.name)) {
                 return;
             }
 
@@ -371,7 +372,8 @@ class AnonymizerService {
                     let result = '';
                     for (let i = 0; i < words.length; i++) {
                         const w = words[i];
-                        if (isExcluded(w)) {
+                        // Manual entities bypass the exclusion list
+                        if (entity.type !== 'manual' && isExcluded(w)) {
                             result += w;
                         } else {
                             result += `[${entity.id}_${entity.type}_${letters[i] || String(i + 1)}]`;
@@ -386,11 +388,12 @@ class AnonymizerService {
                 });
             } else if (words.length === 1) {
                 // Single word entity: Check exclusion and min length before replacing
-                if (isExcluded(words[0])) return;
-
-                // Check min length for single word entities
-                if (minCharacterThreshold > 0 && words[0].length < minCharacterThreshold) {
-                    return;
+                // Manual entities bypass these checks
+                if (entity.type !== 'manual') {
+                    if (isExcluded(words[0])) return;
+                    if (minCharacterThreshold > 0 && words[0].length < minCharacterThreshold) {
+                        return;
+                    }
                 }
 
                 const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
@@ -400,14 +403,17 @@ class AnonymizerService {
             // Replace remaining individual words (only if anonymizePartialWords is true)
             if (anonymizePartialWords) {
                 words.forEach((w, idx) => {
-                    // Check min length for partial words
-                    if (minCharacterThreshold > 0 && w.length < minCharacterThreshold) {
-                        return;
-                    }
+                    // Manual entities bypass these checks
+                    if (entity.type !== 'manual') {
+                        // Check min length for partial words
+                        if (minCharacterThreshold > 0 && w.length < minCharacterThreshold) {
+                            return;
+                        }
 
-                    // Skip individual words that are in the exclusion list
-                    if (isExcluded(w)) {
-                        return;
+                        // Skip individual words that are in the exclusion list
+                        if (isExcluded(w)) {
+                            return;
+                        }
                     }
                     const suffix = letters[idx] || String(idx + 1);
                     const wordPattern = new RegExp(`\\b${escapeRegex(w)}\\b`, 'gi');

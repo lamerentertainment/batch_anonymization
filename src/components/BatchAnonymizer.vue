@@ -587,6 +587,7 @@
                             @mouseover="handleTextMouseOver"
                             @mouseout="handleTextMouseOut"
                             @mousemove="handleTextMouseMove"
+                            @mouseup="handleTextSelection"
                         ></div>
 
                         <!-- Custom Tooltip -->
@@ -609,7 +610,23 @@
                             <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
                             <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
                             <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
-                            <span class="text-base-content/40 ml-2 italic">Hover zeigt Original</span>
+                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded border border-gray-400">manuell</span>
+                            <span class="text-base-content/40 ml-2 italic">Hover zeigt Original, Markieren zum Anonymisieren</span>
+                        </div>
+
+                        <!-- Selection Hover Menu -->
+                        <div
+                            v-if="selectionMenu.visible"
+                            class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
+                            :style="{ top: selectionMenu.y + 'px', left: selectionMenu.x + 'px', transform: 'translate(-50%, -120%)' }"
+                        >
+                            <button
+                                @click="addManualEntity"
+                                class="btn btn-primary btn-xs normal-case gap-1"
+                            >
+                                <TagIcon class="w-3 h-3" />
+                                Markierte Stelle anonymisieren?
+                            </button>
                         </div>
 
                         <!-- Anonymized Words List - Click to exclude -->
@@ -670,6 +687,7 @@
                                             </td>
                                             <td class="text-center">
                                                 <button
+                                                    v-if="entity.type !== 'manual'"
                                                     @click="toggleSessionRemovedEntity(entity.name)"
                                                     class="btn btn-ghost btn-xs btn-square"
                                                     :class="sessionRemovedEntities.includes(entity.name) ? 'text-success' : 'text-error'"
@@ -677,6 +695,14 @@
                                                 >
                                                     <XMarkIcon v-if="!sessionRemovedEntities.includes(entity.name)" class="w-4 h-4" />
                                                     <ArrowPathIcon v-else class="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    v-else
+                                                    @click="removeManualEntity(entity.name)"
+                                                    class="btn btn-ghost btn-xs btn-square text-error"
+                                                    title="Manuelle Anonymisierung entfernen"
+                                                >
+                                                    <XMarkIcon class="w-4 h-4" />
                                                 </button>
                                             </td>
                                         </tr>
@@ -812,9 +838,25 @@ export default {
             // Anonymization options
             convertWordToMarkdown: true,
             courtStyle: false,
-            sessionRemovedEntities: []
+            sessionRemovedEntities: [],
+            
+            // Manual selection / Hover menu
+            manualEntities: [], // List of strings manually marked for anonymization
+            selectionMenu: {
+                visible: false,
+                x: 0,
+                y: 0,
+                selectedText: ''
+            }
 
         };
+    },
+    mounted() {
+        window.addEventListener('mousedown', this.hideSelectionMenu);
+        this.loadExclusionList();
+    },
+    beforeUnmount() {
+        window.removeEventListener('mousedown', this.hideSelectionMenu);
     },
     computed: {
         canStartProcessing() {
@@ -870,7 +912,8 @@ export default {
                 'organization': 'background-color: #fbcfe8; color: #831843;',
                 'location': 'background-color: #99f6e4; color: #134e4a;',
                 'date': 'background-color: #fed7aa; color: #7c2d12;',
-                'time': 'background-color: #fed7aa; color: #7c2d12;'
+                'time': 'background-color: #fed7aa; color: #7c2d12;',
+                'manual': 'background-color: #e5e7eb; color: #111827;'
             };
 
             // Regex for placeholders: [id_type] or [id_type_suffix] or [id_type_court_REPLACEMENT]
@@ -1401,7 +1444,8 @@ export default {
             // Detect entities (use pre-detected if available, otherwise detect)
             let entities = [];
             if (preDetectedEntities) {
-                entities = preDetectedEntities;
+                // Deep copy to avoid mutating the cache
+                entities = JSON.parse(JSON.stringify(preDetectedEntities));
             } else {
                 entities = await iframeAnonymizer.detectEntities(
                     processingText,
@@ -1409,6 +1453,23 @@ export default {
                     this.threshold
                 );
             }
+
+            // Add manual entities
+            this.manualEntities.forEach(manualName => {
+                const cleanManualName = manualName.trim();
+                const existingEntity = entities.find(e => e.name.toLowerCase() === cleanManualName.toLowerCase());
+                
+                if (existingEntity) {
+                    // Force type to manual if it was found by GLiNER but manually marked too
+                    existingEntity.type = 'manual';
+                } else {
+                    entities.push({
+                        id: entities.length + 1,
+                        name: cleanManualName,
+                        type: 'manual'
+                    });
+                }
+            });
 
             // Filter out entities removed in this session
             // Use case-insensitive and trimmed comparison
@@ -1709,6 +1770,62 @@ export default {
                 this.hoverTooltip.x = e.clientX;
                 this.hoverTooltip.y = e.clientY;
             }
+        },
+        handleTextSelection(event) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length > 0) {
+                // Determine if the click happened inside the preview box
+                const previewBox = this.$el.querySelector('.cursor-text');
+                if (previewBox && previewBox.contains(event.target)) {
+                    this.selectionMenu.x = event.clientX;
+                    this.selectionMenu.y = event.clientY;
+                    this.selectionMenu.selectedText = selectedText;
+                    this.selectionMenu.visible = true;
+                }
+            } else {
+                this.selectionMenu.visible = false;
+            }
+        },
+        addManualEntity() {
+            const word = this.selectionMenu.selectedText;
+            if (!word || word.trim() === '') return;
+
+            const cleanWord = word.trim();
+            if (!this.manualEntities.includes(cleanWord)) {
+                this.manualEntities.push(cleanWord);
+            }
+
+            this.selectionMenu.visible = false;
+            
+            // Clear selection
+            window.getSelection().removeAllRanges();
+
+            // Re-run preview test
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
+        },
+        removeManualEntity(name) {
+            this.manualEntities = this.manualEntities.filter(n => n !== name);
+            
+            // Re-run preview test
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
+        },
+        hideSelectionMenu(event) {
+            // Close if clicking outside the menu
+            if (this.selectionMenu.visible && event) {
+                const menuEl = this.$el.querySelector('.fixed.z-\\[110\\]');
+                if (menuEl && menuEl.contains(event.target)) {
+                    return;
+                }
+            }
+            this.selectionMenu.visible = false;
         }
     }
 };
