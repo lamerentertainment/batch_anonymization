@@ -122,11 +122,14 @@ async function extractTextFromDocx(file, options = {}) {
             headingStyle: 'atx',
             codeBlockStyle: 'fenced'
         });
-        return turndownService.turndown(htmlContent);
+        return {
+            text: turndownService.turndown(htmlContent),
+            html: htmlContent
+        };
     }
 
     const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
+    return { text: result.value };
 }
 
 /**
@@ -142,6 +145,7 @@ export async function processFile(file, options = {}) {
 
     try {
         let extractedText = '';
+        let extractedHtml = undefined;
         const extension = '.' + file.name.split('.').pop().toLowerCase();
 
         if (file.type === 'text/plain' || extension === '.txt') {
@@ -150,7 +154,9 @@ export async function processFile(file, options = {}) {
             extractedText = await extractTextFromPdf(file);
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
             extension === '.docx' || extension === '.doc') {
-            extractedText = await extractTextFromDocx(file, options);
+            const docxResult = await extractTextFromDocx(file, options);
+            extractedText = docxResult.text;
+            extractedHtml = docxResult.html;
         }
 
         if (!extractedText || extractedText.trim().length === 0) {
@@ -160,7 +166,7 @@ export async function processFile(file, options = {}) {
             };
         }
 
-        return { success: true, text: extractedText };
+        return { success: true, text: extractedText, html: extractedHtml };
     } catch (error) {
         console.error('Error processing file:', error);
         return {

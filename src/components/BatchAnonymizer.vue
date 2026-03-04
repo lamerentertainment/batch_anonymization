@@ -152,6 +152,27 @@
                     </ul>
                 </div>
 
+                <!-- File Options -->
+                <div class="p-4 border-t border-base-300 bg-base-200/30">
+                    <div class="flex items-center gap-2 mb-2">
+                        <DocumentIcon class="w-4 h-4 text-base-content/60" />
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-base-content/60">Datei-Optionen</h3>
+                    </div>
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                            <input
+                                type="checkbox"
+                                v-model="convertWordToMarkdown"
+                                class="checkbox checkbox-xs checkbox-primary"
+                            >
+                            <span class="label-text text-xs font-semibold">Word (.docx) als Markdown</span>
+                        </label>
+                        <p class="text-[10px] leading-tight text-base-content/50 ml-5 mt-1">
+                            Behält Formatierung (Fett, Listen, etc.) bei.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Clear All Button -->
                 <div v-if="inputFiles.length > 0" class="p-4 border-t border-base-300">
                     <button @click="clearInputFiles" class="btn btn-ghost btn-sm w-full text-error">
@@ -336,30 +357,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Group 4: File Options -->
-                <div class="px-4 pb-1 pt-2 flex items-center gap-2">
-                    <DocumentIcon class="w-4 h-4" />
-                    <h3 class="font-bold text-sm">Datei-Optionen</h3>
-                </div>
-                <div class="px-4 pb-4">
-                     <div class="border border-base-300 rounded-lg p-3 space-y-2">
-                        <div class="form-control">
-                            <label class="label cursor-pointer justify-start gap-2 p-0">
-                                <input
-                                    type="checkbox"
-                                    v-model="convertWordToMarkdown"
-                                    class="checkbox checkbox-sm checkbox-primary"
-                                >
-                                <span class="label-text text-sm font-semibold">Word-Dateien (.docx) in Markdown konvertieren</span>
-                            </label>
-                            <p class="text-xs text-base-content/50 ml-6 mt-1">
-                                Wenn aktiviert, wird die Word-Formatierung (Fett, Kursiv, Listen, Überschriften) beibehalten und in Markdown umgewandelt. Wenn deaktiviert, wird nur der unformatierte Text extrahiert.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
                 </div>
 
                 <!-- Start Processing Button -->
@@ -577,7 +574,7 @@
                         <!-- Anonymized Text with Highlighting -->
                         <div
                             class="p-4 border border-base-300 rounded-lg bg-base-200/50
-                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto cursor-text"
+                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto cursor-text [&_p]:mb-4 [&_h1]:mb-4 [&_h2]:mb-4 [&_h3]:mb-4 [&_ul]:mb-4 [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:mb-4 [&_ol]:ml-4 [&_ol]:list-decimal"
                             v-html="highlightedAnonymizedText"
                             @mouseover="handleTextMouseOver"
                             @mouseout="handleTextMouseOut"
@@ -820,7 +817,12 @@ export default {
                 entityMap[entity.id] = entity.name;
             });
 
-            let text = this.escapeHtml(this.testPreviewResult.anonymizedText);
+            let text = '';
+            if (this.testPreviewResult.anonymizedHtml) {
+                text = this.testPreviewResult.anonymizedHtml;
+            } else {
+                text = this.escapeHtml(this.testPreviewResult.anonymizedText);
+            }
 
             // Color mapping by entity type
             const colorMap = {
@@ -975,6 +977,42 @@ export default {
         window.removeEventListener('mousemove', this.handleMouseMove);
     },
     methods: {
+        truncateHtml(html, maxLength) {
+            if (!html) return '';
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            let currentLength = 0;
+            let truncated = false;
+            
+            function traverseAndTruncate(node) {
+                if (truncated) {
+                    if (node.parentNode) node.parentNode.removeChild(node);
+                    return;
+                }
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const textLen = node.textContent.length;
+                    if (currentLength + textLen > maxLength) {
+                        node.textContent = node.textContent.substring(0, maxLength - currentLength) + '...';
+                        truncated = true;
+                        currentLength = maxLength;
+                    } else {
+                        currentLength += textLen;
+                    }
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    const children = Array.from(node.childNodes);
+                    for (const child of children) {
+                        if (truncated) {
+                            node.removeChild(child);
+                        } else {
+                            traverseAndTruncate(child);
+                        }
+                    }
+                }
+            }
+            
+            Array.from(div.childNodes).forEach(traverseAndTruncate);
+            return div.innerHTML;
+        },
         // Exclusion list methods
         saveExclusionList() {
             try {
@@ -1390,6 +1428,7 @@ export default {
 
                 const fullText = result.text;
                 let limitedText = fullText;
+                let limitedHtml = result.html || null;
 
                 // Limit to first ~2000 characters only if not full test
                 // (Button says 1000, but we give a bit more context while keeping performance)
@@ -1403,6 +1442,9 @@ export default {
                         if (lastSpace > 0) {
                             limitedText = limitedText.slice(0, lastSpace) + '...';
                         }
+                    }
+                    if (limitedHtml) { 
+                        limitedHtml = this.truncateHtml(limitedHtml, charLimit);
                     }
                 }
 
@@ -1447,10 +1489,24 @@ export default {
                     }
                 );
 
+                let anonymizedHtml = null;
+                if (limitedHtml) {
+                    anonymizedHtml = anonymizerService.anonymizeText(
+                        limitedHtml,
+                        entities,
+                        {
+                            anonymizePartialWords: this.anonymizePartialWords,
+                            minCharacterThreshold: this.minCharacterThreshold,
+                            exclusionList: exclusionList
+                        }
+                    );
+                }
+
                 // Store result
                 this.testPreviewResult = {
                     originalText: limitedText,
                     anonymizedText: anonymizedText,
+                    anonymizedHtml: anonymizedHtml,
                     entities: entities,
                     wordCount: limitedText.split(/\s+/).length,
                     totalWords: fullText.split(/\s+/).length,
