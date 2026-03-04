@@ -284,7 +284,8 @@ class AnonymizerService {
         const {
             anonymizePartialWords = true,
             minCharacterThreshold = 0,
-            exclusionList = []
+            exclusionList = [],
+            courtStyle = false
         } = options;
 
         // Normalize exclusion list to lowercase for case-insensitive comparison
@@ -298,6 +299,16 @@ class AnonymizerService {
             return normalizedExclusionList.includes(word.toLowerCase());
         };
 
+        const getCourtIdentifier = (index) => {
+            let res = '';
+            let n = index;
+            while (n >= 0) {
+                res = String.fromCharCode(65 + (n % 26)) + res;
+                n = Math.floor(n / 26) - 1;
+            }
+            return res + ".________";
+        };
+
         entities.forEach(entity => {
             if (!entity.name) return;
 
@@ -306,6 +317,25 @@ class AnonymizerService {
 
             // Skip entire entity only if the FULL name matches an excluded term
             if (isExcluded(entity.name)) {
+                return;
+            }
+
+            if (courtStyle) {
+                const courtId = getCourtIdentifier(entity.id - 1);
+                let suffixStr = '';
+                if (entity.type === 'organization') {
+                    const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                    const lastWord = words[words.length - 1];
+                    if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                        suffixStr = ' ' + lastWord;
+                    }
+                }
+                const courtReplacement = courtId + suffixStr;
+
+                const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+                anonymized = anonymized.replace(fullPattern, courtReplacement);
+
                 return;
             }
 

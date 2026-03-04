@@ -785,10 +785,17 @@
                     </div>
                 </div>
                 
-                <!-- Group 4: File Options -->
                 <div class="mt-6 border-t pt-4">
                     <h4 class="text-md font-semibold text-base-content mb-3">Datei-Optionen</h4>
-                    <div class="bg-base-200 rounded p-3">
+                    <div class="bg-base-200 rounded p-3 space-y-3">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                v-model="courtStyle"
+                                class="checkbox checkbox-sm checkbox-primary"
+                            >
+                            <span class="text-sm font-semibold">Gerichtsübliche Anonymisierung (A.________, B.________ AG)</span>
+                        </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -1153,6 +1160,7 @@ export default {
     },
     data() {
         return { 
+            courtStyle: false, // Gerichtsübliche Anonymisierung
             convertWordToMarkdown: true,
             loading: false,
             downloading: false,
@@ -1437,9 +1445,37 @@ export default {
             const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const letters = 'abcdefghijklmnopqrstuvwxyz';
 
+            const getCourtIdentifier = (index) => {
+                let res = '';
+                let n = index;
+                while (n >= 0) {
+                    res = String.fromCharCode(65 + (n % 26)) + res;
+                    n = Math.floor(n / 26) - 1;
+                }
+                return res + ".________";
+            };
+
             this.entities.forEach(entity => {
                 if (!entity.name) return;
                 const words = entity.name.split(/\s+|-/).filter(w => w && w.trim().length > 0);
+
+                if (this.courtStyle) {
+                    const courtId = getCourtIdentifier(entity.id - 1);
+                    let suffixStr = '';
+                    if (entity.type.toLowerCase() === 'organization') {
+                        const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                        const lastWord = words[words.length - 1];
+                        if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                            suffixStr = ' ' + lastWord;
+                        }
+                    }
+                    const courtReplacement = courtId + suffixStr;
+                    
+                    const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                    const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+                    t = t.replace(fullPattern, courtReplacement);
+                    return;
+                }
 
                 if (words.length > 1) {
                     const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
@@ -1469,6 +1505,16 @@ export default {
             
             let anonymized = this.text;
 
+            const getCourtIdentifier = (index) => {
+                let res = '';
+                let n = index;
+                while (n >= 0) {
+                    res = String.fromCharCode(65 + (n % 26)) + res;
+                    n = Math.floor(n / 26) - 1;
+                }
+                return res + ".________";
+            };
+
             // For each entity, first replace the full multi-word span with a single placeholder (id_type)
             // Then, replace remaining partial word occurrences with suffixed placeholders (id_type_a, id_type_b, ...)
             this.entities.forEach(entity => {
@@ -1481,6 +1527,24 @@ export default {
                 // Helper to escape regex special chars for whole-word matching
                 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const letters = 'abcdefghijklmnopqrstuvwxyz';
+
+                if (this.courtStyle) {
+                    const courtId = getCourtIdentifier(entity.id - 1);
+                    let suffixStr = '';
+                    if (entity.type.toLowerCase() === 'organization') {
+                        const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                        const lastWord = words[words.length - 1];
+                        if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                            suffixStr = ' ' + lastWord;
+                        }
+                    }
+                    const courtReplacement = `<span class="badge badge-outline">${courtId}${suffixStr}</span>`;
+                    
+                    const fullJoined = words.map(w => escapeRegex(w)).join('[\\s-]+');
+                    const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+                    anonymized = anonymized.replace(fullPattern, courtReplacement);
+                    return;
+                }
 
                 if (words.length > 1) {
                     // Build a full name regex: \bword1[\s-]+word2[\s-]+...\b to match the entire span

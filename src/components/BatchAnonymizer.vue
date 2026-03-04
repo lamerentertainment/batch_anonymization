@@ -158,7 +158,15 @@
                         <DocumentIcon class="w-4 h-4 text-base-content/60" />
                         <h3 class="font-bold text-xs uppercase tracking-wider text-base-content/60">Datei-Optionen</h3>
                     </div>
-                    <div class="form-control">
+                    <div class="form-control space-y-2">
+                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                            <input
+                                type="checkbox"
+                                v-model="courtStyle"
+                                class="checkbox checkbox-xs checkbox-primary"
+                            >
+                            <span class="label-text text-xs font-semibold">Gerichtsübliche Anonymisierung (A.________)</span>
+                        </label>
                         <label class="label cursor-pointer justify-start gap-2 p-0">
                             <input
                                 type="checkbox"
@@ -783,7 +791,8 @@ export default {
             },
 
             // Anonymization options
-            convertWordToMarkdown: true
+            convertWordToMarkdown: true,
+            courtStyle: false
 
         };
     },
@@ -1361,7 +1370,8 @@ export default {
                     const anonymizedText = anonymizerService.anonymizeText(result.text, entities, {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
-                        exclusionList: this.parseExclusionList()
+                        exclusionList: this.parseExclusionList(),
+                        courtStyle: this.courtStyle
                     });
 
                     outputFile.content = anonymizedText;
@@ -1485,7 +1495,8 @@ export default {
                     {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
-                        exclusionList: exclusionList
+                        exclusionList: exclusionList,
+                        courtStyle: this.courtStyle
                     }
                 );
 
@@ -1497,7 +1508,8 @@ export default {
                         {
                             anonymizePartialWords: this.anonymizePartialWords,
                             minCharacterThreshold: this.minCharacterThreshold,
-                            exclusionList: exclusionList
+                            exclusionList: exclusionList,
+                            courtStyle: this.courtStyle
                         }
                     );
                 }
