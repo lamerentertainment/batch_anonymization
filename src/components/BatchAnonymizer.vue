@@ -165,7 +165,7 @@
                                 v-model="courtStyle"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
-                            <span class="label-text text-xs font-semibold">Gerichtsübliche Anonymisierung (A.________)</span>
+                            <span class="label-text text-xs font-semibold">gerichtsübliche Anonymisierung (A.________) vornehmen</span>
                         </label>
                         <label class="label cursor-pointer justify-start gap-2 p-0">
                             <input
@@ -173,7 +173,7 @@
                                 v-model="convertWordToMarkdown"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
-                            <span class="label-text text-xs font-semibold">Word (.docx) als Markdown</span>
+                            <span class="label-text text-xs font-semibold">importierte Word-Dateien (.docx) als Markdown-Dateien ausgeben</span>
                         </label>
                         <p class="text-[10px] leading-tight text-base-content/50 ml-5 mt-1">
                             Behält Formatierung (Fett, Listen, etc.) bei.
@@ -617,7 +617,7 @@
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="font-semibold text-sm">Anonymisierte Wörter</h4>
                                 <span class="text-xs text-base-content/60">
-                                    Klicken um zur Negativliste hinzuzufügen
+                                    Klicken um zur Negativliste hinzuzufügen oder von der Negativliste entfernen
                                 </span>
                             </div>
                             <div class="flex flex-wrap gap-2">
