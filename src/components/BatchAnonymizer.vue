@@ -625,13 +625,12 @@
                                     v-for="item in uniqueAnonymizedWords"
                                     :key="item.word"
                                     @click="addToExclusionList(item.word)"
-                                    :disabled="item.isInExclusionList"
                                     class="px-2 py-1 text-xs rounded-full border transition-all"
                                     :class="item.isInExclusionList
-                                        ? 'bg-base-300 text-base-content/40 border-base-300 cursor-not-allowed line-through'
+                                        ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 cursor-pointer line-through'
                                         : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
                                     :title="item.isInExclusionList
-                                        ? 'Bereits in der Negativliste'
+                                        ? `Klicken um '${item.word}' von der Negativliste zu entfernen`
                                         : `Klicken um '${item.word}' zur Negativliste hinzuzufügen`"
                                 >
                                     {{ item.word }}
@@ -1124,21 +1123,31 @@ export default {
             const currentExclusions = this.parseExclusionList();
 
             // Check if word already exists (case-insensitive)
-            const alreadyExists = currentExclusions.some(
+            const existingIndex = currentExclusions.findIndex(
                 w => w.toLowerCase() === cleanWord.toLowerCase()
             );
 
-            if (alreadyExists) return;
-
-            // Add word to exclusion list
-            if (this.exclusionList.trim() === '') {
-                this.exclusionList = cleanWord;
+            if (existingIndex >= 0) {
+                // Remove word
+                currentExclusions.splice(existingIndex, 1);
+                this.exclusionList = currentExclusions.join(', ');
             } else {
-                this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
+                // Add word
+                if (this.exclusionList.trim() === '') {
+                    this.exclusionList = cleanWord;
+                } else {
+                    this.exclusionList = this.exclusionList.trim() + ', ' + cleanWord;
+                }
             }
 
             // Save to localStorage
             this.saveExclusionList();
+            
+            // Re-run preview test if currently in preview modal
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
         },
 
         // Initialize model (ensure it's cached)
@@ -1429,7 +1438,12 @@ export default {
             this.isFullTest = full;
             this.testPreviewLoading = true;
             this.testPreviewError = null;
-            this.testPreviewResult = null;
+            
+            // Only clear result if we're not just adjusting the current one
+            if (!this.testPreviewAdjusting) {
+                this.testPreviewResult = null;
+            }
+            
             this.showTestModal = true;
 
             try {
@@ -1537,6 +1551,7 @@ export default {
                 this.testPreviewError = error.message;
             } finally {
                 this.testPreviewLoading = false;
+                this.testPreviewAdjusting = false;
             }
         },
 
