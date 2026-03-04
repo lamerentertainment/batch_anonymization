@@ -655,6 +655,7 @@
                                             <th>Typ</th>
                                             <th>Platzhalter</th>
                                             <th>Status</th>
+                                            <th class="text-center">Aktion</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -666,6 +667,17 @@
                                                 <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">
                                                     {{ getEntityStatus(entity).label }}
                                                 </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button
+                                                    @click="toggleSessionRemovedEntity(entity.name)"
+                                                    class="btn btn-ghost btn-xs btn-square"
+                                                    :class="sessionRemovedEntities.includes(entity.name) ? 'text-success' : 'text-error'"
+                                                    :title="sessionRemovedEntities.includes(entity.name) ? 'Anonymisierung wieder aktivieren' : 'Diese Entität von der Anonymisierung ausschliessen'"
+                                                >
+                                                    <XMarkIcon v-if="!sessionRemovedEntities.includes(entity.name)" class="w-4 h-4" />
+                                                    <ArrowPathIcon v-else class="w-4 h-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -704,7 +716,8 @@ import {
     NoSymbolIcon,
     Cog6ToothIcon,
     MagnifyingGlassIcon,
-    SignalIcon
+    SignalIcon,
+    ArrowPathIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -734,7 +747,8 @@ export default {
         NoSymbolIcon,
         Cog6ToothIcon,
         MagnifyingGlassIcon,
-        SignalIcon
+        SignalIcon,
+        ArrowPathIcon
     },
     data() {
         return {
@@ -791,7 +805,8 @@ export default {
 
             // Anonymization options
             convertWordToMarkdown: true,
-            courtStyle: false
+            courtStyle: false,
+            sessionRemovedEntities: []
 
         };
     },
@@ -1097,6 +1112,11 @@ export default {
                 .filter(word => word.length > 0);
         },
         getEntityStatus(entity) {
+            // Check session removed list (highest priority)
+            if (this.sessionRemovedEntities.includes(entity.name)) {
+                 return { code: 'removed', label: 'Gelöscht (Sitzung)', class: 'text-error' };
+            }
+
             // Check exclusion list
             const exclusionList = this.parseExclusionList();
             if (exclusionList.length > 0) {
@@ -1115,6 +1135,19 @@ export default {
             }
 
             return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
+        },
+        toggleSessionRemovedEntity(name) {
+            const index = this.sessionRemovedEntities.indexOf(name);
+            if (index > -1) {
+                this.sessionRemovedEntities.splice(index, 1);
+            } else {
+                this.sessionRemovedEntities.push(name);
+            }
+            
+            // Re-run preview test if currently in preview modal
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
         },
         addToExclusionList(word) {
             if (!word || word.trim() === '') return;
@@ -1378,8 +1411,13 @@ export default {
                         this.threshold
                     );
 
+                    // Filter out entities removed in this session
+                    const filteredEntities = entities.filter(entity => 
+                        !this.sessionRemovedEntities.includes(entity.name)
+                    );
+
                     // Anonymize text
-                    const anonymizedText = anonymizerService.anonymizeText(result.text, entities, {
+                    const anonymizedText = anonymizerService.anonymizeText(result.text, filteredEntities, {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
                         exclusionList: this.parseExclusionList(),
@@ -1482,11 +1520,16 @@ export default {
                     this.threshold
                 );
 
+                // Filter out entities removed in this session for the ACTUAL anonymization
+                const sessionFilteredEntities = entities.filter(entity => 
+                    !this.sessionRemovedEntities.includes(entity.name)
+                );
+
                 // Get current exclusion list
                 const exclusionList = this.parseExclusionList();
 
-                // Count how many entities would be excluded
-                const excludedEntities = entities.filter(entity => {
+                // Count how many entities would be excluded (from the already session-filtered list)
+                const excludedEntities = sessionFilteredEntities.filter(entity => {
                     const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/);
                     return entityWords.some(word =>
                         exclusionList.some(excl => excl.toLowerCase() === word)
@@ -1496,7 +1539,7 @@ export default {
                 // Count how many entities would be skipped due to length
                 let skippedShortEntitiesCount = 0;
                 if (this.anonymizePartialWords && this.minCharacterThreshold > 0) {
-                    skippedShortEntitiesCount = entities.filter(entity => {
+                    skippedShortEntitiesCount = sessionFilteredEntities.filter(entity => {
                         // If already excluded by blacklist, don't count here to avoid double counting
                         const isExcluded = excludedEntities.some(e => e.id === entity.id);
                         if (isExcluded) return false;
@@ -1508,7 +1551,7 @@ export default {
                 // Anonymize text with current options including exclusion list
                 const anonymizedText = anonymizerService.anonymizeText(
                     limitedText,
-                    entities,
+                    sessionFilteredEntities,
                     {
                         anonymizePartialWords: this.anonymizePartialWords,
                         minCharacterThreshold: this.minCharacterThreshold,
@@ -1522,7 +1565,7 @@ export default {
                 if (limitedHtml) {
                     anonymizedHtml = anonymizerService.anonymizeText(
                         limitedHtml,
-                        entities,
+                        sessionFilteredEntities,
                         {
                             anonymizePartialWords: this.anonymizePartialWords,
                             minCharacterThreshold: this.minCharacterThreshold,
