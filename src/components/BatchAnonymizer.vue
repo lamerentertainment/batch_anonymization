@@ -114,29 +114,29 @@
                                 <button
                                     v-if="(hoveredFileIndex === index || (testPreviewLoading && testPreviewFile === file)) && modelStatus === 'ready'"
                                     @click.stop="testAnonymization(file, false)"
-                                    class="btn btn-xs btn-primary animate-fadeIn"
+                                    class="btn btn-xs btn-square btn-primary animate-fadeIn"
                                     :disabled="testPreviewLoading"
-                                    title="Anonymisierung testen"
+                                    title="Anonymisierung testen (ca. 2000 Zeichen)"
                                 >
                                     <template v-if="testPreviewLoading && testPreviewFile === file && !isFullTest">
                                         <span class="loading loading-spinner loading-xs"></span>
                                     </template>
                                     <template v-else>
-                                        Anonymisierung testen (ca. 2000 Zeichen)
+                                        <MagnifyingGlassIcon class="w-4 h-4" />
                                     </template>
                                 </button>
                                 <button
                                     v-if="(hoveredFileIndex === index || (testPreviewLoading && testPreviewFile === file)) && modelStatus === 'ready'"
                                     @click.stop="testAnonymization(file, true)"
-                                    class="btn btn-xs btn-outline btn-primary animate-fadeIn ml-1"
+                                    class="btn btn-xs btn-square btn-outline btn-primary animate-fadeIn ml-1"
                                     :disabled="testPreviewLoading"
-                                    title="Volle Datei anonymisieren und prüfen"
+                                    title="Datei komplett anonymisieren und prüfen"
                                 >
                                     <template v-if="testPreviewLoading && testPreviewFile === file && isFullTest">
                                         <span class="loading loading-spinner loading-xs"></span>
                                     </template>
                                     <template v-else>
-                                        Datei komplett anonymisieren
+                                        <DocumentCheckIcon class="w-4 h-4" />
                                     </template>
                                 </button>
 
