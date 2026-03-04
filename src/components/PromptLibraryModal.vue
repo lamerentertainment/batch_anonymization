@@ -34,7 +34,7 @@
               <button
                 class="btn btn-ghost btn-xs shrink-0"
                 @click="openEditModal(p)"
-                title="Prompt im großen Editor bearbeiten"
+                title="Prompt im grossen Editor bearbeiten"
               >
                 🔍
               </button>

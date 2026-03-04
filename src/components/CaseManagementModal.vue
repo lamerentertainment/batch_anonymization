@@ -230,7 +230,7 @@
 
       <!-- Footer Buttons -->
       <div class="mt-4 flex justify-end">
-        <button class="btn btn-sm" @click="$emit('close')">Schließen</button>
+        <button class="btn btn-sm" @click="$emit('close')">Schliessen</button>
       </div>
 
       <!-- Toast Notification -->
@@ -272,7 +272,7 @@
           In Anon.vue laden
         </button>
         <button @click="fullScreenDoc = null" class="btn btn-sm btn-outline">
-          Schließen
+          Schliessen
         </button>
       </div>
     </div>

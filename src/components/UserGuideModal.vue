@@ -427,7 +427,7 @@
             </svg>
             <span>
               <strong>Best Practice:</strong> Erstellen Sie für jeden Mandanten/Projekt einen eigenen Case.
-              Exportieren Sie wichtige Cases regelmäßig als Backup!
+              Exportieren Sie wichtige Cases regelmässig als Backup!
             </span>
           </div>
         </div>
@@ -654,7 +654,7 @@ Orientiere dich an diesem Beispiel:
 
           <h3>Restricted Mode</h3>
           <p>
-            Der <strong>Restricted Mode</strong> ist standardmäßig aktiviert und verhindert das versehentliche
+            Der <strong>Restricted Mode</strong> ist standardmässig aktiviert und verhindert das versehentliche
             Kopieren nicht vollständig geprüfter Texte.
           </p>
 
@@ -664,7 +664,7 @@ Orientiere dich an diesem Beispiel:
             <li>Wählen Sie <strong>"Einstellungen konfigurieren"</strong></li>
             <li>Geben Sie das <strong>Master-Passwort</strong> ein</li>
             <li>Der Restricted Mode wird für die aktuelle Sitzung deaktiviert</li>
-            <li>Nach dem Schließen des Browsers wird er automatisch wieder aktiviert</li>
+            <li>Nach dem Schliessen des Browsers wird er automatisch wieder aktiviert</li>
           </ol>
 
           <div class="alert alert-warning mt-4">
@@ -724,8 +724,8 @@ Orientiere dich an diesem Beispiel:
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <span>
-              <strong>Datenschutz:</strong> Alle Einstellungen und Daten werden ausschließlich lokal im Browser gespeichert.
-              Es erfolgt keine Übertragung an externe Server (außer bei Nutzung der KI-Inferenz mit Ihrem API-Schlüssel).
+              <strong>Datenschutz:</strong> Alle Einstellungen und Daten werden ausschliesslich lokal im Browser gespeichert.
+              Es erfolgt keine Übertragung an externe Server (ausser bei Nutzung der KI-Inferenz mit Ihrem API-Schlüssel).
             </span>
           </div>
         </div>
@@ -777,7 +777,7 @@ Orientiere dich an diesem Beispiel:
             <div class="card bg-base-200">
               <div class="card-body py-3">
                 <h4 class="font-semibold text-sm">Backups erstellen</h4>
-                <p class="text-xs">Exportieren Sie wichtige Cases. Speichern Sie Backups außerhalb des Browsers. Testen Sie Wiederherstellung.</p>
+                <p class="text-xs">Exportieren Sie wichtige Cases. Speichern Sie Backups ausserhalb des Browsers. Testen Sie Wiederherstellung.</p>
               </div>
             </div>
 
@@ -800,7 +800,7 @@ Orientiere dich an diesem Beispiel:
 
             <div class="card bg-base-200">
               <div class="card-body py-3">
-                <h4 class="font-semibold text-sm">Große Texte</h4>
+                <h4 class="font-semibold text-sm">Grosse Texte</h4>
                 <p class="text-xs">Teilen Sie sehr lange Texte (>100.000 Zeichen) auf. Nutzen Sie Case Management für Struktur. Vermeiden Sie unnötige Neuberechnungen.</p>
               </div>
             </div>
@@ -842,7 +842,7 @@ Orientiere dich an diesem Beispiel:
                 Werden meine Daten auf einen Server hochgeladen?
               </div>
               <div class="collapse-content">
-                <p><strong>Nein.</strong> Alle Daten werden ausschließlich lokal im Browser verarbeitet. <strong>Ausnahme:</strong> Wenn Sie die Google Gemini API für Quick Infer verwenden, werden Prompts und ausgewählter Kontext an Google gesendet.</p>
+                <p><strong>Nein.</strong> Alle Daten werden ausschliesslich lokal im Browser verarbeitet. <strong>Ausnahme:</strong> Wenn Sie die Google Gemini API für Quick Infer verwenden, werden Prompts und ausgewählter Kontext an Google gesendet.</p>
               </div>
             </div>
 
@@ -947,7 +947,7 @@ Orientiere dich an diesem Beispiel:
 
       <!-- Footer with Close Button -->
       <div class="modal-action">
-        <button @click="$emit('close')" class="btn btn-primary">Schließen</button>
+        <button @click="$emit('close')" class="btn btn-primary">Schliessen</button>
       </div>
     </div>
   </div>

@@ -12,7 +12,7 @@
 
 ## Einführung
 
-Diese Webanwendung ermöglicht die **lokale, KI-gestützte Anonymisierung** und **De-Anonymisierung** von sensiblen Texten. Alle Daten werden ausschließlich im Browser verarbeitet - es erfolgt **keine Übertragung an externe Server** (außer bei optionaler Nutzung der Google Gemini API).
+Diese Webanwendung ermöglicht die **lokale, KI-gestützte Anonymisierung** und **De-Anonymisierung** von sensiblen Texten. Alle Daten werden ausschliesslich im Browser verarbeitet - es erfolgt **keine Übertragung an externe Server** (ausser bei optionaler Nutzung der Google Gemini API).
 
 ### Unterstützte Entitätstypen
 - 👤 **PERSON** - Namen von Personen
@@ -28,7 +28,7 @@ Diese Webanwendung ermöglicht die **lokale, KI-gestützte Anonymisierung** und 
 
 ## Funktionen im Restricted Mode
 
-Der **Restricted Mode** ist standardmäßig **aktiviert** und dient dem Schutz vor versehentlichem Kopieren nicht vollständig geprüfter Texte. Er stellt sicher, dass Benutzer anonymisierte Texte vollständig durchgesehen haben, bevor sie diese verwenden können.
+Der **Restricted Mode** ist standardmässig **aktiviert** und dient dem Schutz vor versehentlichem Kopieren nicht vollständig geprüfter Texte. Er stellt sicher, dass Benutzer anonymisierte Texte vollständig durchgesehen haben, bevor sie diese verwenden können.
 
 ### 🔒 Was ist im Restricted Mode eingeschränkt?
 
@@ -51,7 +51,7 @@ Um den Restricted Mode zu entsperren:
 2. Wählen Sie **"Einstellungen konfigurieren"**
 3. Geben Sie das **Master-Passwort** ein
 4. Der Restricted Mode wird für die aktuelle Sitzung deaktiviert
-5. Nach dem Schließen des Browsers wird der Restricted Mode automatisch wieder aktiviert
+5. Nach dem Schliessen des Browsers wird der Restricted Mode automatisch wieder aktiviert
 
 **Hinweis:** Wenn das Master-Passwort geändert wird, werden alle aktiven Sitzungen automatisch auf Restricted Mode zurückgesetzt.
 
@@ -271,7 +271,7 @@ Bevor Sie die Inferenz starten, können Sie den **vollständigen Prompt** einseh
 4. Klicken Sie auf **"Preview Full Prompt"**
 5. Ein Modal zeigt den **kompletten Prompt** inklusive aller eingefügten Textbausteine und Kontext
 6. Sie können den Prompt **in die Zwischenablage kopieren** ("Copy Full Prompt")
-7. Schließen Sie die Vorschau oder starten Sie die Inferenz direkt
+7. ssen Sie die Vorschau oder starten Sie die Inferenz direkt
 
 ---
 
@@ -288,7 +288,7 @@ Die Prompt Library ermöglicht die Verwaltung von **wiederverwendbaren KI-Prompt
 
 1. Klicken Sie auf **"Neuer Prompt"** oben im Modal
 2. Geben Sie einen **Namen** ein (z.B. "Vertrags-Zusammenfassung")
-3. Geben Sie den **Prompt-Text** in das große Textfeld ein
+3. Geben Sie den **Prompt-Text** in das grosse Textfeld ein
 4. **Optional**: Fügen Sie **Textbausteine** ein:
    - Klicken Sie auf den Button **"Textbaustein einfügen"** (über dem Textfeld)
    - Wählen Sie einen Textbaustein aus der Dropdown-Liste
@@ -521,7 +521,7 @@ Für **spezielle Muster** (z.B. Telefonnummern, Kundennummern), die die KI nicht
 - **Microsoft Word-Dokumente**
 - Text wird extrahiert
 - Formatierung wird entfernt
-- Tabellen werden als Fließtext dargestellt
+- Tabellen werden als Fliesstext dargestellt
 
 **Tipp:** Für beste Ergebnisse kopieren Sie Text manuell aus Ihrem Dokument, statt Dateien hochzuladen.
 
@@ -633,7 +633,7 @@ Für **spezielle Muster** (z.B. Telefonnummern, Kundennummern), die die KI nicht
    - Stabile Internetverbindung erforderlich
    - Nur einmal nötig
 
-2. **Große Texte**
+2. **Grosse Texte**
    - Teilen Sie sehr lange Texte (>100.000 Zeichen) auf
    - Nutzen Sie Case Management für Struktur
    - Vermeiden Sie unnötige Neuberechnungen
@@ -652,12 +652,12 @@ Für **spezielle Muster** (z.B. Telefonnummern, Kundennummern), die die KI nicht
 
 2. **Master-Passwort schützen**
    - Teilen Sie das Passwort nicht
-   - Ändern Sie es regelmäßig
+   - Ändern Sie es regelmässig
    - Verwenden Sie ein starkes Passwort
 
 3. **Backups erstellen**
    - Exportieren Sie wichtige Cases
-   - Speichern Sie Backups außerhalb des Browsers
+   - Speichern Sie Backups ausserhalb des Browsers
    - Testen Sie Wiederherstellung
 
 4. **API-Schlüssel sichern**
@@ -683,7 +683,7 @@ Für **spezielle Muster** (z.B. Telefonnummern, Kundennummern), die die KI nicht
 
 ### ❓ Werden meine Daten auf einen Server hochgeladen?
 
-**Nein.** Alle Daten werden ausschließlich lokal im Browser verarbeitet. Ausnahme: Wenn Sie die Google Gemini API für Quick Infer verwenden, werden Prompts und ausgewählter Kontext an Google gesendet.
+**Nein.** Alle Daten werden ausschliesslich lokal im Browser verarbeitet. Ausnahme: Wenn Sie die Google Gemini API für Quick Infer verwenden, werden Prompts und ausgewählter Kontext an Google gesendet.
 
 ### ❓ Kann ich die Anwendung offline nutzen?
 
@@ -732,7 +732,7 @@ Die KI-Erkennung funktioniert am besten mit **deutschen und englischen** Texten.
 | **Ctrl + C** | Nach Klick auf "Kopieren"-Button |
 | **Ctrl + A** | Gesamten Text im Eingabe-/Ausgabefeld markieren |
 | **Tab** | Zwischen Eingabe- und Ausgabefeld wechseln |
-| **Esc** | Modals schließen |
+| **Esc** | Modals schliessen |
 
 ---
 
@@ -785,4 +785,4 @@ Die KI-Erkennung funktioniert am besten mit **deutschen und englischen** Texten.
 
 ---
 
-*Diese Anleitung wird regelmäßig aktualisiert. Letzte Aktualisierung: 14.11.2024*
+*Diese Anleitung wird regelmässig aktualisiert. Letzte Aktualisierung: 14.11.2024*

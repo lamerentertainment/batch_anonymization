@@ -678,7 +678,7 @@
                 <!-- Modal Footer -->
                 <div class="px-6 py-4 border-t border-base-300 flex justify-end gap-2">
                     <button @click="closeTestModal" class="btn btn-ghost">
-                        Schließen
+                        Schliessen
                     </button>
                 </div>
             </div>

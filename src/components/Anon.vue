@@ -237,7 +237,7 @@
                             <button
                                 @click="closeActiveCase"
                                 class="btn btn-xs btn-ghost btn-square text-error"
-                                title="Fall schließen"
+                                title="Fall schliessen"
                             >
                                 <XMarkIcon class="h-4 w-4" />
                             </button>
@@ -429,7 +429,7 @@
 
                                     <div class="divider my-2"></div>
 
-                                    <button @click="showHistoryDropdown = false" class="btn btn-xs btn-ghost w-full">Schließen</button>
+                                    <button @click="showHistoryDropdown = false" class="btn btn-xs btn-ghost w-full">Schliessen</button>
                                 </div>
                             </div>
 
@@ -3191,7 +3191,7 @@ export default {
             if (!this.activeCase) return;
 
             // Optional: Confirm if user wants to close the case
-            if (confirm(`Fall "${this.activeCase.name}" schließen?`)) {
+            if (confirm(`Fall "${this.activeCase.name}" schliessen?`)) {
                 this.activeCase = null;
                 this.autoSyncCase = false; // Reset auto-sync when closing case
                 this.showToast('Fall geschlossen');

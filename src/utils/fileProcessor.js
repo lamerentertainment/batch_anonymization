@@ -66,7 +66,7 @@ export function validateFile(file) {
     if (file.size > MAX_FILE_SIZE) {
         return {
             valid: false,
-            error: `Datei zu groß. Maximale Größe: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+            error: `Datei zu gross. Maximale Grösse: ${MAX_FILE_SIZE / 1024 / 1024}MB`
         };
     }
 
