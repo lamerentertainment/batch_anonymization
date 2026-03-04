@@ -5,6 +5,7 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
+import TurndownService from 'turndown';
 
 // Initialize PDF.js worker
 const initPdfWorker = () => {
@@ -53,7 +54,7 @@ export function validateFile(file) {
 
     const extension = '.' + file.name.split('.').pop().toLowerCase();
     const isValidType = SUPPORTED_MIME_TYPES.includes(file.type) ||
-                        SUPPORTED_EXTENSIONS.includes(extension);
+        SUPPORTED_EXTENSIONS.includes(extension);
 
     if (!isValidType) {
         return {
@@ -111,8 +112,19 @@ async function extractTextFromPdf(file) {
  * @param {File} file - DOCX file
  * @returns {Promise<string>}
  */
-async function extractTextFromDocx(file) {
+async function extractTextFromDocx(file, options = {}) {
     const arrayBuffer = await file.arrayBuffer();
+
+    if (options.convertWordToMarkdown) {
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        const htmlContent = result.value;
+        const turndownService = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced'
+        });
+        return turndownService.turndown(htmlContent);
+    }
+
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
 }
@@ -122,7 +134,7 @@ async function extractTextFromDocx(file) {
  * @param {File} file - File to process
  * @returns {Promise<{ success: boolean, text?: string, error?: string }>}
  */
-export async function processFile(file) {
+export async function processFile(file, options = {}) {
     const validation = validateFile(file);
     if (!validation.valid) {
         return { success: false, error: validation.error };
@@ -137,8 +149,8 @@ export async function processFile(file) {
         } else if (file.type === 'application/pdf' || extension === '.pdf') {
             extractedText = await extractTextFromPdf(file);
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                   extension === '.docx' || extension === '.doc') {
-            extractedText = await extractTextFromDocx(file);
+            extension === '.docx' || extension === '.doc') {
+            extractedText = await extractTextFromDocx(file, options);
         }
 
         if (!extractedText || extractedText.trim().length === 0) {

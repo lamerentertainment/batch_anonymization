@@ -337,7 +337,28 @@
                     </div>
                 </div>
 
-
+                <!-- Group 4: File Options -->
+                <div class="px-4 pb-1 pt-2 flex items-center gap-2">
+                    <DocumentIcon class="w-4 h-4" />
+                    <h3 class="font-bold text-sm">Datei-Optionen</h3>
+                </div>
+                <div class="px-4 pb-4">
+                     <div class="border border-base-300 rounded-lg p-3 space-y-2">
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-2 p-0">
+                                <input
+                                    type="checkbox"
+                                    v-model="convertWordToMarkdown"
+                                    class="checkbox checkbox-sm checkbox-primary"
+                                >
+                                <span class="label-text text-sm font-semibold">Word-Dateien (.docx) in Markdown konvertieren</span>
+                            </label>
+                            <p class="text-xs text-base-content/50 ml-6 mt-1">
+                                Wenn aktiviert, wird die Word-Formatierung (Fett, Kursiv, Listen, Überschriften) beibehalten und in Markdown umgewandelt. Wenn deaktiviert, wird nur der unformatierte Text extrahiert.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 </div>
 
@@ -765,6 +786,7 @@ export default {
             },
 
             // Anonymization options
+            convertWordToMarkdown: true
 
         };
     },
@@ -1263,8 +1285,10 @@ export default {
             // Initialize output file entries
             this.inputFiles.forEach(file => {
                 const baseName = getFileNameWithoutExtension(file.relativePath || file.name);
+                const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
                 // Preserve folder structure in output name
-                const outputName = baseName + '.txt';
+                const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
+                const outputName = baseName + ext;
                 this.outputFiles.push({
                     inputFile: file,
                     outputName: outputName,
@@ -1283,7 +1307,7 @@ export default {
 
                 try {
                     // Extract text from file
-                    const result = await processFile(outputFile.inputFile);
+                    const result = await processFile(outputFile.inputFile, { convertWordToMarkdown: this.convertWordToMarkdown });
                     if (!result.success) {
                         throw new Error(result.error);
                     }
@@ -1359,7 +1383,7 @@ export default {
 
             try {
                 // Extract text from file
-                const result = await processFile(file);
+                const result = await processFile(file, { convertWordToMarkdown: this.convertWordToMarkdown });
                 if (!result.success) {
                     throw new Error(result.error);
                 }
@@ -1448,7 +1472,9 @@ export default {
 
             const originalName = this.testPreviewFile?.name || 'text';
             const baseName = getFileNameWithoutExtension(originalName);
-            const fileName = `${baseName}_preview_anonymized.txt`;
+            const isDocx = originalName.toLowerCase().endsWith('.docx') || originalName.toLowerCase().endsWith('.doc');
+            const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
+            const fileName = `${baseName}_preview_anonymized${ext}`;
 
             const blob = new Blob([this.testPreviewResult.anonymizedText], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);

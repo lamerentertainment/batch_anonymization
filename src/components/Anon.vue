@@ -785,6 +785,24 @@
                     </div>
                 </div>
                 
+                <!-- Group 4: File Options -->
+                <div class="mt-6 border-t pt-4">
+                    <h4 class="text-md font-semibold text-base-content mb-3">Datei-Optionen</h4>
+                    <div class="bg-base-200 rounded p-3">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                v-model="convertWordToMarkdown"
+                                class="checkbox checkbox-sm checkbox-primary"
+                            >
+                            <span class="text-sm font-semibold">Word-Dateien (.docx) in Markdown konvertieren</span>
+                        </label>
+                        <p class="text-xs text-base-content/50 ml-7 mt-1">
+                            Wenn aktiviert, wird die Word-Formatierung (Fett, Kursiv, Listen, Überschriften) beibehalten und in Markdown umgewandelt. Wenn deaktiviert, wird nur der unformatierte Text extrahiert.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Model Cache Management Section -->
                 <div class="mt-6 border-t pt-4">
                     <h4 class="text-md font-semibold text-base-content mb-3">Model Cache Management</h4>
@@ -1082,6 +1100,7 @@
 import { Gliner } from 'gliner';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
+import TurndownService from 'turndown';
 import modelCache from '../utils/modelCache.js';
 import { savePreset as saveEntityPreset, loadPreset as loadEntityPreset, listPresets as listEntityPresets, deletePreset as deleteEntityPreset } from '../utils/entityPresets.js';
 import PromptLibraryModal from './PromptLibraryModal.vue';
@@ -1134,6 +1153,7 @@ export default {
     },
     data() {
         return { 
+            convertWordToMarkdown: true,
             loading: false,
             downloading: false,
             downloadProgress: 0,
@@ -2642,6 +2662,17 @@ export default {
         },
         async extractTextFromDocx(file) {
             const arrayBuffer = await file.arrayBuffer();
+            
+            if (this.convertWordToMarkdown) {
+                const result = await mammoth.convertToHtml({ arrayBuffer });
+                const htmlContent = result.value;
+                const turndownService = new TurndownService({
+                    headingStyle: 'atx',
+                    codeBlockStyle: 'fenced'
+                });
+                return turndownService.turndown(htmlContent);
+            }
+            
             const result = await mammoth.extractRawText({ arrayBuffer });
             return result.value;
         },
