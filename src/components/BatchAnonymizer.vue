@@ -832,10 +832,18 @@
                                 <table class="table table-xs w-full table-pin-rows">
                                     <thead>
                                         <tr class="bg-base-200">
-                                            <th>Original</th>
-                                            <th>Typ</th>
-                                            <th>Platzhalter</th>
-                                            <th>Status</th>
+                                            <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('name')">
+                                                Original <span v-if="entitySortColumn === 'name'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('type')">
+                                                Typ <span v-if="entitySortColumn === 'type'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('placeholder')">
+                                                Platzhalter <span v-if="entitySortColumn === 'placeholder'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
+                                            <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('status')">
+                                                Status <span v-if="entitySortColumn === 'status'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                            </th>
                                             <th class="text-center">Aktion</th>
                                         </tr>
                                     </thead>
@@ -1033,7 +1041,11 @@ export default {
                 selectedText: '',
                 step: 1,
                 selectedCategory: ''
-            }
+            },
+            
+            // Entity table sorting
+            entitySortColumn: 'name',
+            entitySortDirection: 'asc'
 
         };
     },
@@ -1223,9 +1235,30 @@ export default {
         },
         sortedEntities() {
             if (!this.testPreviewResult || !this.testPreviewResult.entities) return [];
-            return [...this.testPreviewResult.entities].sort((a, b) =>
-                a.name.localeCompare(b.name)
-            );
+            return [...this.testPreviewResult.entities].sort((a, b) => {
+                let valA, valB;
+                
+                if (this.entitySortColumn === 'name') {
+                    valA = a.name.toLowerCase();
+                    valB = b.name.toLowerCase();
+                } else if (this.entitySortColumn === 'type') {
+                    valA = a.type.toLowerCase();
+                    valB = b.type.toLowerCase();
+                } else if (this.entitySortColumn === 'placeholder') {
+                    valA = this.getActualPlaceholder(a).toLowerCase();
+                    valB = this.getActualPlaceholder(b).toLowerCase();
+                } else if (this.entitySortColumn === 'status') {
+                    valA = this.getEntityStatus(a).label.toLowerCase();
+                    valB = this.getEntityStatus(b).label.toLowerCase();
+                } else {
+                    valA = a.name.toLowerCase();
+                    valB = b.name.toLowerCase();
+                }
+
+                if (valA < valB) return this.entitySortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return this.entitySortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
         }
     },
     mounted() {
@@ -1249,6 +1282,14 @@ export default {
         window.removeEventListener('mousemove', this.handleMouseMove);
     },
     methods: {
+        sortBy(column) {
+            if (this.entitySortColumn === column) {
+                this.entitySortDirection = this.entitySortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.entitySortColumn = column;
+                this.entitySortDirection = 'asc';
+            }
+        },
         truncateHtml(html, maxLength) {
             if (!html) return '';
             const div = document.createElement('div');
