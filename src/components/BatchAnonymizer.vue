@@ -502,7 +502,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             @click.self="closeTestModal"
         >
-            <div class="bg-base-100 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="bg-base-100 rounded-lg shadow-xl max-w-[95vw] w-full mx-4 max-h-[95vh] flex flex-col">
                 <!-- Modal Header -->
                 <div class="px-6 py-4 border-b border-base-300 flex items-center justify-between">
                     <div>
@@ -591,7 +591,7 @@
                         <div
                             ref="previewContainer"
                             class="p-4 border border-base-300 rounded-lg bg-base-200/50
-                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto cursor-text [&_p]:mb-4 [&_h1]:mb-4 [&_h2]:mb-4 [&_h3]:mb-4 [&_ul]:mb-4 [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:mb-4 [&_ol]:ml-4 [&_ol]:list-decimal"
+                                   whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-[65vh] overflow-y-auto cursor-text [&_p]:mb-4 [&_h1]:mb-4 [&_h2]:mb-4 [&_h3]:mb-4 [&_ul]:mb-4 [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:mb-4 [&_ol]:ml-4 [&_ol]:list-decimal"
                             v-html="highlightedAnonymizedText"
                             @mouseover="handleTextMouseOver"
                             @mouseout="handleTextMouseOut"
