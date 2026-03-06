@@ -2006,6 +2006,7 @@ export default {
             const words = entityName.toLowerCase().split(/[\s,;-]+/).filter(w => w.length > 0);
             const nameLower = entityName.toLowerCase();
             const nameCanonical = this.getCanonicalNameForUI(entityName);
+            const exclusionList = this.parseExclusionList().map(excl => excl.toLowerCase());
             
             let targets = new Set();
             this.testPreviewResult.entities.forEach(e => {
@@ -2017,7 +2018,13 @@ export default {
                     const targetCanonical = this.getCanonicalNameForUI(targetName);
                     // Prevent circular mapping and don't list entities already merged together
                     if (nameCanonical !== targetCanonical) {
-                        targets.add(targetName);
+                        // Check if the entity is fully in the negative list (and not manual)
+                        const targetWords = targetName.split(/[\s,;-]+/).filter(w => w.length > 0);
+                        const isFullyExcluded = e.type !== 'manual' && targetWords.length > 0 && targetWords.every(w => exclusionList.includes(w.toLowerCase()));
+                        
+                        if (!isFullyExcluded) {
+                            targets.add(targetName);
+                        }
                     }
                 }
             });
