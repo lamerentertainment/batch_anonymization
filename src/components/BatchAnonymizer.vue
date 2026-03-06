@@ -531,9 +531,9 @@
                 </div>
 
                 <!-- Modal Body -->
-                <div class="px-6 py-4 overflow-y-auto flex-1">
+                <div ref="modalBody" class="px-6 py-4 overflow-y-auto flex-1">
                     <!-- Loading State -->
-                    <div v-if="testPreviewLoading" class="flex items-center justify-center py-12">
+                    <div v-if="testPreviewLoading && !testPreviewAdjusting" class="flex items-center justify-center py-12">
                         <span class="loading loading-spinner loading-lg text-primary"></span>
                         <span class="ml-3 text-base-content/60">Anonymisiere Text...</span>
                     </div>
@@ -589,6 +589,7 @@
 
                         <!-- Anonymized Text with Highlighting -->
                         <div
+                            ref="previewContainer"
                             class="p-4 border border-base-300 rounded-lg bg-base-200/50
                                    whitespace-pre-wrap font-mono text-sm leading-relaxed max-h-96 overflow-y-auto cursor-text [&_p]:mb-4 [&_h1]:mb-4 [&_h2]:mb-4 [&_h3]:mb-4 [&_ul]:mb-4 [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:mb-4 [&_ol]:ml-4 [&_ol]:list-decimal"
                             v-html="highlightedAnonymizedText"
@@ -708,14 +709,40 @@
                             v-if="selectionMenu.visible"
                             class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
                             :style="{ top: selectionMenu.y + 'px', left: selectionMenu.x + 'px', transform: 'translate(-50%, -120%)' }"
+                            @mousedown.stop
                         >
                             <button
-                                @click="addManualEntity"
+                                v-if="selectionMenu.step === 1"
+                                @click="selectionMenu.step = 2"
                                 class="btn btn-primary btn-xs normal-case gap-1"
                             >
                                 <TagIcon class="w-3 h-3" />
                                 Markierte Stelle anonymisieren?
                             </button>
+                            <div v-else class="flex flex-col gap-1 p-2 min-w-[200px]">
+                                <span class="text-xs font-bold text-base-content/70">Kategorie auswählen:</span>
+                                <select v-model="selectionMenu.selectedCategory" class="select select-bordered select-xs w-full">
+                                    <option value="" disabled selected>Bitte wählen...</option>
+                                    <option v-for="label in availableLabels" :key="label" :value="label">
+                                        {{ formatLabel(label) }}
+                                    </option>
+                                </select>
+                                <div class="flex justify-end gap-1 mt-1">
+                                    <button
+                                        @click="cancelManualEntityAdding"
+                                        class="btn btn-ghost btn-xs"
+                                    >
+                                        Abbrechen
+                                    </button>
+                                    <button
+                                        @click="addManualEntity"
+                                        class="btn btn-primary btn-xs"
+                                        :disabled="!selectionMenu.selectedCategory"
+                                    >
+                                        Speichern
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Anonymized Words List - Click to exclude -->
@@ -783,7 +810,7 @@
                                             </td>
                                             <td class="text-center">
                                                 <button
-                                                    v-if="entity.type !== 'manual'"
+                                                    v-if="!entity.isManual"
                                                     @click="toggleSessionRemovedEntity(entity.name)"
                                                     class="btn btn-ghost btn-xs btn-square"
                                                     :class="sessionRemovedEntities.includes(entity.name) ? 'text-success' : 'text-error'"
@@ -945,12 +972,14 @@ export default {
             courtEntityMappings: {},
             
             // Manual selection / Hover menu
-            manualEntities: [], // List of strings manually marked for anonymization
+            manualEntities: [], // List of objects { word: '', category: '' } manually marked for anonymization
             selectionMenu: {
                 visible: false,
                 x: 0,
                 y: 0,
-                selectedText: ''
+                selectedText: '',
+                step: 1,
+                selectedCategory: ''
             }
 
         };
@@ -1584,18 +1613,20 @@ export default {
             }
 
             // Add manual entities
-            this.manualEntities.forEach(manualName => {
-                const cleanManualName = manualName.trim();
+            this.manualEntities.forEach(manualEntity => {
+                const cleanManualName = manualEntity.word.trim();
                 const existingEntity = entities.find(e => e.name.toLowerCase() === cleanManualName.toLowerCase());
                 
                 if (existingEntity) {
-                    // Force type to manual if it was found by GLiNER but manually marked too
-                    existingEntity.type = 'manual';
+                    // Force type to selected category if it was found by GLiNER but manually marked too
+                    existingEntity.type = manualEntity.category;
+                    existingEntity.isManual = true;
                 } else {
                     entities.push({
                         id: entities.length + 1,
                         name: cleanManualName,
-                        type: 'manual'
+                        type: manualEntity.category,
+                        isManual: true
                     });
                 }
             });
@@ -1773,6 +1804,14 @@ export default {
             this.testPreviewLoading = true;
             this.testPreviewError = null;
             
+            // Save scroll position before we start if we're adjusting
+            let savedPreviewScroll = 0;
+            let savedModalScroll = 0;
+            if (this.testPreviewAdjusting) {
+                if (this.$refs.previewContainer) savedPreviewScroll = this.$refs.previewContainer.scrollTop;
+                if (this.$refs.modalBody) savedModalScroll = this.$refs.modalBody.scrollTop;
+            }
+
             // Only clear result if we're not just adjusting the current one
             if (!this.testPreviewAdjusting) {
                 this.testPreviewResult = null;
@@ -1842,6 +1881,18 @@ export default {
                     excludedEntitiesCount: excludedEntitiesCount,
                     skippedShortEntitiesCount: skippedShortEntitiesCount
                 };
+
+                // Restore scroll position
+                if (this.testPreviewAdjusting) {
+                    this.$nextTick(() => {
+                        if (this.$refs.previewContainer) {
+                            this.$refs.previewContainer.scrollTop = savedPreviewScroll;
+                        }
+                        if (this.$refs.modalBody) {
+                            this.$refs.modalBody.scrollTop = savedModalScroll;
+                        }
+                    });
+                }
 
             } catch (error) {
                 console.error('Test anonymization error:', error);
@@ -2076,6 +2127,8 @@ export default {
                     this.selectionMenu.x = event.clientX;
                     this.selectionMenu.y = event.clientY;
                     this.selectionMenu.selectedText = selectedText;
+                    this.selectionMenu.step = 1;
+                    this.selectionMenu.selectedCategory = '';
                     this.selectionMenu.visible = true;
                 }
             } else {
@@ -2084,11 +2137,15 @@ export default {
         },
         addManualEntity() {
             const word = this.selectionMenu.selectedText;
-            if (!word || word.trim() === '') return;
+            const category = this.selectionMenu.selectedCategory;
+            if (!word || word.trim() === '' || !category) return;
 
             const cleanWord = word.trim();
-            if (!this.manualEntities.includes(cleanWord)) {
-                this.manualEntities.push(cleanWord);
+            if (!this.manualEntities.some(e => e.word === cleanWord)) {
+                this.manualEntities.push({ word: cleanWord, category: category });
+            } else {
+                const existing = this.manualEntities.find(e => e.word === cleanWord);
+                if (existing) existing.category = category;
             }
 
             this.selectionMenu.visible = false;
@@ -2102,8 +2159,14 @@ export default {
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
         },
+        cancelManualEntityAdding() {
+            this.selectionMenu.visible = false;
+            this.selectionMenu.step = 1;
+            this.selectionMenu.selectedCategory = '';
+            window.getSelection().removeAllRanges();
+        },
         removeManualEntity(name) {
-            this.manualEntities = this.manualEntities.filter(n => n !== name);
+            this.manualEntities = this.manualEntities.filter(n => n.word !== name);
             
             // Re-run preview test
             if (this.showTestModal && this.testPreviewResult) {
