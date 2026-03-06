@@ -854,12 +854,7 @@
                                                 </select>
                                             </td>
                                             <td class="font-mono text-xs text-base-content/70 select-all">
-                                                <template v-if="courtStyle && (entity.type.toLowerCase() === 'person' || entity.type.toLowerCase() === 'organization')">
-                                                    {{ entity.courtId || '...' }}
-                                                </template>
-                                                <template v-else>
-                                                    [{{ entity.id }}_{{ entity.type.toLowerCase() }}]
-                                                </template>
+                                                {{ getActualPlaceholder(entity) }}
                                             </td>
                                             <td>
                                                 <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">
@@ -1405,6 +1400,33 @@ export default {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
+        },
+        getActualPlaceholder(entity) {
+            if (!this.courtStyle) {
+                return `[${entity.id}_${entity.type.toLowerCase()}]`;
+            }
+            
+            const type = entity.type ? entity.type.toLowerCase() : '';
+            if (type === 'person' || type === 'organization' || type === 'organisation') {
+                const courtId = entity.courtId || '________';
+                let suffixStr = '';
+                if ((type === 'organization' || type === 'organisation') && entity.name) {
+                    const words = entity.name.split(/[\s,;-]+/).filter(w => w && w.trim().length > 0);
+                    const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
+                    const lastWord = words[words.length - 1];
+                    if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
+                        const isExcluded = this.parseExclusionList().map(w => w.toLowerCase()).includes(lastWord.toLowerCase());
+                        // Using entity.isManual to match anonymizer.js check
+                        if (!entity.isManual && isExcluded) {
+                            suffixStr = '';
+                        } else {
+                            suffixStr = ' ' + lastWord;
+                        }
+                    }
+                }
+                return courtId + suffixStr;
+            }
+            return '________';
         },
         addToExclusionList(word) {
             if (!word || typeof word !== 'string' || word.trim() === '') return;

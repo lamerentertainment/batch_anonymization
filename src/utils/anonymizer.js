@@ -346,7 +346,7 @@ class AnonymizerService {
             entities.forEach(entity => {
                 if (entity.courtId) {
                     const type = entity.type ? entity.type.toLowerCase() : '';
-                    if (type === 'person' || type === 'organization') {
+                    if (type === 'person' || type === 'organization' || type === 'organisation') {
                         const canonical = getCanonicalName(entity.name);
                         // Track the courtId of the canonical entity, or use the first available one
                         if (entity.name === canonical || !canonicalCourtIds[canonical]) {
@@ -359,7 +359,7 @@ class AnonymizerService {
             // Second pass: assign court IDs ensuring mapped entities share the same ID
             entities.forEach(entity => {
                 const type = entity.type ? entity.type.toLowerCase() : '';
-                if (type === 'person' || type === 'organization') {
+                if (type === 'person' || type === 'organization' || type === 'organisation') {
                     const canonical = getCanonicalName(entity.name);
 
                     if (canonicalCourtIds[canonical]) {
@@ -381,7 +381,7 @@ class AnonymizerService {
 
             // Skip entire entity only if the FULL name matches an excluded term
             // Manual entities bypass the exclusion list
-            if (entity.type !== 'manual' && isExcluded(entity.name)) {
+            if (!entity.isManual && isExcluded(entity.name)) {
                 return;
             }
 
@@ -389,14 +389,14 @@ class AnonymizerService {
                 let courtReplacement = "________";
                 const type = entity.type ? entity.type.toLowerCase() : '';
 
-                if (type === 'person' || type === 'organization') {
+                if (type === 'person' || type === 'organization' || type === 'organisation') {
                     const courtId = entity.courtId || "________";
                     let suffixStr = '';
-                    if (type === 'organization') {
+                    if (type === 'organization' || type === 'organisation') {
                         const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
                         const lastWord = words[words.length - 1];
                         if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
-                            if (entity.type !== 'manual' && isExcluded(lastWord)) {
+                            if (!entity.isManual && isExcluded(lastWord)) {
                                 // Excluded, will be dynamically kept as a separate word, so no suffix needed here
                                 suffixStr = '';
                             } else {
@@ -421,7 +421,7 @@ class AnonymizerService {
 
                         for (let i = 0; i < words.length; i++) {
                             const w = words[i];
-                            if (entity.type !== 'manual' && isExcluded(w)) {
+                            if (!entity.isManual && isExcluded(w)) {
                                 outputs.push(w);
                             } else {
                                 if (!courtReplaced) {
@@ -442,7 +442,7 @@ class AnonymizerService {
                         return result;
                     });
                 } else {
-                    if (entity.type !== 'manual' && isExcluded(words[0])) {
+                    if (!entity.isManual && isExcluded(words[0])) {
                         return;
                     }
                     const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
@@ -463,7 +463,7 @@ class AnonymizerService {
                     for (let i = 0; i < words.length; i++) {
                         const w = words[i];
                         // Manual entities bypass the exclusion list
-                        if (entity.type !== 'manual' && isExcluded(w)) {
+                        if (!entity.isManual && isExcluded(w)) {
                             result += w;
                         } else {
                             result += `[${entity.id}_${entity.type}_${letters[i] || String(i + 1)}]`;
@@ -479,7 +479,7 @@ class AnonymizerService {
             } else if (words.length === 1) {
                 // Single word entity: Check exclusion and min length before replacing
                 // Manual entities bypass these checks
-                if (entity.type !== 'manual') {
+                if (!entity.isManual) {
                     if (isExcluded(words[0])) return;
                     if (minCharacterThreshold > 0 && words[0].length < minCharacterThreshold) {
                         return;
@@ -494,7 +494,7 @@ class AnonymizerService {
             if (anonymizePartialWords) {
                 words.forEach((w, idx) => {
                     // Manual entities bypass these checks
-                    if (entity.type !== 'manual') {
+                    if (!entity.isManual) {
                         // Check min length for partial words
                         if (minCharacterThreshold > 0 && w.length < minCharacterThreshold) {
                             return;
