@@ -395,7 +395,12 @@ class AnonymizerService {
                         const suffixes = ['AG', 'GmbH', 'SA', 'Genossenschaft', 'Kollektivgesellschaft', 'Kommanditgesellschaft', 'Verein', 'Stiftung', 'Inc', 'Corp', 'LLC', 'Ltd', 'SE'];
                         const lastWord = words[words.length - 1];
                         if (lastWord && suffixes.some(s => s.toLowerCase() === lastWord.toLowerCase())) {
-                            suffixStr = ' ' + lastWord;
+                            if (entity.type !== 'manual' && isExcluded(lastWord)) {
+                                // Excluded, will be dynamically kept as a separate word, so no suffix needed here
+                                suffixStr = '';
+                            } else {
+                                suffixStr = ' ' + lastWord;
+                            }
                         }
                     }
                     courtReplacement = courtId + suffixStr;
@@ -405,9 +410,43 @@ class AnonymizerService {
                     courtReplacement = `[${entity.id}_${entity.type}_court_${courtReplacement}]`;
                 }
 
-                const fullJoined = words.map(w => escapeRegex(w)).join('[\\s,;-]+');
-                const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
-                anonymized = anonymized.replace(fullPattern, courtReplacement);
+                if (words.length > 1) {
+                    const fullJoined = words.map(w => escapeRegex(w)).join('([\\s,;-]+)');
+                    const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+
+                    anonymized = anonymized.replace(fullPattern, (match, ...args) => {
+                        let courtReplaced = false;
+                        let outputs = [];
+
+                        for (let i = 0; i < words.length; i++) {
+                            const w = words[i];
+                            if (entity.type !== 'manual' && isExcluded(w)) {
+                                outputs.push(w);
+                            } else {
+                                if (!courtReplaced) {
+                                    outputs.push(courtReplacement);
+                                    courtReplaced = true;
+                                } else {
+                                    outputs.push("");
+                                }
+                            }
+                        }
+
+                        let result = outputs[0] || "";
+                        for (let i = 1; i < words.length; i++) {
+                            if (outputs[i] !== "") {
+                                result += args[i - 1] + outputs[i];
+                            }
+                        }
+                        return result;
+                    });
+                } else {
+                    if (entity.type !== 'manual' && isExcluded(words[0])) {
+                        return;
+                    }
+                    const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
+                    anonymized = anonymized.replace(singleWordPattern, courtReplacement);
+                }
 
                 return;
             }
