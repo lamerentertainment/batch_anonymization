@@ -514,19 +514,33 @@
                             </span>
                         </p>
                     </div>
-                    <div class="flex items-center gap-2">
-                         <button
-                            v-if="testPreviewResult"
-                            @click="downloadTestResult"
-                            class="btn btn-ghost btn-sm"
-                            title="Anonymisierten Text herunterladen"
-                        >
-                            <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
-                            Download
-                        </button>
-                        <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
-                            <XMarkIcon class="w-5 h-5" />
-                        </button>
+                    <div class="flex items-center gap-2 sm:gap-4">
+                        <label v-if="testPreviewResult" class="cursor-pointer flex items-center gap-2 border-r border-base-300 pr-2 sm:pr-4">
+                            <span class="text-xs font-semibold text-base-content/70 hidden sm:inline">gerichtsüblich</span>
+                            <span class="text-xs font-semibold text-base-content/70 sm:hidden">Gericht</span>
+                            <input
+                                type="checkbox"
+                                v-model="courtStyle"
+                                @change="handleCourtStyleChange"
+                                class="toggle toggle-sm toggle-primary"
+                                title="Gerichtsübliche Anonymisierung (A.________) aktivieren"
+                            >
+                        </label>
+                        <div class="flex items-center gap-2">
+                             <button
+                                v-if="testPreviewResult"
+                                @click="downloadTestResult"
+                                class="btn btn-ghost btn-sm"
+                                title="Anonymisierten Text herunterladen"
+                            >
+                                <ArrowDownTrayIcon class="w-5 h-5 mr-2 hidden sm:inline" />
+                                <span class="hidden sm:inline">Download</span>
+                                <ArrowDownTrayIcon class="w-5 h-5 sm:hidden" />
+                            </button>
+                            <button @click="closeTestModal" class="btn btn-ghost btn-sm btn-square">
+                                <XMarkIcon class="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -652,6 +666,24 @@
                                     </div>
                                 </div>
                                 <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
+
+                                <!-- Change Category -->
+                                <div class="form-control w-full my-1">
+                                    <label class="label p-0 pb-1">
+                                        <span class="label-text-alt text-base-content/70">Kategorie ändern:</span>
+                                    </label>
+                                    <select 
+                                        class="select select-bordered select-xs w-full text-base-content" 
+                                        :value="hoverTooltip.entityType"
+                                        @change="changeEntityCategory(hoverTooltip.entityName, $event.target.value)"
+                                    >
+                                        <option value="" disabled>Bitte wählen...</option>
+                                        <option v-for="label in availableLabels" :key="label" :value="label">
+                                            {{ formatLabel(label) }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="border-t border-gray-700 my-1"></div>
 
                                 <!-- Surgical Word Buttons -->
                                 <div class="flex flex-wrap gap-1">
@@ -794,7 +826,17 @@
                                     <tbody>
                                         <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
                                             <td class="font-medium max-w-[200px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
-                                            <td><span class="badge badge-ghost badge-outline badge-sm text-[10px]">{{ entity.type }}</span></td>
+                                            <td>
+                                                <select 
+                                                    class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[120px]" 
+                                                    :value="entity.type"
+                                                    @change="changeEntityCategory(entity.name, $event.target.value)"
+                                                >
+                                                    <option v-for="label in availableLabels" :key="label" :value="label">
+                                                        {{ formatLabel(label) }}
+                                                    </option>
+                                                </select>
+                                            </td>
                                             <td class="font-mono text-xs text-base-content/70 select-all">
                                                 <template v-if="courtStyle && (entity.type.toLowerCase() === 'person' || entity.type.toLowerCase() === 'organization')">
                                                     {{ entity.courtId || '...' }}
@@ -1380,6 +1422,14 @@ export default {
                     this.testAnonymization(this.testPreviewFile, this.isFullTest);
                 }
             });
+        },
+
+        handleCourtStyleChange() {
+            // Re-run preview test if currently in preview modal when court style changes
+            if (this.showTestModal && this.testPreviewResult) {
+                this.testPreviewAdjusting = true;
+                this.testAnonymization(this.testPreviewFile, this.isFullTest);
+            }
         },
 
         // Initialize model (ensure it's cached)
@@ -2140,7 +2190,17 @@ export default {
             const category = this.selectionMenu.selectedCategory;
             if (!word || word.trim() === '' || !category) return;
 
-            const cleanWord = word.trim();
+            this.changeEntityCategory(word, category);
+
+            this.selectionMenu.visible = false;
+            
+            // Clear selection
+            window.getSelection().removeAllRanges();
+        },
+        changeEntityCategory(name, category) {
+            if (!name || !category) return;
+
+            const cleanWord = name.trim();
             if (!this.manualEntities.some(e => e.word === cleanWord)) {
                 this.manualEntities.push({ word: cleanWord, category: category });
             } else {
@@ -2148,10 +2208,8 @@ export default {
                 if (existing) existing.category = category;
             }
 
-            this.selectionMenu.visible = false;
-            
-            // Clear selection
-            window.getSelection().removeAllRanges();
+            // Remove from sessionRemovedEntities if it was ignored, so the category change takes effect
+            this.sessionRemovedEntities = this.sessionRemovedEntities.filter(n => n.trim().toLowerCase() !== cleanWord.toLowerCase());
 
             // Re-run preview test
             if (this.showTestModal && this.testPreviewResult) {

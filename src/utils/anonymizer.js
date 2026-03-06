@@ -348,7 +348,10 @@ class AnonymizerService {
                     const type = entity.type ? entity.type.toLowerCase() : '';
                     if (type === 'person' || type === 'organization') {
                         const canonical = getCanonicalName(entity.name);
-                        canonicalCourtIds[canonical] = entity.courtId;
+                        // Track the courtId of the canonical entity, or use the first available one
+                        if (entity.name === canonical || !canonicalCourtIds[canonical]) {
+                            canonicalCourtIds[canonical] = entity.courtId;
+                        }
                     }
                 }
             });
@@ -359,14 +362,12 @@ class AnonymizerService {
                 if (type === 'person' || type === 'organization') {
                     const canonical = getCanonicalName(entity.name);
 
-                    if (!entity.courtId) {
-                        if (canonicalCourtIds[canonical]) {
-                            entity.courtId = canonicalCourtIds[canonical];
-                        } else {
-                            const newId = getCourtIdentifier(courtCounter++);
-                            entity.courtId = newId;
-                            canonicalCourtIds[canonical] = newId;
-                        }
+                    if (canonicalCourtIds[canonical]) {
+                        entity.courtId = canonicalCourtIds[canonical];
+                    } else {
+                        const newId = getCourtIdentifier(courtCounter++);
+                        entity.courtId = newId;
+                        canonicalCourtIds[canonical] = newId;
                     }
                 }
             });
