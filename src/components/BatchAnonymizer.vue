@@ -636,34 +636,50 @@
                             <!-- Actions (Only when pinned) -->
                             <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
                                 <!-- Merge (Zusammenlegen) for court style -->
-                                <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')">
-                                    <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300">
-                                        <div class="font-bold mb-1">Zusammengelegt mit:</div>
-                                        <div class="flex justify-between items-center gap-2">
-                                            <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
-                                            <button @click.stop="unmergeEntity(hoverTooltip.entityName)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
+                                <!-- Entity this one is merged WITH -->
+                                <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                                    <div class="font-bold mb-1">Zusammengelegt auf:</div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
+                                        <button @click.stop="unmergeEntity(hoverTooltip.entityName)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
+                                            <XMarkIcon class="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Entities merged INTO this one -->
+                                <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                                    <div class="font-bold mb-1">Hiermit zusammengelegt:</div>
+                                    <div class="flex flex-col gap-1">
+                                        <div v-for="source in getMappedToThis(hoverTooltip.entityName)" :key="source" class="flex justify-between items-center gap-2">
+                                            <span class="truncate">{{ source }}</span>
+                                            <button @click.stop="unmergeEntity(source)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
                                                 <XMarkIcon class="w-3 h-3" />
                                             </button>
                                         </div>
                                     </div>
-                                    <div v-else class="form-control w-full">
-                                        <label class="label p-0 pb-1">
-                                            <span class="label-text-alt text-base-content/70">Zusammenlegen mit:</span>
-                                        </label>
-                                        <select 
-                                            class="select select-bordered select-xs w-full text-base-content" 
-                                            @change="mergeEntity(hoverTooltip.entityName, $event.target.value); $event.target.value = ''"
+                                </div>
+
+                                <!-- Dropdown to pull/merge more entities here -->
+                                <div class="form-control w-full">
+                                    <label class="label p-0 pb-1">
+                                        <span class="label-text-alt text-base-content/70">
+                                            {{ courtEntityMappings[hoverTooltip.entityName] || getMappedToThis(hoverTooltip.entityName).length > 0 ? 'Weitere Entität zusammenlegen:' : 'Entität hiermit zusammenlegen:' }}
+                                        </span>
+                                    </label>
+                                    <select 
+                                        class="select select-bordered select-xs w-full text-base-content" 
+                                        @change="mergeEntity($event.target.value, hoverTooltip.entityName); $event.target.value = ''"
+                                    >
+                                        <option value="" disabled selected>Entität auswählen...</option>
+                                        <option 
+                                            v-for="target in getMergeSuggestions(hoverTooltip.entityName, hoverTooltip.entityType)" 
+                                            :key="target.name" 
+                                            :value="target.name"
                                         >
-                                            <option value="" disabled selected>Entität auswählen...</option>
-                                            <option 
-                                                v-for="target in getMergeSuggestions(hoverTooltip.entityName, hoverTooltip.entityType)" 
-                                                :key="target" 
-                                                :value="target"
-                                            >
-                                                {{ target }}
-                                            </option>
-                                        </select>
-                                    </div>
+                                            {{ target.isRecommended ? '★ ' : '' }}{{ target.name }}{{ target.isRecommended ? ' (empfohlen)' : '' }}
+                                        </option>
+                                    </select>
                                 </div>
                                 <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
 
@@ -1988,25 +2004,37 @@ export default {
             if (!this.testPreviewResult || !this.testPreviewResult.entities || !entityName || !entityType) return [];
             
             const words = entityName.toLowerCase().split(/[\s,;-]+/).filter(w => w.length > 0);
+            const nameLower = entityName.toLowerCase();
+            const nameCanonical = this.getCanonicalNameForUI(entityName);
             
             let targets = new Set();
             this.testPreviewResult.entities.forEach(e => {
                 const targetName = e.name;
                 const targetType = e.type ? e.type.toLowerCase() : '';
                 
-                // Only suggest entities of the same type and not the current entity itself
-                if (targetName !== entityName && targetType === entityType.toLowerCase()) {
-                    // Prevent circular mapping (simple check: don't suggest an entity that maps to this one)
-                    if (this.courtEntityMappings[targetName] !== entityName) {
+                // Only suggest entities of the same type and not already grouped with the current entity
+                if (targetType === entityType.toLowerCase()) {
+                    const targetCanonical = this.getCanonicalNameForUI(targetName);
+                    // Prevent circular mapping and don't list entities already merged together
+                    if (nameCanonical !== targetCanonical) {
                         targets.add(targetName);
                     }
                 }
             });
+
+            // Helper to check for common substring of length >= 3
+            const hasCommonSubstring = (str1, str2, minLength = 3) => {
+                if (!str1 || !str2 || str1.length < minLength || str2.length < minLength) return false;
+                for (let i = 0; i <= str1.length - minLength; i++) {
+                    const sub = str1.substring(i, i + minLength);
+                    if (str2.includes(sub)) return true;
+                }
+                return false;
+            };
             
             return Array.from(targets).sort((a, b) => {
                 const aLower = a.toLowerCase();
                 const bLower = b.toLowerCase();
-                const nameLower = entityName.toLowerCase();
                 
                 // 1. Exact Substring match
                 const aContains = aLower.includes(nameLower) || nameLower.includes(aLower);
@@ -2015,7 +2043,14 @@ export default {
                 if (aContains && !bContains) return -1;
                 if (!aContains && bContains) return 1;
                 
-                // 2. Word overlap
+                // 2. >= 3 consecutive characters match
+                const aHasCommon = hasCommonSubstring(nameLower, aLower, 3);
+                const bHasCommon = hasCommonSubstring(nameLower, bLower, 3);
+
+                if (aHasCommon && !bHasCommon) return -1;
+                if (!aHasCommon && bHasCommon) return 1;
+                
+                // 3. Word overlap
                 const aWords = aLower.split(/[\s,;-]+/).filter(w => w.length > 0);
                 const aShared = words.filter(w => aWords.includes(w)).length;
                 
@@ -2024,9 +2059,29 @@ export default {
                 
                 if (aShared !== bShared) return bShared - aShared;
                 
-                // 3. Alphabetical fallback
+                // 4. Alphabetical fallback
                 return a.localeCompare(b);
+            }).map(name => {
+                const lower = name.toLowerCase();
+                const isExact = lower.includes(nameLower) || nameLower.includes(lower);
+                const isSimilar = hasCommonSubstring(nameLower, lower, 3);
+                return {
+                    name: name,
+                    isRecommended: isExact || isSimilar
+                };
             });
+        },
+        getMappedToThis(targetName) {
+            return Object.keys(this.courtEntityMappings).filter(source => this.courtEntityMappings[source] === targetName);
+        },
+        getCanonicalNameForUI(name) {
+            let current = name;
+            let visited = new Set();
+            while (this.courtEntityMappings[current] && !visited.has(current)) {
+                visited.add(current);
+                current = this.courtEntityMappings[current];
+            }
+            return current;
         },
         mergeEntity(source, target) {
             if (!source || !target) return;
