@@ -1018,7 +1018,7 @@
             </div>
 
             <!-- Footer Panels (alternative to side panel) -->
-            <div v-if="testPreviewResult && panelsInFooter" class="border-t border-base-300 bg-base-100 flex-shrink-0 flex flex-col" style="height: 240px;">
+            <div v-if="testPreviewResult && panelsInFooter" class="border-t border-base-300 bg-base-100 flex-shrink-0 flex flex-col" :style="(showEntityPanel || showWordsPanel) ? 'height: 240px;' : 'height: auto;'">
                 <!-- Tab bar -->
                 <div class="flex items-center border-b border-base-300 flex-shrink-0">
                     <button
