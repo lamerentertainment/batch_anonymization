@@ -894,7 +894,12 @@
                     >
                         <XMarkIcon class="w-3 h-3" />
                     </button>
-                    <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
+                    <div v-if="hoverTooltip.isExclusion" class="flex flex-col gap-2 mt-1" :class="hoverTooltip.isPinned ? 'pr-6' : ''">
+                        <button @click.stop="addToExclusionList(hoverTooltip.word); hoverTooltip.visible = false; hoverTooltip.isPinned = false" class="btn btn-xs btn-outline btn-warning w-full">
+                            Von Negativliste entfernen?
+                        </button>
+                    </div>
+                    <div v-else-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
                         <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
                             <div class="font-bold mb-1">Zusammengelegt auf:</div>
                             <div class="flex justify-between items-center gap-2">
@@ -975,7 +980,7 @@
                             Ganze Entität ignorieren
                         </button>
                     </div>
-                    <div :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
+                    <div v-if="!hoverTooltip.isExclusion" :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
                         Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
                         <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
                     </div>
@@ -1254,8 +1259,13 @@
                                 <XMarkIcon class="w-3 h-3" />
                             </button>
 
-                            <!-- Actions (Only when pinned) -->
-                            <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
+                            <!-- Actions -->
+                            <div v-if="hoverTooltip.isExclusion" class="flex flex-col gap-2 mt-1" :class="hoverTooltip.isPinned ? 'pr-6' : ''">
+                                <button @click.stop="addToExclusionList(hoverTooltip.word); hoverTooltip.visible = false; hoverTooltip.isPinned = false" class="btn btn-xs btn-outline btn-warning w-full">
+                                    Von Negativliste entfernen?
+                                </button>
+                            </div>
+                            <div v-else-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
                                 <!-- Merge (Zusammenlegen) for court style -->
                                 <!-- Entity this one is merged WITH -->
                                 <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
@@ -1352,7 +1362,7 @@
                                 </button>
                             </div>
                             
-                            <div :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
+                            <div v-if="!hoverTooltip.isExclusion" :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
                                 Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
                                 <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
                             </div>
@@ -1645,9 +1655,11 @@ export default {
                 entityName: '',
                 entityType: '',
                 word: '',
-                isPinned: false
+                isPinned: false,
+                isExclusion: false
             },
             hideTooltipTimeout: null,
+            exclusionHoverTimeout: null,
             isHoveringTooltip: false,
 
             // Anonymization options
@@ -1851,7 +1863,7 @@ export default {
             // Highlight words skipped due to exclusion list (appear in multi-word entities but not anonymized)
             const exclRegex = /\[\[excl:([^\]]+)\]\]/g;
             text = text.replace(exclRegex, (_match, word) => {
-                return `<span class="exclusion-list-word" title="Nicht anonymisiert (Negativliste)" style="text-decoration: underline; text-decoration-color: #ca8a04; text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: default;">${word}</span>`;
+                return `<span class="exclusion-list-word" title="Nicht anonymisiert (Negativliste)" style="text-decoration: underline; text-decoration-color: #ca8a04; text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer;">${word}</span>`;
             });
 
             return text;
@@ -2886,8 +2898,32 @@ export default {
         },
         handleTextMouseOver(e) {
             if (this.hoverTooltip.isPinned) return;
+
+            if (this.exclusionHoverTimeout) {
+                clearTimeout(this.exclusionHoverTimeout);
+                this.exclusionHoverTimeout = null;
+            }
+
+            const exclusionTarget = e.target.closest('.exclusion-list-word');
+            if (exclusionTarget) {
+                 this.exclusionHoverTimeout = setTimeout(() => {
+                     const word = exclusionTarget.textContent;
+                     if (word) {
+                         this.hoverTooltip.text = word;
+                         this.hoverTooltip.word = word;
+                         this.hoverTooltip.entityName = word;
+                         this.hoverTooltip.isExclusion = true;
+                         this.hoverTooltip.visible = true;
+                         this.hoverTooltip.x = e.clientX;
+                         this.hoverTooltip.y = e.clientY;
+                     }
+                 }, 500);
+                 return;
+            }
+
             const target = e.target.closest('.anonymized-token');
             if (target) {
+                this.hoverTooltip.isExclusion = false;
                 // Clear any pending hide timeout
                 if (this.hideTooltipTimeout) {
                     clearTimeout(this.hideTooltipTimeout);
@@ -2914,8 +2950,16 @@ export default {
         },
         handleTextMouseOut(e) {
             if (this.hoverTooltip.isPinned) return;
+            
+            if (this.exclusionHoverTimeout) {
+                clearTimeout(this.exclusionHoverTimeout);
+                this.exclusionHoverTimeout = null;
+            }
+
+            const exclusionTarget = e.target.closest('.exclusion-list-word');
             const target = e.target.closest('.anonymized-token');
-            if (target) {
+            
+            if (exclusionTarget || target) {
                 // Use a timeout to allow the user to move the mouse into the tooltip
                 this.hideTooltipTimeout = setTimeout(() => {
                     if (!this.isHoveringTooltip && !this.hoverTooltip.isPinned) {
@@ -2938,6 +2982,21 @@ export default {
             this.hoverTooltip.visible = false;
         },
         handleTokenClick(e) {
+            const exclusionTarget = e.target.closest('.exclusion-list-word');
+            if (exclusionTarget) {
+                // Pin the tooltip at current position
+                const word = exclusionTarget.textContent;
+                this.hoverTooltip.text = word;
+                this.hoverTooltip.word = word;
+                this.hoverTooltip.entityName = word;
+                this.hoverTooltip.isExclusion = true;
+                this.hoverTooltip.isPinned = true;
+                this.hoverTooltip.visible = true;
+                this.hoverTooltip.x = e.clientX;
+                this.hoverTooltip.y = e.clientY;
+                return;
+            }
+
             const target = e.target.closest('.anonymized-token');
             if (target) {
                 // If clicking same token while pinned, just unpin (or do nothing? user said "fixed until clicked elsewhere")
