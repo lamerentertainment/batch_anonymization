@@ -1750,9 +1750,19 @@ export default {
         },
         sortedEntities() {
             if (!this.testPreviewResult || !this.testPreviewResult.entities) return [];
-            return [...this.testPreviewResult.entities].sort((a, b) => {
+            const exclusionList = this.parseExclusionList();
+
+            // Filter out entities where ALL components are in the blocklist
+            const filteredEntities = this.testPreviewResult.entities.filter(entity => {
+                if (!this.isAllComponentsInBlocklist(entity, exclusionList)) {
+                    return true;
+                }
+                return false;
+            });
+
+            return [...filteredEntities].sort((a, b) => {
                 let valA, valB;
-                
+
                 if (this.entitySortColumn === 'name') {
                     valA = a.name.toLowerCase();
                     valB = b.name.toLowerCase();
@@ -1939,6 +1949,13 @@ export default {
             }
 
             return { code: 'anonymized', label: 'Anonymisiert', class: 'text-success' };
+        },
+        isAllComponentsInBlocklist(entity, exclusionList) {
+            const entityWords = entity.name.toLowerCase().split(/[\s,;-]+/).filter(word => word.length > 0);
+            if (entityWords.length === 0) return false;
+
+            const exclusionListLower = exclusionList.map(word => word.toLowerCase());
+            return entityWords.every(word => exclusionListLower.includes(word));
         },
         toggleSessionRemovedEntity(name) {
             const cleanName = name.trim().toLowerCase();
