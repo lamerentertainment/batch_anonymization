@@ -286,7 +286,8 @@ class AnonymizerService {
             minCharacterThreshold = 0,
             exclusionList = [],
             courtStyle = false,
-            courtEntityMappings = {} // User-defined entity merging mappings
+            courtEntityMappings = {}, // User-defined entity merging mappings
+            testPreviewMode = false
         } = options;
 
         // Normalize exclusion list to lowercase for case-insensitive comparison
@@ -422,7 +423,7 @@ class AnonymizerService {
                         for (let i = 0; i < words.length; i++) {
                             const w = words[i];
                             if (!entity.isManual && isExcluded(w)) {
-                                outputs.push(w);
+                                outputs.push(testPreviewMode ? `[[excl:${w}]]` : w);
                             } else {
                                 if (!courtReplaced) {
                                     outputs.push(courtReplacement);
@@ -464,7 +465,7 @@ class AnonymizerService {
                         const w = words[i];
                         // Manual entities bypass the exclusion list
                         if (!entity.isManual && isExcluded(w)) {
-                            result += w;
+                            result += testPreviewMode ? `[[excl:${w}]]` : w;
                         } else {
                             result += `[${entity.id}_${entity.type}_${letters[i] || String(i + 1)}]`;
                         }

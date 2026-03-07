@@ -1714,6 +1714,12 @@ export default {
                 return `<span class="anonymized-token" data-entity-id="${id}" data-entity-type="${normalizedType}" data-original="${escapedOriginal}" data-specific-word="${specificWord.replace(/"/g, '&quot;')}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
             });
 
+            // Highlight words skipped due to exclusion list (appear in multi-word entities but not anonymized)
+            const exclRegex = /\[\[excl:([^\]]+)\]\]/g;
+            text = text.replace(exclRegex, (_match, word) => {
+                return `<span class="exclusion-list-word" title="Nicht anonymisiert (Negativliste)" style="text-decoration: underline; text-decoration-color: #ca8a04; text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: default;">${word}</span>`;
+            });
+
             return text;
         },
         uniqueAnonymizedWords() {
