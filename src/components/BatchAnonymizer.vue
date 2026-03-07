@@ -867,7 +867,7 @@
                                         ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 cursor-pointer line-through'
                                         : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
                                 >
-                                    {{ item.word }}<span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                                    {{ item.word }}
                                 </button>
                             </div>
                             <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
@@ -1111,7 +1111,7 @@
                                     ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 cursor-pointer line-through'
                                     : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
                             >
-                                {{ item.word }}<span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                                {{ item.word }}
                             </button>
                         </div>
                         <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
@@ -1446,7 +1446,6 @@
                                         : `Klicken um '${item.word}' zur Negativliste hinzuzufügen`"
                                 >
                                     {{ item.word }}
-                                    <span v-if="item.isInExclusionList" class="ml-1">✓</span>
                                 </button>
                             </div>
                             <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
