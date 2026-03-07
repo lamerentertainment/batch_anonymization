@@ -788,7 +788,7 @@
                         <div class="px-3 py-2 border-b border-base-300">
                             <h4 class="font-semibold text-sm">Gefundene Entitäten & Platzhalter</h4>
                         </div>
-                        <div class="flex-1 overflow-auto">
+                        <div class="flex-1 overflow-auto" ref="entityPanelSideScroll">
                             <table class="table table-xs w-full table-pin-rows">
                                 <thead>
                                     <tr class="bg-base-200">
@@ -808,8 +808,8 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
-                                        <td class="font-medium max-w-[150px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
+                                    <tr v-for="entity in sortedEntities" :key="entity.id" :data-entity-name="entity.name" class="hover:bg-base-200/50">
+                                        <td class="font-medium max-w-[150px] truncate cursor-pointer hover:text-primary" :title="entity.name + ' – klicken um im Text zu scrollen'" v-html="formatEntityName(entity)" @click.stop="scrollToNextTokenForEntity(entity.name)"></td>
                                         <td>
                                             <select
                                                 class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
@@ -1034,7 +1034,7 @@
                 <!-- Panel content -->
                 <div class="flex flex-1 overflow-hidden">
                     <!-- Entity Panel (footer) -->
-                    <div v-if="showEntityPanel" class="flex-1 overflow-auto border-r border-base-300">
+                    <div v-if="showEntityPanel" class="flex-1 overflow-auto border-r border-base-300" ref="entityPanelFooterScroll">
                         <table class="table table-xs w-full table-pin-rows">
                             <thead>
                                 <tr class="bg-base-200">
@@ -1054,8 +1054,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
-                                    <td class="font-medium max-w-[150px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
+                                <tr v-for="entity in sortedEntities" :key="entity.id" :data-entity-name="entity.name" class="hover:bg-base-200/50">
+                                    <td class="font-medium max-w-[150px] truncate cursor-pointer hover:text-primary" :title="entity.name + ' – klicken um im Text zu scrollen'" v-html="formatEntityName(entity)" @click.stop="scrollToNextTokenForEntity(entity.name)"></td>
                                     <td>
                                         <select
                                             class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
@@ -1676,7 +1676,8 @@ export default {
             singleFileDragOver: false,
             showEntityPanel: false,
             showWordsPanel: false,
-            panelsInFooter: false
+            panelsInFooter: false,
+            entityScrollIndex: {}
 
         };
     },
@@ -2948,11 +2949,16 @@ export default {
                 this.hoverTooltip.entityName = target.dataset.original || '';
                 this.hoverTooltip.entityType = target.dataset.entityType || '';
                 this.hoverTooltip.word = target.dataset.specificWord || '';
-                
+
                 // Lock position to current mousepos (or center of element?)
                 // clientX/Y is fine as it's where the user clicked
                 this.hoverTooltip.x = e.clientX;
                 this.hoverTooltip.y = e.clientY;
+
+                // Scroll entity panel to highlight this entity
+                if (this.showEntityPanel) {
+                    this.$nextTick(() => this.scrollEntityPanelToEntity(this.hoverTooltip.entityName));
+                }
             } else {
                 // Unpin if clicking elsewhere in the preview
                 this.unpinTooltip();
@@ -2961,6 +2967,36 @@ export default {
         unpinTooltip() {
             this.hoverTooltip.isPinned = false;
             this.hoverTooltip.visible = false;
+        },
+
+        // Scrolls the entity panel (side or footer) to show the row matching entityName, with a brief highlight
+        scrollEntityPanelToEntity(entityName) {
+            const containers = [this.$refs.entityPanelSideScroll, this.$refs.entityPanelFooterScroll];
+            for (const container of containers) {
+                if (!container) continue;
+                const row = Array.from(container.querySelectorAll('tr[data-entity-name]'))
+                    .find(tr => tr.dataset.entityName === entityName);
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    row.classList.add('entity-row-highlight');
+                    setTimeout(() => row.classList.remove('entity-row-highlight'), 1200);
+                }
+            }
+        },
+
+        // Cycles through all occurrences of entityName in the preview text and scrolls to next one
+        scrollToNextTokenForEntity(entityName) {
+            const container = this.$refs.singlePreviewContainer;
+            if (!container) return;
+            const tokens = Array.from(container.querySelectorAll('.anonymized-token'))
+                .filter(el => el.dataset.original === entityName);
+            if (tokens.length === 0) return;
+            const currentIdx = this.entityScrollIndex[entityName] ?? -1;
+            const nextIdx = (currentIdx + 1) % tokens.length;
+            this.entityScrollIndex = { ...this.entityScrollIndex, [entityName]: nextIdx };
+            tokens[nextIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            tokens[nextIdx].classList.add('token-nav-highlight');
+            setTimeout(() => tokens[nextIdx].classList.remove('token-nav-highlight'), 900);
         },
         handleTextMouseMove(e) {
             if (this.hoverTooltip.visible && !this.hoverTooltip.isPinned) {
@@ -3124,3 +3160,23 @@ export default {
     }
 };
 </script>
+
+<style>
+/* Token highlight when navigating from entity panel (v-html, cannot use scoped) */
+.token-nav-highlight {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px;
+    transition: outline 0.2s;
+}
+</style>
+
+<style scoped>
+/* Entity row highlight when a matching token is clicked in the preview text */
+@keyframes entity-row-pulse {
+    0%   { background-color: color-mix(in oklch, var(--color-primary) 22%, transparent); }
+    100% { background-color: transparent; }
+}
+.entity-row-highlight {
+    animation: entity-row-pulse 1.2s ease-out forwards;
+}
+</style>
