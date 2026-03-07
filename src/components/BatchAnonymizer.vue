@@ -880,7 +880,7 @@
                 <!-- Tooltip (fixed positioned, works in single-file mode) -->
                 <div
                     v-if="hoverTooltip.visible"
-                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl flex flex-col gap-2 min-w-[220px]"
                     :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                     :style="tooltipStyle"
                     @mouseenter="handleTooltipMouseEnter"
@@ -1243,7 +1243,7 @@
                         <!-- Custom Tooltip -->
                         <div
                             v-if="hoverTooltip.visible"
-                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl flex flex-col gap-2 min-w-[220px]"
                             :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                             :style="tooltipStyle"
                             @mouseenter="handleTooltipMouseEnter"
@@ -1703,10 +1703,23 @@ export default {
     },
     computed: {
         tooltipStyle() {
-            const HALF_W = 120; // conservative estimate (min-w-[220px] / 2 + padding)
-            const MARGIN = 8;
-            const x = Math.max(HALF_W + MARGIN, Math.min(window.innerWidth - HALF_W - MARGIN, this.hoverTooltip.x));
-            return { top: (this.hoverTooltip.y - 4) + 'px', left: x + 'px' };
+            const MARGIN = 16;
+            const x = this.hoverTooltip.x;
+            const y = this.hoverTooltip.y - 4;
+            
+            if (x < window.innerWidth / 2) {
+                return {
+                    top: y + 'px',
+                    left: Math.max(MARGIN, x - 20) + 'px',
+                    transform: 'translateY(-100%)'
+                };
+            } else {
+                return {
+                    top: y + 'px',
+                    right: Math.max(MARGIN, window.innerWidth - x - 20) + 'px',
+                    transform: 'translateY(-100%)'
+                };
+            }
         },
         // True when the preview result is active (either in modal or single-file mode)
         isPreviewActive() {
