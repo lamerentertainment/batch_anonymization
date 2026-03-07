@@ -540,6 +540,22 @@
                     </span>
                 </div>
 
+                <!-- Dateinamen anonymisieren -->
+                <div class="tooltip tooltip-bottom flex-shrink-0" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
+                    </label>
+                </div>
+
+                <!-- DOCX → MD -->
+                <div class="tooltip tooltip-bottom flex-shrink-0" data-tip="Word-Dateien (.docx) als Markdown ausgeben – behält Formatierung (Fett, Listen, etc.) bei">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
+                    </label>
+                </div>
+
                 <!-- Download Button(s) -->
                 <div class="flex items-center gap-1 flex-shrink-0">
                     <template v-if="testPreviewResult && isDocxFile">
@@ -640,21 +656,6 @@
                     </div>
                 </div>
 
-                <!-- Dateinamen anonymisieren -->
-                <div class="tooltip tooltip-bottom" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
-                        <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
-                    </label>
-                </div>
-
-                <!-- DOCX → MD -->
-                <div class="tooltip tooltip-bottom" data-tip="Word-Dateien (.docx) als Markdown ausgeben – behält Formatierung (Fett, Listen, etc.) bei">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
-                        <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
-                    </label>
-                </div>
 
                 <!-- Anonymisieren Button -->
                 <button
