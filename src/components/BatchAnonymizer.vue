@@ -1,13 +1,31 @@
 <template>
     <div class="flex flex-col h-screen bg-base-200">
         <!-- Header -->
-        <header class="bg-base-100 border-b border-base-300 px-6 py-4 flex items-baseline gap-x-4">
-            <h1 class="text-2xl font-bold text-base-content">
-                Batch-Anonymisierung
-            </h1>
-            <p class="text-sm text-base-content/60 mt-1">
-                Mehrere Dateien nacheinander anonymisieren
-            </p>
+        <header class="bg-base-100 border-b border-base-300 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-baseline gap-x-4">
+                <h1 class="text-2xl font-bold text-base-content">
+                    {{ viewMode === 'batch' ? 'Batch-Anonymisierung' : 'Einzeldatei-Anonymisierung' }}
+                </h1>
+                <p class="text-sm text-base-content/60 mt-1">
+                    {{ viewMode === 'batch' ? 'Mehrere Dateien nacheinander anonymisieren' : 'Eine Datei interaktiv anonymisieren und bearbeiten' }}
+                </p>
+            </div>
+            <div class="flex items-center gap-1 bg-base-200 rounded-lg p-1">
+                <button
+                    @click="viewMode = 'batch'"
+                    class="btn btn-sm rounded-md transition-all"
+                    :class="viewMode === 'batch' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
+                >
+                    Batch
+                </button>
+                <button
+                    @click="viewMode = 'single'"
+                    class="btn btn-sm rounded-md transition-all"
+                    :class="viewMode === 'single' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
+                >
+                    Einzeldatei
+                </button>
+            </div>
         </header>
 
         <!-- Status Banner -->
@@ -32,8 +50,8 @@
             </div>
         </div>
 
-        <!-- Main Content: 3 Columns -->
-        <main class="flex-1 flex overflow-hidden">
+        <!-- Main Content: 3 Columns (Batch Mode) -->
+        <main v-if="viewMode === 'batch'" class="flex-1 flex overflow-hidden">
             <!-- LEFT: File Input -->
             <section
                 class="border-r border-base-300 bg-base-100 flex flex-col flex-shrink-0"
@@ -496,6 +514,483 @@
             </section>
         </main>
 
+        <!-- Single File View -->
+        <main v-else-if="viewMode === 'single'" class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Row 1: File Upload Bar -->
+            <div class="bg-base-100 border-b border-base-300 px-4 py-2 flex items-center gap-3">
+                <input ref="singleFileInput" type="file" accept=".txt,.pdf,.docx,.doc" class="hidden" @change="handleSingleFileInputChange">
+
+                <!-- Drop Zone -->
+                <div
+                    class="flex-1 border-2 border-dashed rounded-lg px-4 py-2 flex items-center gap-3 cursor-pointer transition-colors min-h-[44px]"
+                    :class="singleFileDragOver ? 'border-primary bg-primary/10' : testPreviewFile ? 'border-success/50 bg-success/5' : 'border-base-300 hover:border-primary/50'"
+                    @click="triggerSingleFileInput"
+                    @drop.prevent="handleSingleFileDrop"
+                    @dragover.prevent="singleFileDragOver = true"
+                    @dragleave.prevent="singleFileDragOver = false"
+                >
+                    <ArrowUpTrayIcon v-if="!testPreviewFile" class="w-5 h-5 text-base-content/40 flex-shrink-0" />
+                    <DocumentCheckIcon v-else class="w-5 h-5 text-success flex-shrink-0" />
+                    <span class="text-sm truncate" :class="testPreviewFile ? 'text-base-content' : 'text-base-content/50'">
+                        {{ testPreviewFile ? testPreviewFile.name : 'Datei hochladen oder hierher ziehen (docx, pdf, txt)' }}
+                    </span>
+                    <span v-if="testPreviewResult" class="ml-auto text-xs text-base-content/40 flex-shrink-0">
+                        {{ testPreviewResult.wordCount }} Wörter
+                    </span>
+                </div>
+
+                <!-- Download Button(s) -->
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <template v-if="testPreviewResult && isDocxFile">
+                        <button @click="downloadSingleResult('txt')" class="btn btn-sm btn-ghost gap-1" title="Als TXT herunterladen">
+                            <ArrowDownTrayIcon class="w-4 h-4" /> TXT
+                        </button>
+                        <button @click="downloadSingleResult('md')" class="btn btn-sm btn-ghost gap-1" title="Als Markdown herunterladen">
+                            <ArrowDownTrayIcon class="w-4 h-4" /> MD
+                        </button>
+                    </template>
+                    <button v-else @click="downloadSingleResult()" class="btn btn-sm btn-ghost gap-1" :disabled="!testPreviewResult">
+                        <ArrowDownTrayIcon class="w-4 h-4" />
+                        <span class="hidden sm:inline">Download</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Row 2: Settings Bar -->
+            <div class="bg-base-100 border-b border-base-300 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <!-- Anonymisierungsstärke -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-base-content/70 whitespace-nowrap">Stärke:</label>
+                    <input type="range" v-model="anonymizationStrength" min="0.05" max="0.8" step="0.05" class="range range-xs range-primary w-24">
+                    <span class="text-xs font-mono text-base-content/60 w-8">{{ Math.round(anonymizationStrength * 100) }}%</span>
+                </div>
+
+                <!-- Entity Selection Dropdown -->
+                <div class="dropdown">
+                    <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
+                        Entitäten ({{ selectedLabels.length }}/{{ availableLabels.length }})
+                        <ChevronDownIcon class="w-3 h-3" />
+                    </label>
+                    <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-64 border border-base-300">
+                        <div class="flex gap-1 mb-2">
+                            <button @click="selectAllLabels" class="btn btn-xs">Alle</button>
+                            <button @click="selectCommonLabels" class="btn btn-xs">Häufige</button>
+                            <button @click="deselectAllLabels" class="btn btn-xs">Keine</button>
+                        </div>
+                        <div class="max-h-48 overflow-y-auto">
+                            <label v-for="label in availableLabels" :key="label" class="flex items-center gap-2 py-1 cursor-pointer hover:bg-base-200 px-2 rounded">
+                                <input type="checkbox" v-model="selectedLabels" :value="label" class="checkbox checkbox-xs checkbox-primary">
+                                <span class="text-xs">{{ formatLabel(label) }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teilwörter Toggle -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="anonymizePartialWords" class="toggle toggle-xs toggle-primary">
+                    <span class="text-xs font-semibold text-base-content/70">Teilwörter</span>
+                </label>
+
+                <!-- Min. Zeichen -->
+                <div v-show="anonymizePartialWords" class="flex items-center gap-1">
+                    <label class="text-xs text-base-content/70 whitespace-nowrap">Min. Zeichen:</label>
+                    <input type="number" v-model.number="minCharacterThreshold" min="0" max="50" class="input input-xs input-bordered w-14">
+                </div>
+
+                <!-- Gerichtsüblich Toggle -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="courtStyle" @change="handleCourtStyleChange" class="toggle toggle-xs toggle-primary">
+                    <span class="text-xs font-semibold text-base-content/70">Gerichtsüblich</span>
+                </label>
+
+                <!-- Negativliste Dropdown -->
+                <div class="dropdown dropdown-bottom">
+                    <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
+                        Negativliste
+                        <ChevronDownIcon class="w-3 h-3" />
+                    </label>
+                    <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-80 border border-base-300">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold">Negativliste</span>
+                            <div class="flex gap-1">
+                                <button @click="mergeDefaultExclusionList" class="btn btn-xs">+ Standard</button>
+                                <button @click="resetExclusionList" class="btn btn-xs btn-error btn-outline">Zurücksetzen</button>
+                            </div>
+                        </div>
+                        <textarea
+                            v-model="exclusionList"
+                            @input="saveExclusionList"
+                            class="textarea textarea-bordered textarea-xs w-full h-24 font-mono text-xs"
+                            placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Dateinamen anonymisieren -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
+                    <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
+                </label>
+
+                <!-- DOCX → MD -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
+                    <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
+                </label>
+
+                <!-- Anonymisieren Button -->
+                <button
+                    @click="runSingleAnonymization"
+                    class="btn btn-primary btn-sm ml-auto"
+                    :disabled="!testPreviewFile || selectedLabels.length === 0 || (testPreviewLoading && !testPreviewAdjusting)"
+                >
+                    <span v-if="testPreviewLoading && !testPreviewAdjusting" class="loading loading-spinner loading-xs mr-1"></span>
+                    {{ (testPreviewLoading && !testPreviewAdjusting) ? 'Anonymisiere...' : 'Anonymisieren' }}
+                </button>
+            </div>
+
+            <!-- Row 3: Main Content Area -->
+            <div class="flex-1 flex overflow-hidden">
+
+                <!-- Text Display Area -->
+                <div class="flex-1 flex flex-col overflow-hidden p-4">
+
+                    <!-- Loading -->
+                    <div v-if="testPreviewLoading && !testPreviewAdjusting" class="flex-1 flex items-center justify-center">
+                        <span class="loading loading-spinner loading-lg text-primary"></span>
+                        <span class="ml-3 text-base-content/60">Anonymisiere Text...</span>
+                    </div>
+
+                    <!-- Error -->
+                    <div v-else-if="testPreviewError" class="alert alert-error">
+                        <ExclamationCircleIcon class="w-6 h-6" />
+                        <span>Fehler: {{ testPreviewError }}</span>
+                    </div>
+
+                    <!-- No file selected -->
+                    <div v-else-if="!testPreviewFile" class="flex-1 flex items-center justify-center">
+                        <div class="text-center text-base-content/40">
+                            <DocumentIcon class="w-20 h-20 mx-auto mb-4 opacity-20" />
+                            <p class="text-xl font-medium">Datei hochladen um zu beginnen</p>
+                            <p class="text-sm mt-2 opacity-70">Unterstützte Formate: .docx, .pdf, .txt</p>
+                        </div>
+                    </div>
+
+                    <!-- File selected, not yet anonymized -->
+                    <div v-else-if="!testPreviewResult" class="flex-1 flex items-center justify-center">
+                        <div class="text-center text-base-content/40">
+                            <DocumentCheckIcon class="w-20 h-20 mx-auto mb-4 opacity-30" />
+                            <p class="text-xl font-medium">{{ testPreviewFile.name }}</p>
+                            <p class="text-sm mt-3">Einstellungen prüfen und auf <strong class="text-primary opacity-80">Anonymisieren</strong> klicken</p>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <template v-else>
+                        <!-- Statistics -->
+                        <div class="mb-3 p-3 bg-base-200 rounded-lg flex flex-wrap gap-4 text-sm flex-shrink-0">
+                            <span><strong class="text-primary">{{ testPreviewResult.entities.length }}</strong> Entitäten gefunden</span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Labels: <strong>{{ selectedLabels.length }}</strong></span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Einzelne Wörter: <strong :class="anonymizePartialWords ? 'text-success' : 'text-base-content/60'">{{ anonymizePartialWords ? 'An' : 'Aus' }}</strong></span>
+                            <span class="text-base-content/40">|</span>
+                            <span>Min. Zeichen: <strong>{{ minCharacterThreshold }}</strong>
+                                <span v-if="testPreviewResult.skippedShortEntitiesCount > 0" class="text-warning ml-1">({{ testPreviewResult.skippedShortEntitiesCount }} übersprungen)</span>
+                            </span>
+                            <template v-if="testPreviewResult.exclusionListCount > 0">
+                                <span class="text-base-content/40">|</span>
+                                <span>Negativliste: <strong class="text-warning">{{ testPreviewResult.exclusionListCount }}</strong> Wörter
+                                    <span v-if="testPreviewResult.excludedEntitiesCount > 0" class="text-success">({{ testPreviewResult.excludedEntitiesCount }} übersprungen)</span>
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Anonymized Text with Highlighting -->
+                        <div
+                            ref="singlePreviewContainer"
+                            class="flex-1 p-4 border border-base-300 rounded-lg bg-base-200/50 whitespace-pre-wrap font-mono text-sm leading-relaxed overflow-y-auto cursor-text [&_p]:mb-4 [&_h1]:mb-4 [&_h2]:mb-4 [&_h3]:mb-4 [&_ul]:mb-4 [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:mb-4 [&_ol]:ml-4 [&_ol]:list-decimal"
+                            v-html="highlightedAnonymizedText"
+                            @mouseover="handleTextMouseOver"
+                            @mouseout="handleTextMouseOut"
+                            @mousemove="handleTextMouseMove"
+                            @mouseup="handleTextSelection"
+                            @click="handleTokenClick"
+                        ></div>
+
+                        <!-- Legend -->
+                        <div class="mt-3 flex gap-2 flex-wrap text-xs items-center flex-shrink-0">
+                            <span class="font-medium text-base-content/60 mr-2">Legende:</span>
+                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded">person</span>
+                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded">email</span>
+                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded">phone</span>
+                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded">address</span>
+                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded">iban/kreditkarte</span>
+                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
+                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
+                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
+                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded border border-gray-400">manuell</span>
+                            <span class="text-base-content/40 ml-2 italic">Hover zeigt Original, Markieren zum Anonymisieren</span>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Right: Panel Toggle Tabs + Panels -->
+                <div v-if="testPreviewResult" class="flex flex-shrink-0">
+
+                    <!-- Vertical toggle tabs -->
+                    <div class="flex flex-col bg-base-100 border-l border-base-300">
+                        <button
+                            @click="showEntityPanel = !showEntityPanel"
+                            class="px-2 py-5 text-xs font-semibold border-b border-base-300 hover:bg-base-200 transition-colors select-none"
+                            :class="showEntityPanel ? 'bg-base-200 text-primary' : 'text-base-content/60'"
+                            title="Gefundene Entitäten & Platzhalter"
+                            style="writing-mode: vertical-rl; text-orientation: mixed;"
+                        >
+                            Entitäten &amp; Platzhalter
+                        </button>
+                        <button
+                            @click="showWordsPanel = !showWordsPanel"
+                            class="px-2 py-5 text-xs font-semibold hover:bg-base-200 transition-colors select-none"
+                            :class="showWordsPanel ? 'bg-base-200 text-primary' : 'text-base-content/60'"
+                            title="Anonymisierte Wörter (Negativliste)"
+                            style="writing-mode: vertical-rl; text-orientation: mixed;"
+                        >
+                            Anonymisierte Wörter
+                        </button>
+                    </div>
+
+                    <!-- Entity Panel -->
+                    <div v-if="showEntityPanel" class="w-80 flex flex-col overflow-hidden bg-base-100 border-l border-base-300">
+                        <div class="px-3 py-2 border-b border-base-300">
+                            <h4 class="font-semibold text-sm">Gefundene Entitäten & Platzhalter</h4>
+                        </div>
+                        <div class="flex-1 overflow-auto">
+                            <table class="table table-xs w-full table-pin-rows">
+                                <thead>
+                                    <tr class="bg-base-200">
+                                        <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('name')">
+                                            Original <span v-if="entitySortColumn === 'name'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                        </th>
+                                        <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('type')">
+                                            Typ <span v-if="entitySortColumn === 'type'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                        </th>
+                                        <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('placeholder')">
+                                            Platzhalter <span v-if="entitySortColumn === 'placeholder'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                        </th>
+                                        <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('status')">
+                                            Status <span v-if="entitySortColumn === 'status'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                        </th>
+                                        <th class="text-center">Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
+                                        <td class="font-medium max-w-[150px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
+                                        <td>
+                                            <select
+                                                class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
+                                                :value="entity.type"
+                                                @change="changeEntityCategory(entity.name, $event.target.value)"
+                                            >
+                                                <option v-for="label in availableLabels" :key="label" :value="label">{{ formatLabel(label) }}</option>
+                                            </select>
+                                        </td>
+                                        <td class="font-mono text-xs text-base-content/70 select-all">{{ getActualPlaceholder(entity) }}</td>
+                                        <td>
+                                            <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">{{ getEntityStatus(entity).label }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button
+                                                v-if="!entity.isManual"
+                                                @click="toggleSessionRemovedEntity(entity.name)"
+                                                class="btn btn-ghost btn-xs btn-square"
+                                                :class="sessionRemovedEntities.includes(entity.name) ? 'text-success' : 'text-error'"
+                                                :title="sessionRemovedEntities.includes(entity.name) ? 'Anonymisierung wieder aktivieren' : 'Diese Entität ausschliessen'"
+                                            >
+                                                <XMarkIcon v-if="!sessionRemovedEntities.includes(entity.name)" class="w-4 h-4" />
+                                                <ArrowPathIcon v-else class="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                v-else
+                                                @click="removeManualEntity(entity.name)"
+                                                class="btn btn-ghost btn-xs btn-square text-error"
+                                                title="Manuelle Anonymisierung entfernen"
+                                            >
+                                                <XMarkIcon class="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Words Panel -->
+                    <div v-if="showWordsPanel" class="w-56 flex flex-col overflow-hidden bg-base-100 border-l border-base-300">
+                        <div class="px-3 py-2 border-b border-base-300">
+                            <h4 class="font-semibold text-sm">Anonymisierte Wörter</h4>
+                            <p class="text-xs text-base-content/50 mt-0.5">Klicken um zur Negativliste hinzuzufügen</p>
+                        </div>
+                        <div class="flex-1 overflow-auto p-3">
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="item in uniqueAnonymizedWords"
+                                    :key="item.word"
+                                    @click="addToExclusionList(item.word)"
+                                    class="px-2 py-1 text-xs rounded-full border transition-all"
+                                    :class="item.isInExclusionList
+                                        ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 cursor-pointer line-through'
+                                        : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
+                                >
+                                    {{ item.word }}<span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                                </button>
+                            </div>
+                            <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
+                                Keine Wörter anonymisiert
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tooltip (fixed positioned, works in single-file mode) -->
+                <div
+                    v-if="hoverTooltip.visible"
+                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                    :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
+                    :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
+                    @mouseenter="handleTooltipMouseEnter"
+                    @mouseleave="handleTooltipMouseLeave"
+                >
+                    <button
+                        v-if="hoverTooltip.isPinned"
+                        @click.stop="unpinTooltip"
+                        class="absolute top-1 right-1 btn btn-ghost btn-xs btn-square text-gray-400 hover:text-white"
+                        title="Anheften aufheben"
+                    >
+                        <XMarkIcon class="w-3 h-3" />
+                    </button>
+                    <div v-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
+                        <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                            <div class="font-bold mb-1">Zusammengelegt auf:</div>
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
+                                <button @click.stop="unmergeEntity(hoverTooltip.entityName)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
+                                    <XMarkIcon class="w-3 h-3" />
+                                </button>
+                            </div>
+                        </div>
+                        <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                            <div class="font-bold mb-1">Hiermit zusammengelegt:</div>
+                            <div class="flex flex-col gap-1">
+                                <div v-for="source in getMappedToThis(hoverTooltip.entityName)" :key="source" class="flex justify-between items-center gap-2">
+                                    <span class="truncate">{{ source }}</span>
+                                    <button @click.stop="unmergeEntity(source)" class="btn btn-xs btn-ghost btn-square text-error" title="Zusammenlegen aufheben">
+                                        <XMarkIcon class="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-control w-full">
+                            <label class="label p-0 pb-1">
+                                <span class="label-text-alt text-base-content/70">
+                                    {{ courtEntityMappings[hoverTooltip.entityName] || getMappedToThis(hoverTooltip.entityName).length > 0 ? 'Weitere Entität zusammenlegen:' : 'Entität hiermit zusammenlegen:' }}
+                                </span>
+                            </label>
+                            <select
+                                class="select select-bordered select-xs w-full text-base-content"
+                                @change="mergeEntity($event.target.value, hoverTooltip.entityName); $event.target.value = ''"
+                            >
+                                <option value="" disabled selected>Entität auswählen...</option>
+                                <option
+                                    v-for="target in getMergeSuggestions(hoverTooltip.entityName, hoverTooltip.entityType)"
+                                    :key="target.name"
+                                    :value="target.name"
+                                >
+                                    {{ target.isRecommended ? '★ ' : '' }}{{ target.name }}{{ target.isRecommended ? ' (empfohlen)' : '' }}
+                                </option>
+                            </select>
+                        </div>
+                        <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
+                        <div class="form-control w-full my-1">
+                            <label class="label p-0 pb-1">
+                                <span class="label-text-alt text-base-content/70">Kategorie ändern:</span>
+                            </label>
+                            <select
+                                class="select select-bordered select-xs w-full text-base-content"
+                                :value="hoverTooltip.entityType"
+                                @change="changeEntityCategory(hoverTooltip.entityName, $event.target.value)"
+                            >
+                                <option value="" disabled>Bitte wählen...</option>
+                                <option v-for="label in availableLabels" :key="label" :value="label">
+                                    {{ formatLabel(label) }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="border-t border-gray-700 my-1"></div>
+                        <div class="flex flex-wrap gap-1">
+                            <button
+                                v-for="word in getSurgicalWords(hoverTooltip.entityName)"
+                                :key="word"
+                                @click="addToExclusionList(word)"
+                                class="btn btn-[10px] h-auto min-h-0 py-1 px-2 btn-outline gap-1"
+                                :class="isWordExcluded(word)
+                                    ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 line-through'
+                                    : 'btn-warning'"
+                            >
+                                <NoSymbolIcon v-if="!isWordExcluded(word)" class="w-3 h-3" />
+                                <CheckIcon v-else class="w-3 h-3" />
+                                {{ word }}
+                            </button>
+                        </div>
+                        <button
+                            @click="toggleSessionRemovedEntity(hoverTooltip.entityName)"
+                            class="btn btn-xs btn-outline btn-error w-full gap-1 text-[10px]"
+                        >
+                            <XMarkIcon class="w-3 h-3" />
+                            Ganze Entität ignorieren
+                        </button>
+                    </div>
+                    <div :class="hoverTooltip.isPinned ? 'border-t border-gray-700 pt-1 mt-1' : ''">
+                        Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
+                        <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
+                    </div>
+                </div>
+
+                <!-- Selection Menu (single-file mode) -->
+                <div
+                    v-if="selectionMenu.visible"
+                    class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
+                    :style="{ top: selectionMenu.y + 'px', left: selectionMenu.x + 'px', transform: 'translate(-50%, -120%)' }"
+                    @mousedown.stop
+                >
+                    <button
+                        v-if="selectionMenu.step === 1"
+                        @click="selectionMenu.step = 2"
+                        class="btn btn-primary btn-xs normal-case gap-1"
+                    >
+                        <TagIcon class="w-3 h-3" />
+                        Markierte Stelle anonymisieren?
+                    </button>
+                    <div v-else class="flex flex-col gap-1 p-2 min-w-[200px]">
+                        <span class="text-xs font-bold text-base-content/70">Kategorie auswählen:</span>
+                        <select v-model="selectionMenu.selectedCategory" class="select select-bordered select-xs w-full">
+                            <option value="" disabled selected>Bitte wählen...</option>
+                            <option v-for="label in availableLabels" :key="label" :value="label">
+                                {{ formatLabel(label) }}
+                            </option>
+                        </select>
+                        <div class="flex justify-end gap-1 mt-1">
+                            <button @click="cancelManualEntityAdding" class="btn btn-ghost btn-xs">Abbrechen</button>
+                            <button @click="addManualEntity" class="btn btn-primary btn-xs" :disabled="!selectionMenu.selectedCategory">Speichern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
         <!-- Test Preview Modal -->
         <div
             v-if="showTestModal"
@@ -920,6 +1415,7 @@ import {
     TagIcon,
     PlayIcon,
     CheckCircleIcon,
+    CheckIcon,
     ExclamationCircleIcon,
     ClockIcon,
     AdjustmentsHorizontalIcon,
@@ -927,7 +1423,8 @@ import {
     Cog6ToothIcon,
     MagnifyingGlassIcon,
     SignalIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    ChevronDownIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -951,6 +1448,7 @@ export default {
         TagIcon,
         PlayIcon,
         CheckCircleIcon,
+        CheckIcon,
         ExclamationCircleIcon,
         ClockIcon,
         AdjustmentsHorizontalIcon,
@@ -958,7 +1456,8 @@ export default {
         Cog6ToothIcon,
         MagnifyingGlassIcon,
         SignalIcon,
-        ArrowPathIcon
+        ArrowPathIcon,
+        ChevronDownIcon
     },
     data() {
         return {
@@ -1045,7 +1544,13 @@ export default {
             
             // Entity table sorting
             entitySortColumn: 'name',
-            entitySortDirection: 'asc'
+            entitySortDirection: 'asc',
+
+            // View mode
+            viewMode: 'batch', // 'batch' | 'single'
+            singleFileDragOver: false,
+            showEntityPanel: false,
+            showWordsPanel: false
 
         };
     },
@@ -1057,6 +1562,16 @@ export default {
         window.removeEventListener('mousedown', this.hideSelectionMenu);
     },
     computed: {
+        // True when the preview result is active (either in modal or single-file mode)
+        isPreviewActive() {
+            return (this.showTestModal || this.viewMode === 'single') && !!this.testPreviewResult;
+        },
+        // True when the current single-file is a Word document
+        isDocxFile() {
+            if (!this.testPreviewFile) return false;
+            const name = this.testPreviewFile.name.toLowerCase();
+            return name.endsWith('.docx') || name.endsWith('.doc');
+        },
         canStartProcessing() {
             return this.inputFiles.length > 0 &&
                    this.selectedLabels.length > 0 &&
@@ -1436,7 +1951,7 @@ export default {
             }
             
             // Re-run preview test if currently in preview modal
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 // Set adjusting flag to true so the modal doesn't clear/flicker
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
@@ -1496,7 +2011,7 @@ export default {
             // Re-run preview test if currently in preview modal
             // Use $nextTick to ensure exclusionList update is propagated
             this.$nextTick(() => {
-                if (this.showTestModal && this.testPreviewResult) {
+                if (this.isPreviewActive) {
                     this.testPreviewAdjusting = true;
                     this.testAnonymization(this.testPreviewFile, this.isFullTest);
                 }
@@ -1505,7 +2020,7 @@ export default {
 
         handleCourtStyleChange() {
             // Re-run preview test if currently in preview modal when court style changes
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
@@ -1937,16 +2452,23 @@ export default {
             let savedPreviewScroll = 0;
             let savedModalScroll = 0;
             if (this.testPreviewAdjusting) {
-                if (this.$refs.previewContainer) savedPreviewScroll = this.$refs.previewContainer.scrollTop;
-                if (this.$refs.modalBody) savedModalScroll = this.$refs.modalBody.scrollTop;
+                if (this.viewMode === 'single') {
+                    if (this.$refs.singlePreviewContainer) savedPreviewScroll = this.$refs.singlePreviewContainer.scrollTop;
+                } else {
+                    if (this.$refs.previewContainer) savedPreviewScroll = this.$refs.previewContainer.scrollTop;
+                    if (this.$refs.modalBody) savedModalScroll = this.$refs.modalBody.scrollTop;
+                }
             }
 
             // Only clear result if we're not just adjusting the current one
             if (!this.testPreviewAdjusting) {
                 this.testPreviewResult = null;
             }
-            
-            this.showTestModal = true;
+
+            // Only open the modal in batch mode
+            if (this.viewMode !== 'single') {
+                this.showTestModal = true;
+            }
 
             try {
                 // Determine if we can use cached detection results
@@ -2014,11 +2536,17 @@ export default {
                 // Restore scroll position
                 if (this.testPreviewAdjusting) {
                     this.$nextTick(() => {
-                        if (this.$refs.previewContainer) {
-                            this.$refs.previewContainer.scrollTop = savedPreviewScroll;
-                        }
-                        if (this.$refs.modalBody) {
-                            this.$refs.modalBody.scrollTop = savedModalScroll;
+                        if (this.viewMode === 'single') {
+                            if (this.$refs.singlePreviewContainer) {
+                                this.$refs.singlePreviewContainer.scrollTop = savedPreviewScroll;
+                            }
+                        } else {
+                            if (this.$refs.previewContainer) {
+                                this.$refs.previewContainer.scrollTop = savedPreviewScroll;
+                            }
+                            if (this.$refs.modalBody) {
+                                this.$refs.modalBody.scrollTop = savedModalScroll;
+                            }
                         }
                     });
                 }
@@ -2157,7 +2685,7 @@ export default {
             if (!source || !target) return;
             this.courtEntityMappings[source] = target;
             
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
@@ -2166,7 +2694,7 @@ export default {
             if (!source) return;
             delete this.courtEntityMappings[source];
             
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
@@ -2337,7 +2865,7 @@ export default {
             this.sessionRemovedEntities = this.sessionRemovedEntities.filter(n => n.trim().toLowerCase() !== cleanWord.toLowerCase());
 
             // Re-run preview test
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
@@ -2352,7 +2880,7 @@ export default {
             this.manualEntities = this.manualEntities.filter(n => n.word !== name);
             
             // Re-run preview test
-            if (this.showTestModal && this.testPreviewResult) {
+            if (this.isPreviewActive) {
                 this.testPreviewAdjusting = true;
                 this.testAnonymization(this.testPreviewFile, this.isFullTest);
             }
@@ -2366,6 +2894,83 @@ export default {
                 }
             }
             this.selectionMenu.visible = false;
+        },
+
+        // ── Single-file mode methods ──────────────────────────────────────────
+
+        triggerSingleFileInput() {
+            this.$refs.singleFileInput.click();
+        },
+
+        handleSingleFileInputChange(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                this.setSingleFile(files[0]);
+            }
+            event.target.value = '';
+        },
+
+        handleSingleFileDrop(event) {
+            this.singleFileDragOver = false;
+            const files = event.dataTransfer?.files;
+            if (files && files.length > 0) {
+                this.setSingleFile(files[0]);
+            }
+        },
+
+        setSingleFile(file) {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                console.warn(`Ungültige Datei: ${validation.error}`);
+                return;
+            }
+            // Reset preview state for the new file
+            this.testPreviewResult = null;
+            this.testPreviewError = null;
+            this.testPreviewDetectedEntities = null;
+            this.testPreviewCachedParams = { file: null, threshold: 0, labels: [] };
+            this.manualEntities = [];
+            this.sessionRemovedEntities = [];
+            this.courtEntityMappings = {};
+            this.hoverTooltip.isPinned = false;
+            this.selectionMenu.visible = false;
+            this.testPreviewFile = file;
+        },
+
+        runSingleAnonymization() {
+            if (!this.testPreviewFile) return;
+            this.testAnonymization(this.testPreviewFile, true);
+        },
+
+        downloadSingleResult(format) {
+            if (!this.testPreviewResult || !this.testPreviewResult.anonymizedText) return;
+
+            const originalName = this.testPreviewFile?.name || 'text';
+            const baseName = getFileNameWithoutExtension(originalName);
+
+            let ext;
+            if (format === 'md') {
+                ext = '.md';
+            } else if (format === 'txt') {
+                ext = '.txt';
+            } else {
+                // Auto: use convertWordToMarkdown for docx files
+                ext = (this.isDocxFile && this.convertWordToMarkdown) ? '.md' : '.txt';
+            }
+
+            let fileName = `${baseName}_anonymized${ext}`;
+            if (this.anonymizeFilenames) {
+                const randomNum = Math.floor(10000000 + Math.random() * 90000000);
+                fileName = `anon-text-${randomNum}${ext}`;
+            }
+
+            const blob = new Blob([this.testPreviewResult.anonymizedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
         }
     }
 };
