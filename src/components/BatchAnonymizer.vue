@@ -560,13 +560,16 @@
             <!-- Row 2: Settings Bar -->
             <div class="bg-base-100 border-b border-base-300 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <!-- Anonymisierungsstärke -->
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-semibold text-base-content/70 whitespace-nowrap">Stärke:</label>
-                    <input type="range" v-model="anonymizationStrength" min="0.05" max="0.8" step="0.05" class="range range-xs range-primary w-24">
-                    <span class="text-xs font-mono text-base-content/60 w-8">{{ Math.round(anonymizationStrength * 100) }}%</span>
+                <div class="tooltip tooltip-bottom" data-tip="Hoch = mehr anonymisiert (mehr False Positives). Niedrig = weniger anonymisiert (mehr False Negatives).">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-semibold text-base-content/70 whitespace-nowrap">Stärke:</label>
+                        <input type="range" v-model="anonymizationStrength" min="0.05" max="0.8" step="0.05" class="range range-xs range-primary w-24">
+                        <span class="text-xs font-mono text-base-content/60 w-8">{{ Math.round(anonymizationStrength * 100) }}%</span>
+                    </div>
                 </div>
 
                 <!-- Entity Selection Dropdown -->
+                <div class="tooltip tooltip-bottom" data-tip="Entitätskategorien auswählen, die anonymisiert werden sollen">
                 <div class="dropdown">
                     <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
                         Entitäten ({{ selectedLabels.length }}/{{ availableLabels.length }})
@@ -586,59 +589,72 @@
                         </div>
                     </div>
                 </div>
+                </div>
 
                 <!-- Teilwörter Toggle -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="anonymizePartialWords" class="toggle toggle-xs toggle-primary">
-                    <span class="text-xs font-semibold text-base-content/70">Teilwörter</span>
-                </label>
+                <div class="tooltip tooltip-bottom" data-tip="Wenn aktiv: einzelne Wortbestandteile erkannter Entitäten werden ebenfalls anonymisiert (z.B. «Max» aus «Vater von Max»)">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="anonymizePartialWords" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">Teilwörter</span>
+                    </label>
+                </div>
 
                 <!-- Min. Zeichen -->
-                <div v-show="anonymizePartialWords" class="flex items-center gap-1">
-                    <label class="text-xs text-base-content/70 whitespace-nowrap">Min. Zeichen:</label>
-                    <input type="number" v-model.number="minCharacterThreshold" min="0" max="50" class="input input-xs input-bordered w-14">
+                <div class="tooltip tooltip-bottom" data-tip="Entitätsbestandteile mit weniger als N Zeichen werden nicht anonymisiert (z.B. eine alleinstehende «5» aus «Landenbergstrasse 5»)">
+                    <div v-show="anonymizePartialWords" class="flex items-center gap-1">
+                        <label class="text-xs text-base-content/70 whitespace-nowrap">Min. Zeichen:</label>
+                        <input type="number" v-model.number="minCharacterThreshold" min="0" max="50" class="input input-xs input-bordered w-14">
+                    </div>
                 </div>
 
                 <!-- Gerichtsüblich Toggle -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="courtStyle" @change="handleCourtStyleChange" class="toggle toggle-xs toggle-primary">
-                    <span class="text-xs font-semibold text-base-content/70">Gerichtsüblich</span>
-                </label>
+                <div class="tooltip tooltip-bottom" data-tip="Gerichtsübliche Darstellung: Entitäten werden als A.________ anonymisiert">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="courtStyle" @change="handleCourtStyleChange" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">Gerichtsüblich</span>
+                    </label>
+                </div>
 
                 <!-- Negativliste Dropdown -->
-                <div class="dropdown dropdown-bottom">
-                    <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
-                        Negativliste
-                        <ChevronDownIcon class="w-3 h-3" />
-                    </label>
-                    <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-80 border border-base-300">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs font-semibold">Negativliste</span>
-                            <div class="flex gap-1">
-                                <button @click="mergeDefaultExclusionList" class="btn btn-xs">+ Standard</button>
-                                <button @click="resetExclusionList" class="btn btn-xs btn-error btn-outline">Zurücksetzen</button>
+                <div class="tooltip tooltip-bottom" data-tip="Wörter, die trotz Erkennung als PII nie anonymisiert werden">
+                    <div class="dropdown dropdown-bottom">
+                        <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
+                            Negativliste
+                            <ChevronDownIcon class="w-3 h-3" />
+                        </label>
+                        <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-80 border border-base-300">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-semibold">Negativliste</span>
+                                <div class="flex gap-1">
+                                    <button @click="mergeDefaultExclusionList" class="btn btn-xs">+ Standard</button>
+                                    <button @click="resetExclusionList" class="btn btn-xs btn-error btn-outline">Zurücksetzen</button>
+                                </div>
                             </div>
+                            <textarea
+                                v-model="exclusionList"
+                                @input="saveExclusionList"
+                                class="textarea textarea-bordered textarea-xs w-full h-24 font-mono text-xs"
+                                placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland"
+                            ></textarea>
                         </div>
-                        <textarea
-                            v-model="exclusionList"
-                            @input="saveExclusionList"
-                            class="textarea textarea-bordered textarea-xs w-full h-24 font-mono text-xs"
-                            placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland"
-                        ></textarea>
                     </div>
                 </div>
 
                 <!-- Dateinamen anonymisieren -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
-                    <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
-                </label>
+                <div class="tooltip tooltip-bottom" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
+                    </label>
+                </div>
 
                 <!-- DOCX → MD -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
-                    <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
-                </label>
+                <div class="tooltip tooltip-bottom" data-tip="Word-Dateien (.docx) als Markdown ausgeben – behält Formatierung (Fett, Listen, etc.) bei">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
+                        <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
+                    </label>
+                </div>
 
                 <!-- Anonymisieren Button -->
                 <button
@@ -738,10 +754,15 @@
                 </div>
 
                 <!-- Right: Panel Toggle Tabs + Panels -->
-                <div v-if="testPreviewResult" class="flex flex-shrink-0">
+                <div v-if="testPreviewResult && !panelsInFooter" class="flex flex-shrink-0">
 
                     <!-- Vertical toggle tabs -->
                     <div class="flex flex-col bg-base-100 border-l border-base-300">
+                        <button
+                            @click="panelsInFooter = true"
+                            class="px-2 py-2 text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors border-b border-base-300 flex items-center justify-center"
+                            title="Panels in den Footer verschieben"
+                        >↓</button>
                         <button
                             @click="showEntityPanel = !showEntityPanel"
                             class="px-2 py-5 text-xs font-semibold border-b border-base-300 hover:bg-base-200 transition-colors select-none"
@@ -986,6 +1007,110 @@
                             <button @click="cancelManualEntityAdding" class="btn btn-ghost btn-xs">Abbrechen</button>
                             <button @click="addManualEntity" class="btn btn-primary btn-xs" :disabled="!selectionMenu.selectedCategory">Speichern</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Panels (alternative to side panel) -->
+            <div v-if="testPreviewResult && panelsInFooter" class="border-t border-base-300 bg-base-100 flex-shrink-0 flex flex-col" style="height: 240px;">
+                <!-- Tab bar -->
+                <div class="flex items-center border-b border-base-300 flex-shrink-0">
+                    <button
+                        @click="showEntityPanel = !showEntityPanel"
+                        class="px-4 py-2 text-xs font-semibold border-r border-base-300 hover:bg-base-200 transition-colors select-none"
+                        :class="showEntityPanel ? 'bg-base-200 text-primary' : 'text-base-content/60'"
+                    >Entitäten &amp; Platzhalter</button>
+                    <button
+                        @click="showWordsPanel = !showWordsPanel"
+                        class="px-4 py-2 text-xs font-semibold border-r border-base-300 hover:bg-base-200 transition-colors select-none"
+                        :class="showWordsPanel ? 'bg-base-200 text-primary' : 'text-base-content/60'"
+                    >Anonymisierte Wörter</button>
+                    <button
+                        @click="panelsInFooter = false"
+                        class="ml-auto px-3 py-2 text-xs text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors"
+                        title="Als Seitenpanel anzeigen"
+                    >→ Seitenpanel</button>
+                </div>
+                <!-- Panel content -->
+                <div class="flex flex-1 overflow-hidden">
+                    <!-- Entity Panel (footer) -->
+                    <div v-if="showEntityPanel" class="flex-1 overflow-auto border-r border-base-300">
+                        <table class="table table-xs w-full table-pin-rows">
+                            <thead>
+                                <tr class="bg-base-200">
+                                    <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('name')">
+                                        Original <span v-if="entitySortColumn === 'name'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                    </th>
+                                    <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('type')">
+                                        Typ <span v-if="entitySortColumn === 'type'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                    </th>
+                                    <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('placeholder')">
+                                        Platzhalter <span v-if="entitySortColumn === 'placeholder'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                    </th>
+                                    <th class="cursor-pointer hover:bg-base-300 select-none" @click="sortBy('status')">
+                                        Status <span v-if="entitySortColumn === 'status'">{{ entitySortDirection === 'asc' ? '↑' : '↓' }}</span>
+                                    </th>
+                                    <th class="text-center">Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="entity in sortedEntities" :key="entity.id" class="hover:bg-base-200/50">
+                                    <td class="font-medium max-w-[150px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
+                                    <td>
+                                        <select
+                                            class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
+                                            :value="entity.type"
+                                            @change="changeEntityCategory(entity.name, $event.target.value)"
+                                        >
+                                            <option v-for="label in availableLabels" :key="label" :value="label">{{ formatLabel(label) }}</option>
+                                        </select>
+                                    </td>
+                                    <td class="font-mono text-xs text-base-content/70 select-all">{{ getActualPlaceholder(entity) }}</td>
+                                    <td>
+                                        <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">{{ getEntityStatus(entity).label }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button
+                                            v-if="!entity.isManual"
+                                            @click="toggleSessionRemovedEntity(entity.name)"
+                                            class="btn btn-ghost btn-xs btn-square"
+                                            :class="sessionRemovedEntities.includes(entity.name) ? 'text-success' : 'text-error'"
+                                            :title="sessionRemovedEntities.includes(entity.name) ? 'Anonymisierung wieder aktivieren' : 'Diese Entität ausschliessen'"
+                                        >
+                                            <XMarkIcon v-if="!sessionRemovedEntities.includes(entity.name)" class="w-4 h-4" />
+                                            <ArrowPathIcon v-else class="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            v-else
+                                            @click="removeManualEntity(entity.name)"
+                                            class="btn btn-ghost btn-xs btn-square text-error"
+                                            title="Manuelle Anonymisierung entfernen"
+                                        >
+                                            <XMarkIcon class="w-4 h-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Words Panel (footer) -->
+                    <div v-if="showWordsPanel" class="w-64 flex-shrink-0 overflow-auto p-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="item in uniqueAnonymizedWords"
+                                :key="item.word"
+                                @click="addToExclusionList(item.word)"
+                                class="px-2 py-1 text-xs rounded-full border transition-all"
+                                :class="item.isInExclusionList
+                                    ? 'bg-warning text-warning-content border-warning hover:bg-warning/80 cursor-pointer line-through'
+                                    : 'bg-base-100 text-base-content border-base-300 hover:bg-primary hover:text-primary-content hover:border-primary cursor-pointer'"
+                            >
+                                {{ item.word }}<span v-if="item.isInExclusionList" class="ml-1">✓</span>
+                            </button>
+                        </div>
+                        <p v-if="uniqueAnonymizedWords.length === 0" class="text-sm text-base-content/50 italic">
+                            Keine Wörter anonymisiert
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1550,7 +1675,8 @@ export default {
             viewMode: 'batch', // 'batch' | 'single'
             singleFileDragOver: false,
             showEntityPanel: false,
-            showWordsPanel: false
+            showWordsPanel: false,
+            panelsInFooter: false
 
         };
     },
