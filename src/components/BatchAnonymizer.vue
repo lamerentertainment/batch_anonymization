@@ -858,7 +858,7 @@
                 <!-- Tooltip (fixed positioned, works in single-file mode) -->
                 <div
                     v-if="hoverTooltip.visible"
-                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
                     :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                     :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
                     @mouseenter="handleTooltipMouseEnter"
@@ -913,7 +913,7 @@
                                 </option>
                             </select>
                         </div>
-                        <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
+                        <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-base-content/20 my-1"></div>
                         <div class="form-control w-full my-1">
                             <label class="label p-0 pb-1">
                                 <span class="label-text-alt text-base-content/70">Kategorie ändern:</span>
@@ -929,7 +929,7 @@
                                 </option>
                             </select>
                         </div>
-                        <div class="border-t border-gray-700 my-1"></div>
+                        <div class="border-t border-base-content/20 my-1"></div>
                         <div class="flex flex-wrap gap-1">
                             <button
                                 v-for="word in getSurgicalWords(hoverTooltip.entityName)"
@@ -953,7 +953,7 @@
                             Ganze Entität ignorieren
                         </button>
                     </div>
-                    <div :class="hoverTooltip.isPinned ? 'border-t border-gray-700 pt-1 mt-1' : ''">
+                    <div :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
                         Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
                         <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
                     </div>
@@ -1112,7 +1112,7 @@
                         <!-- Custom Tooltip -->
                         <div
                             v-if="hoverTooltip.visible"
-                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-white bg-gray-900 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
+                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
                             :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                             :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
                             @mouseenter="handleTooltipMouseEnter"
@@ -1176,7 +1176,7 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-gray-700 my-1"></div>
+                                <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-base-content/20 my-1"></div>
 
                                 <!-- Change Category -->
                                 <div class="form-control w-full my-1">
@@ -1194,7 +1194,7 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div class="border-t border-gray-700 my-1"></div>
+                                <div class="border-t border-base-content/20 my-1"></div>
 
                                 <!-- Surgical Word Buttons -->
                                 <div class="flex flex-wrap gap-1">
@@ -1226,7 +1226,7 @@
                                 </button>
                             </div>
                             
-                            <div :class="hoverTooltip.isPinned ? 'border-t border-gray-700 pt-1 mt-1' : ''">
+                            <div :class="hoverTooltip.isPinned ? 'border-t border-base-content/20 pt-1 mt-1' : ''">
                                 Original: <span class="font-bold text-primary-focus" v-html="hoverTooltip.text"></span>
                                 <span v-if="hoverTooltip.isPinned" class="ml-2 text-[8px] uppercase tracking-widest text-primary opacity-70">Angeheftet</span>
                             </div>
