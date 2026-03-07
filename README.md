@@ -1,29 +1,66 @@
-# Iusable Anonymization and Pseudonymization Tool
+# lokale Anonymisierung
 
-A Vue 3 application for anonymizing text by detecting and replacing sensitive entities with placeholder tokens.
+Ein leistungsstarkes, datenschutzorientiertes Werkzeug zur automatisierten und interaktiven Anonymisierung von Textdokumenten. Entwickelt für Anwendungsfälle, bei denen **Personally Identifiable Information (PII)** zuverlässig erkannt und durch Platzhalter ersetzt werden muss.
 
-## Features
+testen auf: http://batch-anon.einfuegen.ch
 
-- **Automatic Entity Detection**: Uses pattern matching to automatically detect license plates and other entities
-- **Manual Entity Definition**: Add custom entities by selecting text or typing them manually
-- **Entity Types**: Support for Person, Location, Organization, Date, Time, License Plate, Car, and Other entities
-- **Real-time Preview**: See anonymized text with entities replaced by labeled badges
-- **Persistent Storage**: Entities are saved in localStorage for session persistence
+## 🛡️ Datenschutz & Sicherheit
 
-## Entity Types Supported
+Der Schutz Ihrer Daten steht an erster Stelle. Im Gegensatz zu vielen anderen KI-Tools arbeitet diese Anwendung nach dem **Local-First-Prinzip**:
 
-- PERSON
-- LOCATION  
-- ORGANIZATION
-- DATE
-- TIME
-- LICENSE_PLATE (automatically detects AA 1234 format)
-- CAR
-- OTHER
+- **Kein Datentransfer**: Ihre Dokumente werden niemals auf einen Server hochgeladen.
+- **Lokale Verarbeitung**: Die KI-Modelle (GLiNER) laufen direkt in Ihrem Browser mittels ONNX Runtime (WebGPU/WASM).
+- **Offline-Fähigkeit**: Nach dem initialen Laden des Modells kann die Anwendung vollständig offline genutzt werden.
 
-## Development
+## ✨ Kernfunktionen
 
-Built with Vue 3, Vite, Tailwind CSS, and DaisyUI.
+### 1. Intelligente Entitätserkennung (KI-gestützt)
+Nutzt modernste **GLiNER (Generalist Model for Information Extraction)** Technologie zur Erkennung von über 60 Kategorien sensibler Daten:
+- **Personen**: Namen, Initialen, Titel.
+- **Adressen & Orte**: Strassen, Städte, Länder, Postleitzahlen.
+- **Organisationen**: Firmennamen, Behörden, Vereine.
+- **Finanzdaten**: IBAN, Kreditkartennummern.
+- **Identifikatoren**: Sozialversicherungsnummern, Steuernummern, Pass- und Ausweisnummern.
+- **Fahrzeugdaten**: Autokennzeichen, Fahrzeugmarken.
+- **Kontakt**: E-Mail-Adressen, Telefonnummern (Festnetz & Mobil).
+
+### 2. Anonymisierungsvarianten
+- **Gerichtsüblicher Stil**: Automatische Umwandlung in das Format `A.________` (mit konsistenter Identifikations-Zuweisung).
+- **Token-basiert**: Ersetzung durch Platzhalter wie `[1_PERSON]`, `[2_LOCATION]`, etc.
+- **Teilwort-Anonymisierung**: Optionale Behandlung von Entitätsbestandteilen (z. B. "Max" aus "Max Mustermann").
+
+### 3. Workflow & Bearbeitung
+- **Batch-Modus**: Verarbeitung ganzer Ordner oder mehrerer Dateien gleichzeitig.
+- **Interaktive Vorschau**: Echtzeit-Vorschau mit farblichen Hervorhebungen und Hover-Funktion (Originaltext wird bei Mouse-over angezeigt).
+- **Manuelle Korrekturen**: Zusätzliche Entitäten einfach durch Markieren im Text definieren.
+- **Entitäts-Merge**: Zusammenführen verschiedener Textvarianten (z. B. "Max Mustermann" und "M. Mustermann") zu einem einzigen Platzhalter.
+- **Negativliste (Exclusion List)**: Definieren von Wörtern, die niemals anonymisiert werden sollen (z. B. Ortsnamen in spezifischen Kontexten).
+
+### 4. Datei-Handling
+- **Unterstützte Formate**: `.txt`, `.pdf`, `.docx` (Word).
+- **Markdown-Export**: Konvertiert Word-Dokumente in Markdown, um Formatierungen (Fett, Listen) bei gleichzeitiger Textbasiertheit beizubehalten.
+- **Dateinamen-Anonymisierung**: Option zur automatischen Generierung neutraler Dateinamen (`anon-text-########`).
+
+## ️ Installation & Setup
+
+```bash
+# Abhängigkeiten installieren und PDF-Worker einrichten
+npm install
+
+# Entwicklungsserver starten
+npm run dev
+
+# Produktions-Build erstellen
+npm run build
+```
+
+### ⚠️ Wichtiger Hinweis zum PDF-Worker & Modellen
+Sie müssen die Modelle und den PDF.js-Worker manuell zum Projekt hinzufügen (oder den Setup-Script nutzen). Siehe `Readme.md` im Ordner `/public` für genaue Anweisungen.
+
+```bash
+# Manueller Setup des PDF-Workers (falls nötig)
+cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
+```
 
 ### Important
 You need to add the models and the pdfjs worker to the project manually. See Readme.md in /public for precise instructions.
