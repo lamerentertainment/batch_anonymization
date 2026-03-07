@@ -12,18 +12,18 @@
             </div>
             <div class="flex items-center gap-1 bg-base-200 rounded-lg p-1">
                 <button
-                    @click="viewMode = 'batch'"
-                    class="btn btn-sm rounded-md transition-all"
-                    :class="viewMode === 'batch' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
-                >
-                    Batch
-                </button>
-                <button
                     @click="viewMode = 'single'"
                     class="btn btn-sm rounded-md transition-all"
                     :class="viewMode === 'single' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
                 >
                     Einzeldatei
+                </button>
+                <button
+                    @click="viewMode = 'batch'"
+                    class="btn btn-sm rounded-md transition-all"
+                    :class="viewMode === 'batch' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
+                >
+                    Batch
                 </button>
             </div>
         </header>
@@ -881,7 +881,7 @@
                     v-if="hoverTooltip.visible"
                     class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
                     :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
-                    :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
+                    :style="tooltipStyle"
                     @mouseenter="handleTooltipMouseEnter"
                     @mouseleave="handleTooltipMouseLeave"
                 >
@@ -984,7 +984,7 @@
                 <div
                     v-if="selectionMenu.visible"
                     class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
-                    :style="{ top: selectionMenu.y + 'px', left: selectionMenu.x + 'px', transform: 'translate(-50%, -120%)' }"
+                    :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min(window.innerWidth - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                     @mousedown.stop
                 >
                     <button
@@ -1239,7 +1239,7 @@
                             v-if="hoverTooltip.visible"
                             class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl transform -translate-x-1/2 -translate-y-full flex flex-col gap-2 min-w-[220px]"
                             :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
-                            :style="{ top: (hoverTooltip.y - 4) + 'px', left: hoverTooltip.x + 'px' }"
+                            :style="tooltipStyle"
                             @mouseenter="handleTooltipMouseEnter"
                             @mouseleave="handleTooltipMouseLeave"
                         >
@@ -1376,7 +1376,7 @@
                         <div
                             v-if="selectionMenu.visible"
                             class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
-                            :style="{ top: selectionMenu.y + 'px', left: selectionMenu.x + 'px', transform: 'translate(-50%, -120%)' }"
+                            :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min(window.innerWidth - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                             @mousedown.stop
                         >
                             <button
@@ -1672,7 +1672,7 @@ export default {
             entitySortDirection: 'asc',
 
             // View mode
-            viewMode: 'batch', // 'batch' | 'single'
+            viewMode: new URLSearchParams(window.location.search).get('mode') === 'batch' ? 'batch' : 'single', // 'batch' | 'single'
             singleFileDragOver: false,
             showEntityPanel: false,
             showWordsPanel: false,
@@ -1689,6 +1689,12 @@ export default {
         window.removeEventListener('mousedown', this.hideSelectionMenu);
     },
     computed: {
+        tooltipStyle() {
+            const HALF_W = 120; // conservative estimate (min-w-[220px] / 2 + padding)
+            const MARGIN = 8;
+            const x = Math.max(HALF_W + MARGIN, Math.min(window.innerWidth - HALF_W - MARGIN, this.hoverTooltip.x));
+            return { top: (this.hoverTooltip.y - 4) + 'px', left: x + 'px' };
+        },
         // True when the preview result is active (either in modal or single-file mode)
         isPreviewActive() {
             return (this.showTestModal || this.viewMode === 'single') && !!this.testPreviewResult;
@@ -2978,8 +2984,14 @@ export default {
                     .find(tr => tr.dataset.entityName === entityName);
                 if (row) {
                     row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    row.classList.add('entity-row-highlight');
-                    setTimeout(() => row.classList.remove('entity-row-highlight'), 1200);
+                    // Flash: show highlight immediately, then fade out
+                    row.style.transition = 'background-color 0s';
+                    row.style.backgroundColor = 'rgba(99, 102, 241, 0.22)';
+                    setTimeout(() => {
+                        row.style.transition = 'background-color 1.1s ease-out';
+                        row.style.backgroundColor = '';
+                        setTimeout(() => { row.style.transition = ''; }, 1100);
+                    }, 350);
                 }
             }
         },
@@ -2994,9 +3006,19 @@ export default {
             const currentIdx = this.entityScrollIndex[entityName] ?? -1;
             const nextIdx = (currentIdx + 1) % tokens.length;
             this.entityScrollIndex = { ...this.entityScrollIndex, [entityName]: nextIdx };
-            tokens[nextIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            tokens[nextIdx].classList.add('token-nav-highlight');
-            setTimeout(() => tokens[nextIdx].classList.remove('token-nav-highlight'), 900);
+            const token = tokens[nextIdx];
+            token.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Ring glow: show immediately, then fade out
+            token.style.transition = 'box-shadow 0s';
+            token.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.85), 0 0 10px rgba(99, 102, 241, 0.35)';
+            setTimeout(() => {
+                token.style.transition = 'box-shadow 0.8s ease-out';
+                token.style.boxShadow = '0 0 0 0 rgba(99, 102, 241, 0)';
+                setTimeout(() => {
+                    token.style.boxShadow = '';
+                    token.style.transition = '';
+                }, 800);
+            }, 550);
         },
         handleTextMouseMove(e) {
             if (this.hoverTooltip.visible && !this.hoverTooltip.isPinned) {
@@ -3160,23 +3182,3 @@ export default {
     }
 };
 </script>
-
-<style>
-/* Token highlight when navigating from entity panel (v-html, cannot use scoped) */
-.token-nav-highlight {
-    outline: 2px solid var(--color-primary) !important;
-    outline-offset: 2px;
-    transition: outline 0.2s;
-}
-</style>
-
-<style scoped>
-/* Entity row highlight when a matching token is clicked in the preview text */
-@keyframes entity-row-pulse {
-    0%   { background-color: color-mix(in oklch, var(--color-primary) 22%, transparent); }
-    100% { background-color: transparent; }
-}
-.entity-row-highlight {
-    animation: entity-row-pulse 1.2s ease-out forwards;
-}
-</style>
