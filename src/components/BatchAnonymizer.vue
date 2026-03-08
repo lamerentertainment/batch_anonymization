@@ -1002,6 +1002,24 @@
                                 </option>
                             </select>
                         </div>
+                        <div class="form-control w-full mt-1">
+                            <label class="label p-0 pb-1">
+                                <span class="label-text-alt text-base-content/70">Platzhalter tauschen:</span>
+                            </label>
+                            <select
+                                class="select select-bordered select-xs w-full text-base-content font-mono"
+                                @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
+                            >
+                                <option value="" disabled selected>Platzhalter wählen...</option>
+                                <option
+                                    v-for="s in placeholderSuggestions"
+                                    :key="s.value"
+                                    :value="s.value"
+                                >
+                                    {{ s.value }} ({{ s.label.split(' > ')[1] }})
+                                </option>
+                            </select>
+                        </div>
                         <div class="border-t border-base-content/20 my-1"></div>
                         <div class="flex flex-wrap gap-1">
                             <button
@@ -1410,6 +1428,24 @@
                                         <option value="" disabled>Bitte wählen...</option>
                                         <option v-for="label in availableLabels" :key="label" :value="label">
                                             {{ formatLabel(label) }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-control w-full mt-1">
+                                    <label class="label p-0 pb-1">
+                                        <span class="label-text-alt text-base-content/70">Platzhalter tauschen:</span>
+                                    </label>
+                                    <select
+                                        class="select select-bordered select-xs w-full text-base-content font-mono"
+                                        @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
+                                    >
+                                        <option value="" disabled selected>Platzhalter wählen...</option>
+                                        <option
+                                            v-for="s in placeholderSuggestions"
+                                            :key="s.value"
+                                            :value="s.value"
+                                        >
+                                            {{ s.value }} ({{ s.label.split(' > ')[1] }})
                                         </option>
                                     </select>
                                 </div>
@@ -2390,6 +2426,11 @@ export default {
         cancelEditingPlaceholder() {
             this.showPlaceholderSuggestions = false;
             this.editingPlaceholderFor = null;
+        },
+
+        findEntityByName(name) {
+            if (!this.testPreviewResult || !this.testPreviewResult.entities) return null;
+            return this.testPreviewResult.entities.find(e => e.name === name);
         },
         
         // Sidebar Resizing
