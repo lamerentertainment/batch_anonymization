@@ -1036,7 +1036,7 @@
                 <div
                     v-if="selectionMenu.visible"
                     class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
-                    :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min(window.innerWidth - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
+                    :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min((windowObj ? windowObj.innerWidth : 1200) - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                     @mousedown.stop
                 >
                     <button
@@ -1470,7 +1470,7 @@
                         <div
                             v-if="selectionMenu.visible"
                             class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
-                            :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min(window.innerWidth - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
+                            :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min((windowObj ? windowObj.innerWidth : 1200) - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                             @mousedown.stop
                         >
                             <button
@@ -1796,22 +1796,17 @@ export default {
             showEntityPanel: false,
             showWordsPanel: false,
             panelsInFooter: false,
-            entityScrollIndex: {}
-
+            entityScrollIndex: {},
+            windowObj: null
         };
     },
     mounted() {
-        window.addEventListener('mousedown', (e) => {
-            this.hideSelectionMenu(e);
-            // Hide placeholder suggestions if clicking elsewhere
-            if (this.showPlaceholderSuggestions) {
-                this.showPlaceholderSuggestions = false;
-            }
-        });
+        this.windowObj = window;
+        window.addEventListener('mousedown', this.handleGlobalMouseDown);
         this.loadExclusionList();
     },
     beforeUnmount() {
-        window.removeEventListener('mousedown', this.hideSelectionMenu);
+        window.removeEventListener('mousedown', this.handleGlobalMouseDown);
         window.removeEventListener('mousemove', this.handleSidebarResize);
         window.removeEventListener('mouseup', this.stopResizingSidebar);
     },
@@ -3388,14 +3383,15 @@ export default {
             }
         },
         hideSelectionMenu(event) {
-            // Close if clicking outside the menu
-            if (this.selectionMenu.visible && event) {
-                const menuEl = this.$el.querySelector('.fixed.z-\\[110\\]');
-                if (menuEl && menuEl.contains(event.target)) {
-                    return;
-                }
-            }
             this.selectionMenu.visible = false;
+        },
+
+        handleGlobalMouseDown(e) {
+            this.hideSelectionMenu(e);
+            // Hide placeholder suggestions if clicking elsewhere
+            if (this.showPlaceholderSuggestions) {
+                this.showPlaceholderSuggestions = false;
+            }
         },
 
         // ── Single-file mode methods ──────────────────────────────────────────
