@@ -755,10 +755,10 @@
                 </div>
 
                 <!-- Right: Panel Toggle Tabs + Panels -->
-                <div v-if="testPreviewResult && !panelsInFooter" class="flex flex-shrink-0">
+                <div v-if="testPreviewResult && !panelsInFooter" class="flex flex-shrink-0" :class="isResizingSidebar ? 'select-none' : ''">
 
-                    <!-- Vertical toggle tabs -->
-                    <div class="flex flex-col bg-base-100 border-l border-base-300">
+                    <!-- Vertical toggle tabs (always on the left edge of the sidebar group) -->
+                    <div class="flex flex-col bg-base-100 border-l border-base-300 z-10">
                         <button
                             @click="panelsInFooter = true"
                             class="px-2 py-2 text-base-content/40 hover:text-primary hover:bg-base-200 transition-colors border-b border-base-300 flex items-center justify-center"
@@ -784,8 +784,16 @@
                         </button>
                     </div>
 
+                    <!-- Resizer handle -->
+                    <div 
+                        v-if="showEntityPanel || showWordsPanel"
+                        class="w-1.5 hover:w-2 bg-transparent hover:bg-primary/50 cursor-col-resize transition-all duration-300 flex-shrink-0 active:bg-primary z-20 -ml-[0.75px]"
+                        @mousedown="startResizingSidebar"
+                        title="Ziehen zum Vergrössern/Verkleinern"
+                    ></div>
+
                     <!-- Entity Panel -->
-                    <div v-if="showEntityPanel" class="w-80 flex flex-col overflow-hidden bg-base-100 border-l border-base-300">
+                    <div v-if="showEntityPanel" class="flex flex-col overflow-hidden bg-base-100 border-l border-base-300 transition-[width]" :style="{ width: sidebarWidth + 'px' }">
                         <div class="px-3 py-2 border-b border-base-300">
                             <h4 class="font-semibold text-sm">Gefundene Entitäten & Platzhalter</h4>
                         </div>
@@ -820,7 +828,45 @@
                                                 <option v-for="label in availableLabels" :key="label" :value="label">{{ formatLabel(label) }}</option>
                                             </select>
                                         </td>
-                                        <td class="font-mono text-xs text-base-content/70 select-all">{{ getActualPlaceholder(entity) }}</td>
+                                        <td class="font-mono text-xs text-base-content/70">
+                                            <div v-if="editingPlaceholderFor === entity.name" class="flex items-center gap-1 relative">
+                                                <div class="relative flex-1">
+                                                    <input 
+                                                        type="text" 
+                                                        v-model="editingPlaceholderValue" 
+                                                        class="input input-xs input-bordered w-full min-w-[100px]"
+                                                        @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                        @keyup.esc="cancelEditingPlaceholder"
+                                                        @click.stop="showPlaceholderSuggestions = true"
+                                                        @focus="showPlaceholderSuggestions = true"
+                                                    >
+                                                    <!-- Custom Dropdown List -->
+                                                    <ul 
+                                                        v-if="showPlaceholderSuggestions" 
+                                                        class="absolute left-0 top-full mt-1 z-[200] w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
+                                                        @mousedown.stop
+                                                    >
+                                                        <li 
+                                                            v-for="s in placeholderSuggestions" 
+                                                            :key="s.value"
+                                                            class="px-4 py-3 hover:bg-primary hover:text-primary-content cursor-pointer transition-colors whitespace-nowrap overflow-hidden text-ellipsis border-b last:border-0 border-base-200/50 flex items-center justify-between gap-3 group"
+                                                            @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity.name)"
+                                                            :title="s.label"
+                                                        >
+                                                            <span class="font-mono text-sm">{{ s.value }}</span>
+                                                            <span class="text-[10px] opacity-60 italic truncate max-w-[150px] group-hover:opacity-100">{{ s.label.split(' > ')[1] }}</span>
+                                                        </li>
+                                                        <li v-if="placeholderSuggestions.length === 0" class="px-4 py-4 italic text-base-content/50 text-center">Keine anderen Platzhalter</li>
+                                                    </ul>
+                                                </div>
+                                                <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                                <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
+                                            </div>
+                                            <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                                <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
+                                                <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                            </div>
+                                        </td>
                                         <td>
                                             <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">{{ getEntityStatus(entity).label }}</span>
                                         </td>
@@ -851,7 +897,7 @@
                     </div>
 
                     <!-- Words Panel -->
-                    <div v-if="showWordsPanel" class="w-56 flex flex-col overflow-hidden bg-base-100 border-l border-base-300">
+                    <div v-if="showWordsPanel" class="flex flex-col overflow-hidden bg-base-100 border-l border-base-300 transition-[width]" :style="{ width: (showEntityPanel ? sidebarWidth : 320) + 'px' }">
                         <div class="px-3 py-2 border-b border-base-300">
                             <h4 class="font-semibold text-sm">Anonymisierte Wörter</h4>
                             <p class="text-xs text-base-content/50 mt-0.5">Klicken um zur Negativliste hinzuzufügen</p>
@@ -1071,7 +1117,44 @@
                                             <option v-for="label in availableLabels" :key="label" :value="label">{{ formatLabel(label) }}</option>
                                         </select>
                                     </td>
-                                    <td class="font-mono text-xs text-base-content/70 select-all">{{ getActualPlaceholder(entity) }}</td>
+                                    <td class="font-mono text-xs text-base-content/70">
+                                        <div v-if="editingPlaceholderFor === entity.name" class="flex items-center gap-1 relative">
+                                            <div class="relative flex-1">
+                                                <input 
+                                                    type="text" 
+                                                    v-model="editingPlaceholderValue" 
+                                                    class="input input-xs input-bordered w-full min-w-[100px]"
+                                                    @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                    @keyup.esc="cancelEditingPlaceholder"
+                                                    @click.stop="showPlaceholderSuggestions = true"
+                                                    @focus="showPlaceholderSuggestions = true"
+                                                >
+                                                <!-- Custom Dropdown List -->
+                                                <ul 
+                                                    v-if="showPlaceholderSuggestions" 
+                                                    class="absolute left-0 bottom-full mb-1 z-[200] w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
+                                                    @mousedown.stop
+                                                >
+                                                    <li 
+                                                        v-for="s in placeholderSuggestions" 
+                                                        :key="s.value"
+                                                        class="px-4 py-3 hover:bg-primary hover:text-primary-content cursor-pointer transition-colors whitespace-nowrap overflow-hidden text-ellipsis border-b last:border-0 border-base-200/50 flex items-center justify-between gap-3 group"
+                                                        @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity.name)"
+                                                        :title="s.label"
+                                                    >
+                                                        <span class="font-mono text-sm">{{ s.value }}</span>
+                                                        <span class="text-[10px] opacity-60 italic truncate max-w-[150px] group-hover:opacity-100">{{ s.label.split(' > ')[1] }}</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                            <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
+                                        </div>
+                                        <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                            <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
+                                            <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                        </div>
+                                    </td>
                                     <td>
                                         <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">{{ getEntityStatus(entity).label }}</span>
                                     </td>
@@ -1491,8 +1574,24 @@
                                                     </option>
                                                 </select>
                                             </td>
-                                            <td class="font-mono text-xs text-base-content/70 select-all">
-                                                {{ getActualPlaceholder(entity) }}
+                                            <td class="font-mono text-xs text-base-content/70">
+                                                <div v-if="editingPlaceholderFor === entity.name" class="flex items-center gap-1">
+                                                    <input 
+                                                        type="text" 
+                                                        v-model="editingPlaceholderValue" 
+                                                        class="input input-xs input-bordered w-full min-w-[100px]"
+                                                        list="placeholder-suggestions"
+                                                        @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                        @keyup.esc="cancelEditingPlaceholder"
+                                                        @click.stop
+                                                    >
+                                                    <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                                    <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
+                                                </div>
+                                                <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                                    <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
+                                                    <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                                </div>
                                             </td>
                                             <td>
                                                 <span :class="getEntityStatus(entity).class" class="text-xs font-semibold">
@@ -1559,7 +1658,8 @@ import {
     MagnifyingGlassIcon,
     SignalIcon,
     ArrowPathIcon,
-    ChevronDownIcon
+    ChevronDownIcon,
+    PencilIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -1592,7 +1692,8 @@ export default {
         MagnifyingGlassIcon,
         SignalIcon,
         ArrowPathIcon,
-        ChevronDownIcon
+        ChevronDownIcon,
+        PencilIcon
     },
     data() {
         return {
@@ -1667,6 +1768,12 @@ export default {
             anonymizeFilenames: true,
             sessionRemovedEntities: [],
             courtEntityMappings: {},
+            customPlaceholders: {},
+            editingPlaceholderFor: null,
+            editingPlaceholderValue: '',
+            showPlaceholderSuggestions: false,
+            sidebarWidth: 400,
+            isResizingSidebar: false,
             
             // Manual selection / Hover menu
             manualEntities: [], // List of objects { word: '', category: '' } manually marked for anonymization
@@ -1694,13 +1801,43 @@ export default {
         };
     },
     mounted() {
-        window.addEventListener('mousedown', this.hideSelectionMenu);
+        window.addEventListener('mousedown', (e) => {
+            this.hideSelectionMenu(e);
+            // Hide placeholder suggestions if clicking elsewhere
+            if (this.showPlaceholderSuggestions) {
+                this.showPlaceholderSuggestions = false;
+            }
+        });
         this.loadExclusionList();
     },
     beforeUnmount() {
         window.removeEventListener('mousedown', this.hideSelectionMenu);
+        window.removeEventListener('mousemove', this.handleSidebarResize);
+        window.removeEventListener('mouseup', this.stopResizingSidebar);
     },
     computed: {
+        placeholderSuggestions() {
+            if (!this.sortedEntities) return [];
+            
+            const phMap = new Map();
+            this.sortedEntities.forEach(entity => {
+                const ph = this.getActualPlaceholder(entity);
+                if (!phMap.has(ph)) {
+                    phMap.set(ph, []);
+                }
+                phMap.get(ph).push(entity.name);
+            });
+            
+            const suggestions = [];
+            phMap.forEach((names, ph) => {
+                suggestions.push({
+                    value: ph,
+                    label: `${ph} > [${names.join(', ')}]`
+                });
+            });
+            
+            return suggestions.sort((a, b) => a.value.localeCompare(b.value));
+        },
         tooltipStyle() {
             const MARGIN = 16;
             const x = this.hoverTooltip.x;
@@ -1787,11 +1924,11 @@ export default {
                 'manual': 'background-color: #e5e7eb; color: #111827;'
             };
 
-            // Regex for placeholders: [id_type] or [id_type_suffix] or [id_type_court_REPLACEMENT]
-            // Updated to capture court style replacement and regular suffixes
-            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_(court_.+?)|_([a-z0-9]+))?\]/gi;
+            // Regex for placeholders: [id_type] or [id_type_suffix] or [id_type_court_REPLACEMENT] or [id_type_custom_REPLACEMENT]
+            // Updated to capture court style replacement, custom replacements and regular suffixes
+            const placeholderRegex = /\[(\d+)_([a-z_\s]+?)(?:_(court_.+?)|_(custom_.+?)|_([a-z0-9]+))?\]/gi;
 
-            text = text.replace(placeholderRegex, (match, id, type, courtReplacementRaw, suffix) => {
+            text = text.replace(placeholderRegex, (match, id, type, courtReplacementRaw, customReplacementRaw, suffix) => {
                 const normalizedType = type.toLowerCase().trim();
                 const style = colorMap[normalizedType] || 'background-color: #fed7aa; color: #7c2d12;';
                 const originalValue = entityMap[id] || 'Unbekannt';
@@ -1802,6 +1939,8 @@ export default {
                 // If it's a court style replacement, use the raw text instead of the bracket match
                 if (courtReplacementRaw && courtReplacementRaw.startsWith('court_')) {
                     displayString = courtReplacementRaw.substring(6); // remove 'court_'
+                } else if (customReplacementRaw && customReplacementRaw.startsWith('custom_')) {
+                    displayString = customReplacementRaw.substring(7); // remove 'custom_'
                 } else if (suffix) {
                     try {
                         let wordIndex = -1;
@@ -2139,6 +2278,10 @@ export default {
             }
         },
         getActualPlaceholder(entity) {
+            const canonicalName = this.getCanonicalNameForUI(entity.name);
+            if (this.customPlaceholders[canonicalName]) {
+                return this.customPlaceholders[canonicalName];
+            }
             if (!this.courtStyle) {
                 return `[${entity.id}_${entity.type.toLowerCase()}]`;
             }
@@ -2197,6 +2340,85 @@ export default {
                     this.testAnonymization(this.testPreviewFile, this.isFullTest);
                 }
             });
+        },
+
+        startEditingPlaceholder(entity) {
+            this.editingPlaceholderFor = entity.name;
+            this.editingPlaceholderValue = this.getActualPlaceholder(entity);
+            this.showPlaceholderSuggestions = true;
+            // focus the input on next tick
+            this.$nextTick(() => {
+                const elements = this.$el.querySelectorAll('input.input-xs');
+                // Try to find the input in the appropriate container
+                elements.forEach(el => {
+                    if (el.offsetParent !== null) el.focus();
+                });
+            });
+        },
+        saveCustomPlaceholder(entityName) {
+            this.showPlaceholderSuggestions = false;
+            const newValue = this.editingPlaceholderValue.trim();
+            if (newValue !== '') {
+                const canonicalNameSelf = this.getCanonicalNameForUI(entityName);
+                const oldValue = this.getActualPlaceholder({ name: entityName });
+                
+                // If the new value is already used by ANOTHER entity, swap them
+                if (newValue !== oldValue) {
+                    let swapTargetCanonical = null;
+                    for (const entity of this.sortedEntities) {
+                        const otherCanonical = this.getCanonicalNameForUI(entity.name);
+                        if (otherCanonical === canonicalNameSelf) continue;
+                        
+                        // Check what the 'other' entity's current placeholder is
+                        if (this.getActualPlaceholder(entity) === newValue) {
+                            swapTargetCanonical = otherCanonical;
+                            break;
+                        }
+                    }
+                    
+                    if (swapTargetCanonical) {
+                        // Perform the swap
+                        this.customPlaceholders[swapTargetCanonical] = oldValue;
+                    }
+                }
+                
+                this.customPlaceholders[canonicalNameSelf] = newValue;
+                
+                // Re-run preview test if currently in preview modal
+                if (this.isPreviewActive) {
+                    this.testPreviewAdjusting = true;
+                    this.testAnonymization(this.testPreviewFile, this.isFullTest);
+                }
+            }
+            this.editingPlaceholderFor = null;
+        },
+        cancelEditingPlaceholder() {
+            this.showPlaceholderSuggestions = false;
+            this.editingPlaceholderFor = null;
+        },
+        
+        // Sidebar Resizing
+        startResizingSidebar(e) {
+            this.isResizingSidebar = true;
+            window.addEventListener('mousemove', this.handleSidebarResize);
+            window.addEventListener('mouseup', this.stopResizingSidebar);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        },
+        handleSidebarResize(e) {
+            if (!this.isResizingSidebar) return;
+            // Sidebar is on the right, so width is window.innerWidth - mouseX - verticalTabsWidth (approx 40px)
+            const newWidth = window.innerWidth - e.clientX - 40;
+            if (newWidth > 200 && newWidth < window.innerWidth * 0.7) {
+                this.sidebarWidth = newWidth;
+            }
+        },
+        stopResizingSidebar() {
+            this.isResizingSidebar = false;
+            window.removeEventListener('mousemove', this.handleSidebarResize);
+            window.removeEventListener('mouseup', this.stopResizingSidebar);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
         },
 
         handleCourtStyleChange() {
@@ -2474,7 +2696,8 @@ export default {
                 minCharacterThreshold: this.minCharacterThreshold,
                 exclusionList: exclusionList,
                 courtStyle: this.courtStyle,
-                courtEntityMappings: this.courtEntityMappings
+                courtEntityMappings: this.courtEntityMappings,
+                customPlaceholders: this.customPlaceholders
             };
 
             const anonymizedText = anonymizerService.anonymizeText(processingText, sessionFilteredEntities, {

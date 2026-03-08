@@ -287,6 +287,7 @@ class AnonymizerService {
             exclusionList = [],
             courtStyle = false,
             courtEntityMappings = {}, // User-defined entity merging mappings
+            customPlaceholders = {},
             testPreviewMode = false
         } = options;
 
@@ -311,6 +312,17 @@ class AnonymizerService {
             return res + ".________";
         };
 
+        const getCanonicalName = (name) => {
+            let current = name;
+            // Prevent infinite loops just in case of cyclic mappings
+            let visited = new Set();
+            while (courtEntityMappings[current] && !visited.has(current)) {
+                visited.add(current);
+                current = courtEntityMappings[current];
+            }
+            return current;
+        };
+
         if (courtStyle) {
             let courtCounter = 0;
             // First pass: find highest existing court counter if any entities already have courtId
@@ -327,18 +339,6 @@ class AnonymizerService {
                     }
                 }
             });
-
-            // Help function to get canonical entity name, following mappings
-            const getCanonicalName = (name) => {
-                let current = name;
-                // Prevent infinite loops just in case of cyclic mappings
-                let visited = new Set();
-                while (courtEntityMappings[current] && !visited.has(current)) {
-                    visited.add(current);
-                    current = courtEntityMappings[current];
-                }
-                return current;
-            };
 
             // Keep track of canonical name to courtId mapping
             const canonicalCourtIds = {};
@@ -379,6 +379,26 @@ class AnonymizerService {
 
             // Split entity name into words, excluding punctuation like commas
             const words = entity.name.split(/[\s,;-]+/).filter(w => w && w.trim().length > 0);
+
+            const canonicalName = getCanonicalName(entity.name);
+            let customPlaceholder = customPlaceholders[canonicalName] || null;
+
+            if (customPlaceholder) {
+                if (testPreviewMode) {
+                    customPlaceholder = `[${entity.id}_${entity.type}_custom_${customPlaceholder}]`;
+                }
+
+                if (words.length > 1) {
+                    const fullJoined = words.map(w => escapeRegex(w)).join('([\\s,;-]+)');
+                    const fullPattern = new RegExp(`\\b${fullJoined}\\b`, 'gi');
+
+                    anonymized = anonymized.replace(fullPattern, customPlaceholder);
+                } else if (words.length === 1) {
+                    const singleWordPattern = new RegExp(`\\b${escapeRegex(words[0])}\\b`, 'gi');
+                    anonymized = anonymized.replace(singleWordPattern, customPlaceholder);
+                }
+                return;
+            }
 
             // Skip entire entity only if the FULL name matches an excluded term
             // Manual entities bypass the exclusion list
