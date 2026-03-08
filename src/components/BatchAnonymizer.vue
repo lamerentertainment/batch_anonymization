@@ -1004,21 +1004,31 @@
                         </div>
                         <div class="form-control w-full mt-1">
                             <label class="label p-0 pb-1">
-                                <span class="label-text-alt text-base-content/70">Platzhalter tauschen:</span>
+                                <span class="label-text-alt text-base-content/70">Platzhalter ändern / tauschen:</span>
                             </label>
-                            <select
-                                class="select select-bordered select-xs w-full text-base-content font-mono"
-                                @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
-                            >
-                                <option value="" disabled selected>Platzhalter wählen...</option>
-                                <option
-                                    v-for="s in placeholderSuggestions"
-                                    :key="s.value"
-                                    :value="s.value"
+                            <div class="flex gap-1">
+                                <input 
+                                    type="text" 
+                                    class="input input-xs input-bordered flex-1 font-mono" 
+                                    placeholder="Neu/Tauschen..."
+                                    :value="getActualPlaceholder(findEntityByName(hoverTooltip.entityName))"
+                                    @keyup.enter="(e) => { const entity = findEntityByName(hoverTooltip.entityName); if(entity) { editingPlaceholderValue = e.target.value; saveCustomPlaceholder(entity); } }"
+                                    @click.stop
                                 >
-                                    {{ s.value }} ({{ s.label.split(' > ')[1] }})
-                                </option>
-                            </select>
+                                <select
+                                    class="select select-bordered select-xs w-28 text-base-content font-mono"
+                                    @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
+                                >
+                                    <option value="" disabled selected>Wählen...</option>
+                                    <option
+                                        v-for="s in placeholderSuggestions"
+                                        :key="s.value"
+                                        :value="s.value"
+                                    >
+                                        {{ s.value }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
                         <div class="border-t border-base-content/20 my-1"></div>
                         <div class="flex flex-wrap gap-1">
@@ -1433,21 +1443,31 @@
                                 </div>
                                 <div class="form-control w-full mt-1">
                                     <label class="label p-0 pb-1">
-                                        <span class="label-text-alt text-base-content/70">Platzhalter tauschen:</span>
+                                        <span class="label-text-alt text-base-content/70">Platzhalter ändern / tauschen:</span>
                                     </label>
-                                    <select
-                                        class="select select-bordered select-xs w-full text-base-content font-mono"
-                                        @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
-                                    >
-                                        <option value="" disabled selected>Platzhalter wählen...</option>
-                                        <option
-                                            v-for="s in placeholderSuggestions"
-                                            :key="s.value"
-                                            :value="s.value"
+                                    <div class="flex gap-1">
+                                        <input 
+                                            type="text" 
+                                            class="input input-xs input-bordered flex-1 font-mono" 
+                                            placeholder="Neu/Tauschen..."
+                                            :value="getActualPlaceholder(findEntityByName(hoverTooltip.entityName))"
+                                            @keyup.enter="(e) => { const entity = findEntityByName(hoverTooltip.entityName); if(entity) { editingPlaceholderValue = e.target.value; saveCustomPlaceholder(entity); } }"
+                                            @click.stop
                                         >
-                                            {{ s.value }} ({{ s.label.split(' > ')[1] }})
-                                        </option>
-                                    </select>
+                                        <select
+                                            class="select select-bordered select-xs w-28 text-base-content font-mono"
+                                            @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
+                                        >
+                                            <option value="" disabled selected>Wählen...</option>
+                                            <option
+                                                v-for="s in placeholderSuggestions"
+                                                :key="s.value"
+                                                :value="s.value"
+                                            >
+                                                {{ s.value }}
+                                            </option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="border-t border-base-content/20 my-1"></div>
 
