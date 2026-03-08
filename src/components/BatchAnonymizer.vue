@@ -835,7 +835,7 @@
                                                         type="text" 
                                                         v-model="editingPlaceholderValue" 
                                                         class="input input-xs input-bordered w-full min-w-[100px]"
-                                                        @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                        @keyup.enter="saveCustomPlaceholder(entity)"
                                                         @keyup.esc="cancelEditingPlaceholder"
                                                         @click.stop="showPlaceholderSuggestions = true"
                                                         @focus="showPlaceholderSuggestions = true"
@@ -850,7 +850,7 @@
                                                             v-for="s in placeholderSuggestions" 
                                                             :key="s.value"
                                                             class="px-4 py-3 hover:bg-primary hover:text-primary-content cursor-pointer transition-colors whitespace-nowrap overflow-hidden text-ellipsis border-b last:border-0 border-base-200/50 flex items-center justify-between gap-3 group"
-                                                            @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity.name)"
+                                                            @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity)"
                                                             :title="s.label"
                                                         >
                                                             <span class="font-mono text-sm">{{ s.value }}</span>
@@ -859,7 +859,7 @@
                                                         <li v-if="placeholderSuggestions.length === 0" class="px-4 py-4 italic text-base-content/50 text-center">Keine anderen Platzhalter</li>
                                                     </ul>
                                                 </div>
-                                                <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                                <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                                 <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                             </div>
                                             <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
@@ -1124,7 +1124,7 @@
                                                     type="text" 
                                                     v-model="editingPlaceholderValue" 
                                                     class="input input-xs input-bordered w-full min-w-[100px]"
-                                                    @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                    @keyup.enter="saveCustomPlaceholder(entity)"
                                                     @keyup.esc="cancelEditingPlaceholder"
                                                     @click.stop="showPlaceholderSuggestions = true"
                                                     @focus="showPlaceholderSuggestions = true"
@@ -1139,7 +1139,7 @@
                                                         v-for="s in placeholderSuggestions" 
                                                         :key="s.value"
                                                         class="px-4 py-3 hover:bg-primary hover:text-primary-content cursor-pointer transition-colors whitespace-nowrap overflow-hidden text-ellipsis border-b last:border-0 border-base-200/50 flex items-center justify-between gap-3 group"
-                                                        @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity.name)"
+                                                        @click="editingPlaceholderValue = s.value; saveCustomPlaceholder(entity)"
                                                         :title="s.label"
                                                     >
                                                         <span class="font-mono text-sm">{{ s.value }}</span>
@@ -1147,7 +1147,7 @@
                                                     </li>
                                                 </ul>
                                             </div>
-                                            <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                            <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                             <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                         </div>
                                         <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
@@ -1581,11 +1581,11 @@
                                                         v-model="editingPlaceholderValue" 
                                                         class="input input-xs input-bordered w-full min-w-[100px]"
                                                         list="placeholder-suggestions"
-                                                        @keyup.enter="saveCustomPlaceholder(entity.name)"
+                                                        @keyup.enter="saveCustomPlaceholder(entity)"
                                                         @keyup.esc="cancelEditingPlaceholder"
                                                         @click.stop
                                                     >
-                                                    <button @click.stop="saveCustomPlaceholder(entity.name)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
+                                                    <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                                     <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                                 </div>
                                                 <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
@@ -2350,22 +2350,22 @@ export default {
                 });
             });
         },
-        saveCustomPlaceholder(entityName) {
+        saveCustomPlaceholder(entity) {
             this.showPlaceholderSuggestions = false;
             const newValue = this.editingPlaceholderValue.trim();
             if (newValue !== '') {
-                const canonicalNameSelf = this.getCanonicalNameForUI(entityName);
-                const oldValue = this.getActualPlaceholder({ name: entityName });
+                const canonicalNameSelf = this.getCanonicalNameForUI(entity.name);
+                const oldValue = this.getActualPlaceholder(entity);
                 
                 // If the new value is already used by ANOTHER entity, swap them
                 if (newValue !== oldValue) {
                     let swapTargetCanonical = null;
-                    for (const entity of this.sortedEntities) {
-                        const otherCanonical = this.getCanonicalNameForUI(entity.name);
+                    for (const otherEntity of this.sortedEntities) {
+                        const otherCanonical = this.getCanonicalNameForUI(otherEntity.name);
                         if (otherCanonical === canonicalNameSelf) continue;
                         
                         // Check what the 'other' entity's current placeholder is
-                        if (this.getActualPlaceholder(entity) === newValue) {
+                        if (this.getActualPlaceholder(otherEntity) === newValue) {
                             swapTargetCanonical = otherCanonical;
                             break;
                         }
