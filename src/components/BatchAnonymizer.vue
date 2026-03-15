@@ -2062,6 +2062,21 @@ export default {
                 return `<span class="anonymized-token" data-entity-id="${id}" data-entity-type="${normalizedType}" data-original="${escapedOriginal}" data-specific-word="${specificWord.replace(/"/g, '&quot;')}" data-original-html="${encodedOriginalHtml}" style="${style} padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: help;">${displayString}</span>`;
             });
 
+            // Merge consecutive identical placeholders (separated only by whitespace)
+            // This handles cases where user merged two entities and they now have the same display string
+            let mergedText = text;
+            const mergeRegex = /(<span class="anonymized-token" [^>]*>)([^<]+)<\/span>(\s*)(<span class="anonymized-token" [^>]*>)\2<\/span>/g;
+            
+            // Repeat to handle 3 or more consecutive identical placeholders
+            let iterations = 0;
+            while (iterations < 5) {
+                const prevLength = mergedText.length;
+                mergedText = mergedText.replace(mergeRegex, '$1$2</span>');
+                if (mergedText.length === prevLength) break;
+                iterations++;
+            }
+            text = mergedText;
+
             // Highlight words skipped due to exclusion list (appear in multi-word entities but not anonymized)
             const exclRegex = /\[\[excl:([^\]]+)\]\]/g;
             text = text.replace(exclRegex, (_match, word) => {
