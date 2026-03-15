@@ -93,7 +93,7 @@
                 >
 
                 <!-- Folder Select Button -->
-                <div class="px-4 pb-4">
+                <div class="px-4 pb-4 space-y-2">
                     <button @click="triggerFolderInput" class="btn btn-outline btn-sm w-full">
                         <FolderOpenIcon class="w-4 h-4 mr-2" />
                         Ordner auswählen
@@ -107,6 +107,10 @@
                         class="hidden"
                         @change="handleFolderSelect"
                     >
+                    <button @click="pasteClipboardToBatch" class="btn btn-outline btn-sm w-full">
+                        <ClipboardDocumentIcon class="w-4 h-4 mr-2" />
+                        Text aus Zwischenablage
+                    </button>
                 </div>
 
                 <!-- File List -->
@@ -539,6 +543,12 @@
                         {{ testPreviewResult.wordCount }} Wörter
                     </span>
                 </div>
+
+                <!-- Paste from Clipboard -->
+                <button @click="pasteClipboardToSingle" class="btn btn-sm btn-outline gap-1 flex-shrink-0">
+                    <ClipboardDocumentIcon class="w-4 h-4" />
+                    Einfügen
+                </button>
 
                 <!-- Dateinamen anonymisieren -->
                 <div class="tooltip tooltip-bottom flex-shrink-0" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
@@ -1715,7 +1725,8 @@ import {
     SignalIcon,
     ArrowPathIcon,
     ChevronDownIcon,
-    PencilIcon
+    PencilIcon,
+    ClipboardDocumentIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -3489,6 +3500,28 @@ export default {
             const files = event.dataTransfer?.files;
             if (files && files.length > 0) {
                 this.setSingleFile(files[0]);
+            }
+        },
+
+        async pasteClipboardToBatch() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) return;
+                const file = new File([text], `clipboard-${Date.now()}.txt`, { type: 'text/plain' });
+                this.addFiles([file]);
+            } catch (e) {
+                console.warn('Zwischenablage konnte nicht gelesen werden:', e);
+            }
+        },
+
+        async pasteClipboardToSingle() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) return;
+                const file = new File([text], 'clipboard.txt', { type: 'text/plain' });
+                this.setSingleFile(file);
+            } catch (e) {
+                console.warn('Zwischenablage konnte nicht gelesen werden:', e);
             }
         },
 
