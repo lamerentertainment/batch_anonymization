@@ -546,8 +546,7 @@
 
                 <!-- Paste from Clipboard -->
                 <button @click="pasteClipboardToSingle" class="btn btn-sm btn-outline gap-1 flex-shrink-0">
-                    <ClipboardDocumentIcon class="w-4 h-4" />
-                    Einfügen
+                    Text aus der Zwischenablage einfügen
                 </button>
 
                 <!-- Dateinamen anonymisieren -->
@@ -598,7 +597,7 @@
                 <div class="tooltip tooltip-bottom" data-tip="Entitätskategorien auswählen, die anonymisiert werden sollen">
                 <div class="dropdown">
                     <label tabindex="0" class="btn btn-xs btn-outline gap-1 cursor-pointer">
-                        Entitäten ({{ selectedLabels.length }}/{{ availableLabels.length }})
+                        PII-Kategorien ({{ selectedLabels.length }}/{{ availableLabels.length }})
                         <ChevronDownIcon class="w-3 h-3" />
                     </label>
                     <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-64 border border-base-300">
