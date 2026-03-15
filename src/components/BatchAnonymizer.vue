@@ -706,12 +706,16 @@
                     </div>
 
                     <!-- File selected, not yet anonymized -->
-                    <div v-else-if="!testPreviewResult" class="flex-1 flex items-center justify-center">
-                        <div class="text-center text-base-content/40">
-                            <DocumentCheckIcon class="w-20 h-20 mx-auto mb-4 opacity-30" />
-                            <p class="text-xl font-medium">{{ testPreviewFile.name }}</p>
-                            <p class="text-sm mt-3">Einstellungen prüfen und auf <strong class="text-primary opacity-80">Anonymisieren</strong> klicken</p>
+                    <div v-else-if="!testPreviewResult" class="flex-1 flex flex-col overflow-hidden">
+                        <div v-if="singleFileRawText" class="flex-1 p-4 border border-base-300 rounded-lg bg-base-200/30 whitespace-pre-wrap font-mono text-sm leading-relaxed overflow-y-auto text-base-content/30 select-none">{{ singleFileRawText }}</div>
+                        <div v-else class="flex-1 flex items-center justify-center">
+                            <div class="text-center text-base-content/40">
+                                <DocumentCheckIcon class="w-20 h-20 mx-auto mb-4 opacity-30" />
+                                <p class="text-xl font-medium">{{ testPreviewFile.name }}</p>
+                                <p class="text-sm mt-3">Einstellungen prüfen und auf <strong class="text-primary opacity-80">Anonymisieren</strong> klicken</p>
+                            </div>
                         </div>
+                        <div class="mt-2 text-center text-xs text-base-content/30 italic flex-shrink-0">Vorschau – auf <strong class="not-italic">Anonymisieren</strong> klicken um zu beginnen</div>
                     </div>
 
                     <!-- Result -->
@@ -1800,6 +1804,7 @@ export default {
             // Test preview state
             showTestModal: false,
             testPreviewFile: null,
+            singleFileRawText: null,
             testPreviewLoading: false,
             testPreviewResult: null,
             testPreviewError: null,
@@ -3534,6 +3539,7 @@ export default {
             // Reset preview state for the new file
             this.testPreviewResult = null;
             this.testPreviewError = null;
+            this.singleFileRawText = null;
             this.testPreviewDetectedEntities = null;
             this.testPreviewCachedParams = { file: null, threshold: 0, labels: [] };
             this.manualEntities = [];
@@ -3542,6 +3548,12 @@ export default {
             this.hoverTooltip.isPinned = false;
             this.selectionMenu.visible = false;
             this.testPreviewFile = file;
+            // Load raw text for preview
+            processFile(file, { convertWordToMarkdown: false }).then(result => {
+                if (result.success && this.testPreviewFile === file) {
+                    this.singleFileRawText = result.text;
+                }
+            });
         },
 
         runSingleAnonymization() {
