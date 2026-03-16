@@ -26,15 +26,15 @@ const initPdfWorker = () => {
 // Initialize on module load
 initPdfWorker();
 
-/**
- * Supported file types
- */
-export const SUPPORTED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.doc'];
+// Supported file types
+export const SUPPORTED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.doc', '.md'];
 export const SUPPORTED_MIME_TYPES = [
     'text/plain',
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword'
+    'application/msword',
+    'text/markdown',
+    'text/x-markdown'
 ];
 
 /**
@@ -59,7 +59,7 @@ export function validateFile(file) {
     if (!isValidType) {
         return {
             valid: false,
-            error: `Nicht unterstütztes Dateiformat. Bitte verwenden Sie TXT, PDF oder DOCX Dateien.`
+            error: `Nicht unterstütztes Dateiformat. Bitte verwenden Sie TXT, PDF, DOCX oder MD Dateien.`
         };
     }
 
@@ -79,12 +79,17 @@ export function validateFile(file) {
  * @returns {Promise<string>}
  */
 async function extractTextFromTxt(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error('Fehler beim Lesen der TXT-Datei'));
-        reader.readAsText(file);
-    });
+    const arrayBuffer = await file.arrayBuffer();
+    try {
+        // Try UTF-8 first with fatal: true to catch encoding errors (like Latin-1 umlauts)
+        const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+        return utf8Decoder.decode(arrayBuffer);
+    } catch (e) {
+        console.log('UTF-8 decoding failed, falling back to ISO-8859-1 (Latin-1)');
+        // Fallback to Latin-1 which handles most Western European characters
+        const latin1Decoder = new TextDecoder('iso-8859-1');
+        return latin1Decoder.decode(arrayBuffer);
+    }
 }
 
 /**
@@ -148,7 +153,7 @@ export async function processFile(file, options = {}) {
         let extractedHtml = undefined;
         const extension = '.' + file.name.split('.').pop().toLowerCase();
 
-        if (file.type === 'text/plain' || extension === '.txt') {
+        if (file.type === 'text/plain' || extension === '.txt' || file.type === 'text/markdown' || file.type === 'text/x-markdown' || extension === '.md') {
             extractedText = await extractTextFromTxt(file);
         } else if (file.type === 'application/pdf' || extension === '.pdf') {
             extractedText = await extractTextFromPdf(file);

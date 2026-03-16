@@ -79,7 +79,7 @@
                         oder klicken zum Auswählen
                     </p>
                     <p class="text-xs text-base-content/40 mt-2">
-                        TXT, PDF, DOCX
+                        TXT, PDF, DOCX, MD
                     </p>
                 </div>
 
@@ -87,7 +87,7 @@
                     ref="fileInput"
                     type="file"
                     multiple
-                    accept=".txt,.pdf,.docx,.doc"
+                    accept=".txt,.pdf,.docx,.doc,.md"
                     class="hidden"
                     @change="handleFileSelect"
                 >
@@ -523,7 +523,7 @@
 
             <!-- Row 1: File Upload Bar -->
             <div class="bg-base-100 border-b border-base-300 px-4 py-2 flex items-center gap-3">
-                <input ref="singleFileInput" type="file" accept=".txt,.pdf,.docx,.doc" class="hidden" @change="handleSingleFileInputChange">
+                <input ref="singleFileInput" type="file" accept=".txt,.pdf,.docx,.doc,.md" class="hidden" @change="handleSingleFileInputChange">
 
                 <!-- Drop Zone -->
                 <div
@@ -537,7 +537,7 @@
                     <ArrowUpTrayIcon v-if="!testPreviewFile" class="w-5 h-5 text-base-content/40 flex-shrink-0" />
                     <DocumentCheckIcon v-else class="w-5 h-5 text-success flex-shrink-0" />
                     <span class="text-sm truncate" :class="testPreviewFile ? 'text-base-content' : 'text-base-content/50'">
-                        {{ testPreviewFile ? testPreviewFile.name : 'Datei hochladen oder hierher ziehen (docx, pdf, txt)' }}
+                        {{ testPreviewFile ? testPreviewFile.name : 'Datei hochladen oder hierher ziehen (docx, pdf, txt, md)' }}
                     </span>
                     <span v-if="testPreviewResult" class="ml-auto text-xs text-base-content/40 flex-shrink-0">
                         {{ testPreviewResult.wordCount }} Wörter
@@ -567,7 +567,7 @@
 
                 <!-- Download Button(s) -->
                 <div class="flex items-center gap-1 flex-shrink-0">
-                    <template v-if="testPreviewResult && isDocxFile">
+                    <template v-if="testPreviewResult && (isDocxFile || isMdFile)">
                         <button @click="downloadSingleResult('txt')" class="btn btn-sm btn-ghost gap-1" title="Als TXT herunterladen">
                             <ArrowDownTrayIcon class="w-4 h-4" /> TXT
                         </button>
@@ -700,7 +700,7 @@
                         <div class="text-center text-base-content/40">
                             <DocumentIcon class="w-20 h-20 mx-auto mb-4 opacity-20" />
                             <p class="text-xl font-medium">Datei hochladen um zu beginnen</p>
-                            <p class="text-sm mt-2 opacity-70">Unterstützte Formate: .docx, .pdf, .txt</p>
+                            <p class="text-sm mt-2 opacity-70">Unterstützte Formate: .docx, .pdf, .txt, .md</p>
                         </div>
                     </div>
 
@@ -1933,6 +1933,12 @@ export default {
             const name = this.testPreviewFile.name.toLowerCase();
             return name.endsWith('.docx') || name.endsWith('.doc');
         },
+        // True when the current single-file is a Markdown document
+        isMdFile() {
+            if (!this.testPreviewFile) return false;
+            const name = this.testPreviewFile.name.toLowerCase();
+            return name.endsWith('.md');
+        },
         canStartProcessing() {
             return this.inputFiles.length > 0 &&
                    this.selectedLabels.length > 0 &&
@@ -2858,8 +2864,9 @@ export default {
             this.inputFiles.forEach(file => {
                 const baseName = getFileNameWithoutExtension(file.relativePath || file.name);
                 const isDocx = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
+                const isMd = file.name.toLowerCase().endsWith('.md');
                 // Preserve folder structure in output name
-                const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
+                const ext = (isMd || (isDocx && this.convertWordToMarkdown)) ? '.md' : '.txt';
                 let outputName = baseName + ext;
                 
                 if (this.anonymizeFilenames) {
@@ -3057,7 +3064,8 @@ export default {
             const originalName = this.testPreviewFile?.name || 'text';
             const baseName = getFileNameWithoutExtension(originalName);
             const isDocx = originalName.toLowerCase().endsWith('.docx') || originalName.toLowerCase().endsWith('.doc');
-            const ext = (isDocx && this.convertWordToMarkdown) ? '.md' : '.txt';
+            const isMd = originalName.toLowerCase().endsWith('.md');
+            const ext = (isMd || (isDocx && this.convertWordToMarkdown)) ? '.md' : '.txt';
             let fileName = `${baseName}_preview_anonymized${ext}`;
 
             if (this.anonymizeFilenames) {
@@ -3573,8 +3581,8 @@ export default {
             } else if (format === 'txt') {
                 ext = '.txt';
             } else {
-                // Auto: use convertWordToMarkdown for docx files
-                ext = (this.isDocxFile && this.convertWordToMarkdown) ? '.md' : '.txt';
+                // Auto: use .md if original is .md or if converting docx to md
+                ext = (this.isMdFile || (this.isDocxFile && this.convertWordToMarkdown)) ? '.md' : '.txt';
             }
 
             let fileName = `${baseName}_anonymized${ext}`;
