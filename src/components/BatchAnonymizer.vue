@@ -2741,7 +2741,8 @@ export default {
                 entities = await iframeAnonymizer.detectEntities(
                     processingText,
                     this.selectedLabels,
-                    this.threshold
+                    this.threshold,
+                    this.viewMode === 'single' ? 600000 : 300000 // 10 min for single, 5 min for batch
                 );
             }
 

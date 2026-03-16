@@ -14,10 +14,13 @@ class IframeAnonymizer {
      * @param {string} text - Text to analyze
      * @param {string[]} labels - Entity labels to detect
      * @param {number} threshold - Detection threshold
+     * @param {number|null} timeout - Optional override timeout in ms
      * @returns {Promise<Array>} - Detected entities
      */
-    async detectEntities(text, labels, threshold) {
+    async detectEntities(text, labels, threshold, timeout = null) {
         console.log('[IframeAnonymizer] Starting detection...');
+        const effectiveTimeout = timeout || this.timeout;
+        
         return new Promise((resolve, reject) => {
             // Create hidden iframe
             const iframe = document.createElement('iframe');
@@ -25,7 +28,7 @@ class IframeAnonymizer {
             iframe.src = this.workerUrl;
 
             // Log for debugging
-            console.log(`[IframeAnonymizer] Creating iframe pointing to ${this.workerUrl}`);
+            console.log(`[IframeAnonymizer] Creating iframe pointing to ${this.workerUrl} with timeout ${effectiveTimeout}ms`);
 
             document.body.appendChild(iframe);
 
@@ -74,11 +77,11 @@ class IframeAnonymizer {
             // Timeout safety
             setTimeout(() => {
                 if (document.body.contains(iframe)) {
-                    console.error('[IframeAnonymizer] Operation TIMED OUT');
+                    console.error('[IframeAnonymizer] Operation TIMED OUT after', effectiveTimeout, 'ms');
                     cleanup();
-                    reject(new Error('Operation timed out - check console for details'));
+                    reject(new Error(`Operation timed out after ${Math.floor(effectiveTimeout / 60000)} minutes - check console for details`));
                 }
-            }, this.timeout);
+            }, effectiveTimeout);
 
             // Handle iframe load error
             iframe.onerror = (e) => {
