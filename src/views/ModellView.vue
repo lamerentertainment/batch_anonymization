@@ -77,8 +77,10 @@ async function del(model) {
     }
 }
 
+// true, wenn der Browser den Schutz auf Knopfdruck abgelehnt hat
+const persistDenied = ref(false);
 async function persist() {
-    await requestPersistence();
+    persistDenied.value = !(await requestPersistence());
     storage.value = await storageInfo();
 }
 </script>
@@ -143,6 +145,34 @@ async function persist() {
           <span v-if="storage.persisted" class="text-success">Speicher geschützt: Der Browser löscht nichts von sich aus.</span>
           <button v-else class="btn btn-xs" @click="persist">Speicher schützen</button>
         </div>
+        <p v-if="persistDenied" class="text-sm text-warning">
+          Der Browser hat den Schutz nicht gewährt. Das Modell bleibt trotzdem gespeichert, können aber bei
+          Speichermangel gelöscht werden. Am ehesten klappt es, wenn die App installiert ist (im Browser-Menü «App installieren» bzw. «Zum Home-Bildschirm»).
+        </p>
+        <details class="text-sm">
+          <summary class="cursor-pointer opacity-70">Was heisst «Speicher schützen»?</summary>
+          <div class="mt-2 space-y-2 opacity-80">
+            <p>
+              Was eine Website im Browser speichert, gilt zunächst als <em>vorläufig</em>: Wird der Platz auf dem Gerät
+              knapp, darf der Browser die Daten selten benutzter Websites ohne Rückfrage löschen. Safari löscht sie
+              zudem, wenn eine Website einige Tage nicht besucht wurde (ausser die App ist auf dem Home-Bildschirm
+              installiert). Für diese App hiesse das: Das Modell ist plötzlich weg und muss neu geladen werden,
+              wofür eine Verbindung nötig ist.
+            </p>
+            <p>
+              «Speicher schützen» bittet den Browser, den Speicher dieser App als <em>dauerhaft</em> zu behandeln. Dann
+              löscht er nichts mehr von sich aus, nur noch, wenn Sie es selbst tun (hier mit «Löschen» oder in den
+              Einstellungen des Browsers unter «Websitedaten löschen»). Geschützt sind das Modell, die gespeicherte App
+              und das Verbindungsprotokoll. Mehr Platz gibt es dadurch nicht, und es wird nichts übertragen.
+            </p>
+            <p>
+              Ob der Wunsch gewährt wird, entscheidet der Browser: Chrome und Edge fragen nicht nach, sondern entscheiden
+              selbst (eher ja, wenn die App installiert ist, ein Lesezeichen hat oder oft benutzt wird). Firefox fragt
+              Sie. Safari gewährt den Schutz am ehesten, wenn die App installiert ist. Beim Laden des Modells fragt
+              die App von sich aus nach; der Knopf ist für den Fall, dass der Browser damals abgelehnt hat.
+            </p>
+          </div>
+        </details>
       </div>
     </section>
 
