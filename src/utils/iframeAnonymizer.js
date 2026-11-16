@@ -7,6 +7,8 @@ class IframeAnonymizer {
     constructor() {
         this.workerUrl = '/gliner-worker.html';
         this.timeout = 300000; // 5 minutes timeout
+        // Worauf GLiNER zuletzt gerechnet hat: { id: 'webgpu'|'wasm', label, fallbackReason }
+        this.backend = null;
     }
 
     /**
@@ -51,6 +53,7 @@ class IframeAnonymizer {
                 if (type === 'HTML_LOADED') {
                     console.log('[IframeAnonymizer] Iframe HTML loaded');
                 } else if (type === 'READY') {
+                    this.backend = event.data.backend ?? null;
                     console.log('[IframeAnonymizer] Worker READY. Sending text...');
                     // Worker is ready, send detection request
                     // We must sanitize the payload to remove Vue Proxies, otherwise postMessage fails with DataCloneError
@@ -62,6 +65,8 @@ class IframeAnonymizer {
                         payload: cleanPayload
                     }, '*');
                 } else if (type === 'RESULT') {
+                    // Das Backend kann während der Rechnung gewechselt haben (WebGPU → Prozessor)
+                    this.backend = event.data.backend ?? this.backend;
                     console.log('[IframeAnonymizer] Got RESULT');
                     cleanup();
                     resolve(payload);

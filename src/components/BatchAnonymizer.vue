@@ -48,6 +48,15 @@
             </div>
         </div>
 
+        <!-- Hinweis: GLiNER rechnet auf dem Prozessor, weil WebGPU nicht nutzbar ist -->
+        <div v-if="computeBackend && computeBackend.id === 'wasm' && !computeNoticeDismissed" class="bg-warning text-warning-content px-6 py-2 text-sm flex items-center gap-3">
+            <span class="flex-1">
+                <strong>Erkennung läuft auf dem Prozessor</strong> (langsamer als auf der Grafikkarte).
+                {{ computeBackend.fallbackReason }}
+            </span>
+            <button class="btn btn-xs btn-ghost" @click="computeNoticeDismissed = true">Ausblenden</button>
+        </div>
+
         <!-- Main Content: 3 Columns (Batch Mode) -->
         <main v-if="viewMode === 'batch'" class="flex-1 flex overflow-hidden">
             <!-- LEFT: File Input -->
@@ -1788,6 +1797,8 @@ export default {
 
             // Model status
             modelStatus: 'idle', // 'idle', 'missing', 'ready', 'error'
+            computeBackend: null, // { id: 'webgpu'|'wasm', label, fallbackReason } aus dem GLiNER-iframe
+            computeNoticeDismissed: false,
             modelError: null,
 
             // Processing state
@@ -2735,6 +2746,7 @@ export default {
                     this.threshold,
                     this.viewMode === 'single' ? 600000 : 300000 // 10 min for single, 5 min for batch
                 );
+                this.computeBackend = iframeAnonymizer.backend;
             }
 
             // Add manual entities
