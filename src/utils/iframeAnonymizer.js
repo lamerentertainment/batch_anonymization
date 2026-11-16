@@ -79,6 +79,29 @@ class IframeAnonymizer {
 
             window.addEventListener('message', handleMessage);
 
+            // Die Worker-Seite meldet sich mit HTML_LOADED, bevor «load» feuert (Modul-Skripte laufen
+            // vorher). Fehlt die Meldung kurz nach «load», kam statt der Worker-Seite etwas anderes
+            // (z. B. eine Fehlerseite): sofort abbrechen statt bis zum Timeout zu warten.
+            let htmlLoaded = false;
+            window.addEventListener('message', function onLoaded(event) {
+                if (event.source === iframe.contentWindow && event.data?.type === 'HTML_LOADED') {
+                    htmlLoaded = true;
+                    window.removeEventListener('message', onLoaded);
+                }
+            });
+            iframe.addEventListener('load', () => {
+                setTimeout(() => {
+                    if (htmlLoaded || !document.body.contains(iframe)) return;
+                    let detail = '';
+                    try {
+                        detail = iframe.contentDocument?.body?.innerText?.trim().slice(0, 200) ?? '';
+                    } catch { /* fremder Inhalt */ }
+                    console.error('[IframeAnonymizer] Worker-Seite nicht geladen:', detail);
+                    cleanup();
+                    reject(new Error(`Die Erkennung konnte nicht gestartet werden: ${this.workerUrl} wurde nicht geladen${detail ? ` («${detail}»)` : ''}.`));
+                }, 3000);
+            }, { once: true });
+
             // Timeout safety
             setTimeout(() => {
                 if (document.body.contains(iframe)) {

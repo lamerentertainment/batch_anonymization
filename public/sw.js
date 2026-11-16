@@ -15,6 +15,10 @@ importScripts('/sw-policy.js');
 // Beim Build eingesetzt (vite.config.js): Version und Liste aller App-Dateien
 const BUILD = /* inject:build */ null || { version: 'dev', id: 'dev' };
 const PRECACHE = /* inject:precache */ [];
+// Diese Datei unverändert vom Dev-Server (npm run dev): Dort gibt es keinen Torwächter. Hängt noch
+// einer von einem früheren Build-Test auf demselben localhost-Port, würde er im Modus «lokal» jede
+// Anfrage an den Dev-Server blockieren. Diese Fassung ersetzt ihn sofort und meldet sich ab.
+const DEV_SERVER = BUILD.id === 'dev';
 
 const APP_CACHE = `app-${BUILD.id}`;
 const MODEL_CACHE = 'models-v1'; // gleich wie in src/models/modelStore.js
@@ -134,6 +138,7 @@ async function handle(request) {
 }
 
 self.addEventListener('fetch', event => {
+    if (DEV_SERVER) return; // direkt ans Netz
     event.respondWith(handle(event.request));
 });
 
@@ -151,6 +156,10 @@ function addStaticRoutes(event) {
 }
 
 self.addEventListener('install', event => {
+    if (DEV_SERVER) {
+        event.waitUntil(self.skipWaiting());
+        return;
+    }
     const routes = addStaticRoutes(event);
     event.waitUntil((async () => {
         await routes;
@@ -204,6 +213,17 @@ function deleteLegacyDb() {
 }
 
 self.addEventListener('activate', event => {
+    if (DEV_SERVER) {
+        event.waitUntil((async () => {
+            await self.registration.unregister();
+            for (const key of await caches.keys()) {
+                if (key.startsWith('app-')) await caches.delete(key);
+            }
+            // Offene Seiten neu laden, damit sie nicht mehr über einen Service Worker laufen
+            for (const client of await self.clients.matchAll({ type: 'window' })) client.navigate(client.url);
+        })());
+        return;
+    }
     event.waitUntil((async () => {
         // Alte App-Versionen und Speicher früherer Versionen (ungeprüfte Modellkopien) entfernen
         for (const key of await caches.keys()) {

@@ -71,9 +71,38 @@ function scheduleExpiry() {
     }
 }
 
+/**
+ * Im Dev-Server gibt es keinen Torwächter. Ein Service Worker, der von einem früheren Build-Test
+ * (vite preview oder Build auf demselben Port) oder von einer anderen App auf demselben localhost-Port
+ * stammt, würde im Modus «lokal» aber jede Anfrage an den Dev-Server blockieren, die nicht in
+ * seinem Speicher liegt (z. B. gliner-worker.html → Erkennung endet im Timeout). Deshalb abmelden
+ * und einmal neu laden, damit die Seite nicht mehr über ihn läuft. Der Modellspeicher bleibt.
+ */
+async function removeStaleServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        if (!navigator.serviceWorker.controller) sessionStorage.removeItem('dev-sw-entfernt');
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (!registrations.length) return;
+        await Promise.all(registrations.map(r => r.unregister()));
+        for (const key of await caches.keys()) {
+            if (key.startsWith('app-')) await caches.delete(key);
+        }
+        console.warn('[Dev] Service Worker eines früheren Builds abgemeldet.');
+        // Eine Seite bleibt bis zum Neuladen unter seiner Kontrolle; nur einmal neu laden (keine Schleife)
+        if (navigator.serviceWorker.controller && !sessionStorage.getItem('dev-sw-entfernt')) {
+            sessionStorage.setItem('dev-sw-entfernt', '1');
+            window.location.reload();
+        }
+    } catch (err) {
+        console.warn('[Dev] Service Worker konnte nicht abgemeldet werden:', err);
+    }
+}
+
 export async function initConnection() {
     if (DEV) {
         state.gatekeeper = 'entwicklung';
+        await removeStaleServiceWorker();
         return;
     }
     if (!('serviceWorker' in navigator)) {
