@@ -1,13 +1,7 @@
-import { createApp } from 'vue'
-import './style.css'
-import App from './App.vue'
+import { createApp } from 'vue';
+import './style.css';
+import App from './App.vue';
+import { initConnection } from './net/connection.js';
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.error('SW registration failed:', err);
-    });
-  });
-}
-
-createApp(App).mount('#app')
+createApp(App).mount('#app');
+initConnection();

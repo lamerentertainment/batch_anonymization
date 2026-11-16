@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "gliner-multi-pii",
+      "name": "Entitätserkennung (GLiNER multi PII)",
+      "purpose": "Erkennt Personen, Orte, Organisationen, Kontakt- und Identifikationsdaten im Text.",
+      "license": "Apache-2.0",
+      "publisher": "urchade (ONNX-Fassung: onnx-community)",
+      "source": "https://huggingface.co/onnx-community/gliner_multi_pii-v1",
+      "repo": "onnx-community/gliner_multi_pii-v1",
+      "revision": "2e0397a7e8a250d76c37122232b3cbde42c8d629",
+      "files": [
+        {
+          "name": "model_fp16.onnx",
+          "role": "Modellgewichte (fp16)",
+          "url": "https://huggingface.co/onnx-community/gliner_multi_pii-v1/resolve/2e0397a7e8a250d76c37122232b3cbde42c8d629/onnx/model_fp16.onnx",
+          "sha256": "e756837e13d16ef832f6cd9fca473c2c3dd1eb232cab13e6443d958d608e797b",
+          "size": 579717643
+        },
+        {
+          "name": "tokenizer.json",
+          "role": "Tokenizer",
+          "url": "https://huggingface.co/onnx-community/gliner_multi_pii-v1/resolve/2e0397a7e8a250d76c37122232b3cbde42c8d629/tokenizer.json",
+          "sha256": "914bd3c8fb7b525af9e23b60d0ec7b1248ddb2b99014efd9c02ebeb022f8cab7",
+          "size": 16331948
+        },
+        {
+          "name": "tokenizer_config.json",
+          "role": "Tokenizer-Einstellungen",
+          "url": "https://huggingface.co/onnx-community/gliner_multi_pii-v1/resolve/2e0397a7e8a250d76c37122232b3cbde42c8d629/tokenizer_config.json",
+          "sha256": "78f866883daf7ee2bc400200a155cdbe9116ed0a6ed597ff573ea2c9862a89a6",
+          "size": 1806
+        }
+      ]
+    }
+  ]
+}

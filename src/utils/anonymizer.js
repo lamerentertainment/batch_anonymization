@@ -3,8 +3,6 @@
  * Handles entity detection with Gliner and text anonymization
  */
 
-import { Gliner } from 'gliner';
-import modelCache from './modelCache.js';
 
 /**
  * Available entity labels for detection
@@ -83,188 +81,10 @@ export const DEFAULT_SELECTED_LABELS = [
 ];
 
 /**
- * Maximum text chunk length for Gliner processing
- */
-const MAX_CHUNK_LENGTH = 12000;
-
-/**
- * Singleton class for managing Gliner instance
+ * Ersetzt erkannte Entitäten durch Platzhalter. Die Erkennung selbst läuft im GLiNER-iframe
+ * (src/worker/worker.js, aufgerufen über iframeAnonymizer.js).
  */
 class AnonymizerService {
-    constructor() {
-        this.gliner = null;
-        this.isInitialized = false;
-        this.isInitializing = false;
-    }
-
-    /**
-     * Initialize the Gliner model
-     * @param {Function} onProgress - Progress callback (0-100)
-     * @returns {Promise<void>}
-     */
-    async initialize(onProgress = () => { }) {
-        if (this.isInitialized) {
-            return;
-        }
-
-        if (this.isInitializing) {
-            // Wait for ongoing initialization
-            while (this.isInitializing) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            return;
-        }
-
-        this.isInitializing = true;
-
-        try {
-            onProgress(0);
-
-            const modelPath = "./models/gliner_multi_pii-v1/onnx/model_fp16.onnx";
-
-            // Load model with caching
-            onProgress(10);
-            let modelData = await modelCache.getOrDownloadModel(
-                modelPath,
-                'quantized',
-                (progress) => {
-                    onProgress(10 + Math.min(progress * 0.7, 70));
-                }
-            );
-
-            // Create blob URL for model
-            const modelBlob = new Blob([modelData], { type: 'application/octet-stream' });
-            const modelUrl = URL.createObjectURL(modelBlob);
-            modelData = null; // Free memory
-
-            onProgress(85);
-
-            // Detect execution providers
-            let executionProviders = ['wasm'];
-            if ('gpu' in navigator) {
-                executionProviders.unshift('webgpu');
-            }
-
-            // Initialize Gliner
-            this.gliner = new Gliner({
-                tokenizerPath: "./gliner_multi_pii-v1",
-                onnxSettings: {
-                    modelPath: modelUrl,
-                    wasmPaths: {
-                        cpu: "./models/gliner_multi_pii-v1/onnx/cpu.wasm",
-                        gpu: "./models/gliner_multi_pii-v1/onnx/gpu.wasm",
-                    },
-                    executionProviders: executionProviders,
-                    sessionOptions: {
-                        enableCpuMemArena: false,
-                        enableMemPattern: false,
-                        graphOptimizationLevel: 'basic'
-                    }
-                },
-                transformersSettings: {
-                    useBrowserCache: true,
-                    allowLocalModels: true,
-                    allowRemoteModels: false,
-                },
-                maxWidth: 12,
-            });
-
-            onProgress(95);
-            await this.gliner.initialize();
-
-            // Clean up blob URL
-            URL.revokeObjectURL(modelUrl);
-
-            this.isInitialized = true;
-            onProgress(100);
-
-            console.log('Anonymizer initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize Anonymizer:', error);
-            this.gliner = null;
-            throw error;
-        } finally {
-            this.isInitializing = false;
-        }
-    }
-
-    /**
-     * Split text into chunks for processing
-     * @param {string} text
-     * @param {number} maxLength
-     * @returns {string[]}
-     */
-    splitTextIntoChunks(text, maxLength = MAX_CHUNK_LENGTH) {
-        const chunks = [];
-        for (let i = 0; i < text.length; i += maxLength) {
-            chunks.push(text.substring(i, i + maxLength));
-        }
-        return chunks;
-    }
-
-    /**
-     * Detect entities in text using Gliner
-     * @param {string} text - Text to analyze
-     * @param {string[]} labels - Entity labels to detect
-     * @returns {Promise<Array<{id: number, name: string, type: string}>>}
-     */
-    async detectEntities(text, labels = DEFAULT_SELECTED_LABELS, threshold = 0.1) {
-        if (!this.isInitialized || !this.gliner) {
-            throw new Error('Anonymizer not initialized. Call initialize() first.');
-        }
-
-        if (!text || text.trim().length === 0) {
-            return [];
-        }
-
-        const chunks = this.splitTextIntoChunks(text);
-        const allEntities = [];
-        let entityId = 1;
-
-        for (const chunk of chunks) {
-            const results = await this.gliner.inference({
-                texts: [chunk],
-                entities: labels,
-                threshold: threshold,
-            });
-
-            const chunkEntities = results[0].map((ent) => ({
-                id: entityId++,
-                name: ent.spanText,
-                type: ent.label,
-            }));
-
-            allEntities.push(...chunkEntities);
-        }
-
-        // Deduplicate entities
-        return this.deduplicateEntities(allEntities);
-    }
-
-    /**
-     * Remove duplicate entities based on name and type
-     * @param {Array} entities
-     * @returns {Array}
-     */
-    deduplicateEntities(entities) {
-        const seen = new Set();
-        const unique = [];
-
-        entities.forEach(entity => {
-            const key = `${entity.name.toLowerCase()}_${entity.type}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                unique.push(entity);
-            }
-        });
-
-        // Reassign sequential IDs
-        return unique.map((entity, index) => ({
-            ...entity,
-            id: index + 1
-        }));
-    }
-
     /**
      * Anonymize text by replacing entities with placeholders
      * @param {string} text - Original text
@@ -534,14 +354,6 @@ class AnonymizerService {
         });
 
         return anonymized;
-    }
-
-    /**
-     * Check if service is ready
-     * @returns {boolean}
-     */
-    isReady() {
-        return this.isInitialized && this.gliner !== null;
     }
 }
 

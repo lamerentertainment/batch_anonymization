@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col h-screen bg-base-200">
+    <div class="flex flex-col h-full bg-base-200">
         <!-- Header -->
         <header class="bg-base-100 border-b border-base-300 px-6 py-4 flex items-center justify-between">
             <div class="flex items-baseline gap-x-4">
@@ -29,24 +29,22 @@
         </header>
 
         <!-- Status Banner -->
-        <div v-if="modelStatus !== 'ready'" class="bg-info text-info-content px-6 py-3">
-            <div class="flex items-center gap-3">
-                <span v-if="modelStatus === 'loading'" class="loading loading-spinner loading-sm"></span>
-                <span v-else-if="modelStatus === 'error'" class="text-error text-xl">!</span>
+        <div v-if="modelStatus !== 'ready'" class="px-6 py-3" :class="modelStatus === 'error' ? 'bg-error text-error-content' : 'bg-info text-info-content'">
+            <div class="flex flex-wrap items-center gap-3">
+                <span v-if="modelStatus === 'idle'" class="loading loading-spinner loading-sm"></span>
                 <div class="flex-1">
                     <template v-if="modelStatus === 'idle'">
-                        <strong>Modell wird vorbereitet...</strong>
+                        <strong>Modell wird geprüft...</strong>
                     </template>
-                    <template v-else-if="modelStatus === 'loading'">
-                        <strong>Modell wird geladen...</strong> {{ modelProgress }}%
-                        <div class="w-full bg-info/20 rounded-full h-2 mt-1">
-                            <div class="bg-white h-2 rounded-full transition-all" :style="{ width: modelProgress + '%' }"></div>
-                        </div>
+                    <template v-else-if="modelStatus === 'missing'">
+                        <strong>Das Modell zur Entitätserkennung ist in diesem Browser nicht installiert.</strong>
+                        Oben «Verbinden» wählen und das Modell unter «Modell/Programmupdate» laden (einmalig, {{ modelDownloadSize }}).
                     </template>
                     <template v-else-if="modelStatus === 'error'">
-                        <strong class="text-error">Fehler:</strong> {{ modelError }}
+                        <strong>Fehler:</strong> {{ modelError }}
                     </template>
                 </div>
+                <button v-if="modelStatus !== 'idle'" class="btn btn-sm" @click="$emit('navigate', 'modell')">Zum Modell</button>
             </div>
         </div>
 
@@ -1736,12 +1734,13 @@ import JSZip from 'jszip';
 import { processFile, validateFile, getFileNameWithoutExtension, SUPPORTED_EXTENSIONS } from '../utils/fileProcessor.js';
 import anonymizerService, { AVAILABLE_LABELS, DEFAULT_SELECTED_LABELS } from '../utils/anonymizer.js';
 import iframeAnonymizer from '../utils/iframeAnonymizer.js';
-import modelCache from '../utils/modelCache.js';
+import { formatBytes, getStatus, models as catalogModels, modelSize } from '../models/modelStore.js';
 
 const DEFAULT_EXCLUSION_LIST = "Bundesgericht; BGer; Bundesgerichts; Bundesgerichtes; BGE; Abteilung; FINMA; Bund; Staat; Eidgenossenschaft; Kanton; Kantons; Luzern; Luzerner; Gemeinde; Obergericht; OGer; Obergerichts; Kantonsgericht; KG; KGer; Kantonsgerichts; Kantonsrichter; Kantonsrichterin; Bezirksgericht; BZGer; Bezirksgerichts; Bezirksrichter; Bezirksrichterin; Kriminalgericht; KGer; Kriminalgerichts; Kriminalrichter; Kriminalrichterin; Arbeitsgericht; Arbeitsgerichts; Arbeitsrichter; Arbeitsrichterin; Friedensrichter; Friedensrichterin; Friedensrichters; Friedensrichteramt; Friedensrichteramts; Einzelrichter; Einzelrichterin; Sachrichter; Staatsanwaltschaft; Oberstaatsanwaltschaft; Staatsanwalt; Staatsanwältin; Polizei; Kantonspolizei; Stadtpolizei; Polizeiposten; Polizeibeamte; Polizeibeamter; Polizeibeamten; Polizist; Polizistin; Polizisten; Strafbehörde; Strafbehörden; Justizvollzugsanstalt; JVA; Bewährungsdienst; Massnahmenvollzug; Vollzugsbehörde; Vollzugs; Betreibungsamt; Betreibungsamtes; Konkursamt; Finanzverwaltung; Steuerverwaltung; Strassenverkehrsamt; Strassenverkehrsamtes; Ausgleichkasse; Ausgleichskasse; Sozialversicherungsanstalt; Sozialhilfe; Strafregisterbehörde; Bundesamt; Schule; Kindergarten; Hort; Spital; Klinik; Beschuldigter; Beschuldigte; Beschuldigten; Angeklagter; Angeklagte; Angeklagten; Täter; Täterin; Täters; Täterschaft; Wiederholungstäter; Täterkomponente; Tätereigenschaft; Opfer; Geschädigte; Geschädigter; Geschädigten; Privatkläger; Privatklägers; Privatklägerin; Privatklägerinnen; Privatklägerschaft; Zivilklägerschaft; Zivilkläger; Zivilklägerin; Kläger; Klägerin; Klage; Klägerschaft; Beklagte; Beklagter; Gesuchsteller; Gesuchstellers; Gesuchstellerin; Beschwerdeführer; Beschwerdeführerin; Rekurrent; Rekurrentin; Rekurrenten; Einziehungsbetroffene; Einziehungsbetroffenen; Betroffene; Betroffenen; Verurteilte; Verurteilten; Verurteilter; Auskunftsperson; Zeuge; Zeugin; Zeugen; Sachverständigen; Drittperson; Adressatin; Partei; Person; Personen; Rechtsanwalt; Rechtsanwalts; Rechtsanwältin; Rechtsanwältinnen; Rechtsanwälte; RA; Verteidiger; Verteidigerin; Verteidigers; Verteidigung; Rechtsvertreter; Rechtsbeistand; Gerichtsschreiber; Gerichtschreiberin; Gerichtsschreiberin; Präsident; Präsidentin; Präsidenten; StGB; Strafgesetzbuch; StPO; Strafprozessordnung; ZPO; OR; ZGB; SchKG; VRG; VwVG; AIG; BetmG; SVG; KAG; BV; DSG; PartG; FusG; IPRG; ArG; UVG; KVG; AHVG; IVG; VVG; DBG; StG; MWSTG; BGG; VwVG; SR; Art.; Abs.; lit.; ZIff.; §; §§; Urteil; Beschluss; Verfügung; Beschwerde; Beschwerdeschrift; Rekurs; Einsprache; Akten; fl.Akten; UA; Beil.; Bel.; bp; Komm.; Doppel; Strafregister; Kantonsblatt; Aktiengesellschaft; Gesellschaft; Gesellschaften; Einzelfirma; Kapitalgesellschaften; Personengesellschaft; Unternehmensgruppe; Corporation; Bank; Bankinstitut; Bankkonto; Post; Versicherung; Krankenkasse; Buchhaltung; Buchführung; Gesellschaftsvermögen; Reinvermögen; Vermögen; Geldwäscherei; Wirtschaftsdelikte; Arbeitgeber; Arbeitgeberin; Arbeitnehmer; Arbeitnehmern; Angestellter; Angestellte; Angestellten; Mitarbeiter; Mitarbeiterin; Mitarbeiterinnen; Geschäftsführer; Geschäftsführers; Verwaltungsrat; Verwaltungsates; Eigentümer; Eigentümerin; Besitzer; Besitzerin; Schuldner; Schuldnerin; Gläubiger; Gläubigerin; Bauherrschaft; Investorin; Berufsmässige; Gastgewerbe; Gasthof; Betriebe; lic.; iur.; MLaw; med.; Familie; Vater; Mutter; Eltern; Grosseltern; Grossvater; Grossmutter; Sohn; Tochter; Bruder; Schwester; Geschwister; Mädchen; Mädchens; Junge; Jungen; Jungens; Kinder; Kind; Enkel; Enkelin; Neffe; Nichte; Onkel; Tante; Cousin; Cousine; Schwager; Schwägerin; Schwiegermutter; Schwiegervater; Schwiegersohn; Schwiegertochter; Ehemann; Ehefrau; Ehepartner; Ehegatten; Partner; Partnerin; Partners; Partnerinnen; Freund; Freunde; Freundin; Freundinnen; Kollege; Kollegen; Kollegin; Kolleginnen; Bekannter; Bekannte; Bekanntenkreis; Nachbar; Nachbarin; Vermieter; Mieter; Patient; Patienten; Arzt; Ärztin; Psychiaterin; Psychiater; Psychologin; Psychologe; Lehrer; Erzieher; Wohnung; Wohnstube; Schlafzimmer; Zimmer; Sofa; Nachttisch; WC; Toilette; Stock; Wohnung; Hausadresse; Wohnadresse; Meldeadresse; Adresse; Postfach; Strasse; Stadt; Schweiz; Ausland; Auto; E-Mail; E-Mails; eMail; eMails; Mail; Mails; Party; Bahnhof; Haltestelle; Bushaltestelle; Tramhaltestelle; Zug; Bahnsteig; Gleis; Flughafen; Parkplatz; Tiefgarage; Garage; Platz; Kreuzung; Trottoir; Fussgängerstreifen; Waldrand; Park; Brücke; Fluss; See; der; die; das; des; dem; den; ein; einer; eine; da; und; oder; für; von; nach; in; im; am; vom; als; zu; er; sie; es; ihm; ihn; ihr; ihre; ihren; ihres; seiner; seine; seinen; seines; dieser; diese; dies; /; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; amtliche; amtlichen; ausserordentlich; zugelassene; zugelassenen; erstinstanzliche; neue; beste; später; oberen; obersten; Proband; Tatverdächtiger; Zeugenaussage; Protokoll; Vorladung; Rechtshilfe; Beweismittel; Einvernahme; Haftprüfung; Untersuchungshaft; Delikt; Verbrechen; Vergehen; Übertretung; Sachschaden; Personenschaden; Genugtuung; Schadenersatz";
 
 export default {
     name: 'BatchAnonymizer',
+    emits: ['navigate'],
     components: {
         FolderIcon,
         FolderOpenIcon,
@@ -1788,8 +1787,7 @@ export default {
             isCustomExclusionList: false,
 
             // Model status
-            modelStatus: 'idle', // 'idle', 'loading', 'ready', 'error'
-            modelProgress: 0,
+            modelStatus: 'idle', // 'idle', 'missing', 'ready', 'error'
             modelError: null,
 
             // Processing state
@@ -1882,6 +1880,9 @@ export default {
         window.removeEventListener('mouseup', this.stopResizingSidebar);
     },
     computed: {
+        modelDownloadSize() {
+            return formatBytes(modelSize(catalogModels[0]));
+        },
         placeholderSuggestions() {
             if (!this.sortedEntities) return [];
             
@@ -2183,8 +2184,8 @@ export default {
         if (savedLeft) this.leftPanelWidth = parseInt(savedLeft);
         if (savedCenter) this.centerPanelWidth = parseInt(savedCenter);
 
-        // Preload the anonymization model on page load
-        this.initializeModel();
+        // Prüfen, ob das Modell installiert ist (geladen wird es nur auf der Seite «Modell/Programmupdate»)
+        this.refreshModelStatus();
         // Load exclusion list from localStorage
         this.loadExclusionList();
 
@@ -2521,32 +2522,16 @@ export default {
             }
         },
 
-        // Initialize model (ensure it's cached)
-        async initializeModel() {
-            if (this.modelStatus === 'ready' || this.modelStatus === 'loading') {
-                return;
-            }
-
+        // Ist das Modell vollständig im geprüften Modellspeicher? Geladen wird nur auf Knopfdruck
+        // auf der Seite «Modell/Programmupdate» (im Modus «verbunden»), nie automatisch.
+        async refreshModelStatus() {
             try {
-                this.modelStatus = 'loading';
-                this.modelProgress = 0;
-                
-                // Only download/cache the model, don't load into memory in main thread
-                const modelPath = "./models/gliner_multi_pii-v1/onnx/model_fp16.onnx";
-                await modelCache.getOrDownloadModel(
-                    modelPath, 
-                    'quantized', 
-                    (progress) => {
-                        this.modelProgress = progress;
-                    }
-                );
-                
-                this.modelStatus = 'ready';
-                console.log('Model cached successfully');
+                const status = await getStatus(catalogModels[0]);
+                this.modelStatus = status === 'installiert' ? 'ready' : 'missing';
+                this.modelError = null;
             } catch (error) {
                 this.modelStatus = 'error';
                 this.modelError = error.message;
-                console.error('Failed to cache model:', error);
             }
         },
         // Layout resizing methods
@@ -2846,14 +2831,11 @@ export default {
         async startProcessing() {
             if (!this.canStartProcessing) return;
 
-            // Ensure model is ready (fallback in case preload failed)
+            // Ohne installiertes Modell keine Verarbeitung
+            await this.refreshModelStatus();
             if (this.modelStatus !== 'ready') {
-                await this.initializeModel();
-                if (this.modelStatus !== 'ready') {
-                    // Model initialization failed
-                    this.isProcessing = false;
-                    return;
-                }
+                this.isProcessing = false;
+                return;
             }
 
             this.isProcessing = true;

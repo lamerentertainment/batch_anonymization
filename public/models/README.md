@@ -1,36 +1,5 @@
-# Cloning Gliner Multi PII Model from Hugging Face
-Make sure git-lfs is installed (https://git-lfs.com)
-`git lfs install`
-Then clone the Gliner Multi PII model repository from Hugging Face:
-`git clone https://huggingface.co/onnx-community/gliner_multi_pii-v1`
+# Keine Modelldateien hier
 
-# PDF.js Worker Configuration
-The application automatically detects if a local PDF.js worker is available and uses intelligent fallback:
-- **Local worker found** → Fully offline mode ✅
-- **Local worker missing** → Uses CDN fallback ⚠️ (requires internet)
-
-**Setup for offline mode:**
-```bash
-npm install
-npm run setup
-```
-The `postinstall` script automatically copies the worker. No manual configuration needed!
-
-**Manual setup (if needed):**
-```bash
-cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
-```
-
-# WASM Files Note
-The WASM file paths specified in the Anonymization component (`cpu.wasm`, `gpu.wasm`) don't exist by default in the public directory, when cloning the model from Hugging Face. The Gliner library has a CDN fallback (`https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/`) which could potentially load WASM files remotely if local paths fail.
-
-To ensure completely local operation and avoid any CDN loading, you should manually copy the WASM files:
-
-```bash
-# Copy ONNX Runtime WASM files to public directory to avoid CDN fallback
-cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm public/models/gliner_multi_pii-v1/onnx/cpu.wasm
-cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm public/models/gliner_multi_pii-v1/onnx/gpu.wasm
-```
-
-Alternatively, you could remove the `wasmPaths` configuration entirely from the Anonymization component to let Vite bundle the WASM files automatically.
-    
+Das GLiNER-Modell wird nicht mehr mit der App ausgeliefert. Die App lädt es im Browser direkt von
+Hugging Face, mit fester Revision und SHA-256-Prüfung (siehe `models/catalog.json` und
+`src/models/modelStore.js`). Der Build bricht ab, wenn hier noch `gliner_multi_pii-v1/` liegt.

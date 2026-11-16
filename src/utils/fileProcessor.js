@@ -7,24 +7,10 @@ import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import TurndownService from 'turndown';
 
-// Initialize PDF.js worker
-const initPdfWorker = () => {
-    const localWorkerPath = '/pdf.worker.min.mjs';
-    const cdnWorkerPath = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-    fetch(localWorkerPath, { method: 'HEAD' })
-        .then(() => {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = localWorkerPath;
-            console.log('Using local PDF.js worker (offline mode)');
-        })
-        .catch(() => {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = cdnWorkerPath;
-            console.log('Using CDN PDF.js worker fallback');
-        });
-};
-
-// Initialize on module load
-initPdfWorker();
+// PDF.js-Worker von der eigenen Website (scripts/copy-vendor.js), nie von einem CDN.
+// Die Versionsnummer im Pfad verhindert, dass ein gespeicherter Worker zu einer anderen
+// pdf.js-Version gerät.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `/vendor/pdfjs-${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 // Supported file types
 export const SUPPORTED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.doc', '.md'];

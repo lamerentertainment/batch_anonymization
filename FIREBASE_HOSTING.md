@@ -42,10 +42,11 @@ Um die Seite wieder live zu schalten, muss ein neuer Build erstellt und auf Fire
 
 ### Per Terminal (CLI)
 
-1. **Abhängigkeiten & Offline-Assets sicherstellen (falls nötig):**
+1. **Abhängigkeiten sicherstellen (falls nötig):**
    ```bash
-   npm run setup
+   npm install
    ```
+   Das Modell wird nicht mit der Website ausgeliefert; die Nutzer laden es im Browser direkt von Hugging Face.
 
 2. **Produktions-Build erstellen:**
    ```bash

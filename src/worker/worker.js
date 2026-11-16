@@ -1,14 +1,15 @@
 import { Gliner } from 'gliner';
-import modelCache from '../utils/modelCache.js';
+import { env } from '@xenova/transformers';
+import { getStatus, models, readModelFile } from '../models/modelStore.js';
 
 // Configuration
 const MAX_CHUNK_LENGTH = 2000;
-const MODEL_PATH = "./models/gliner_multi_pii-v1/onnx/model_fp16.onnx";
-const TOKENIZER_PATH = "./gliner_multi_pii-v1";
-const WASM_PATHS = {
-    cpu: "./models/gliner_multi_pii-v1/onnx/cpu.wasm",
-    gpu: "./models/gliner_multi_pii-v1/onnx/gpu.wasm",
-};
+const MODEL = models.find(m => m.id === 'gliner-multi-pii');
+// Muss zu dem repo-Namen passen, den transformers.js in seinen Anfragen verwendet (siehe unten)
+const TOKENIZER_REPO = MODEL.repo;
+// ONNX Runtime von gliner, von der eigenen Website (scripts/copy-vendor.js), nie vom CDN
+/* global __GLINER_ORT_VERSION__ */
+const ORT_DIR = `/vendor/ort-${__GLINER_ORT_VERSION__}/`;
 
 /**
  * Worker state
@@ -22,6 +23,29 @@ function updateStatus(status) {
     if (el) el.textContent = status;
 }
 
+// Der Tokenizer wird von transformers.js geladen. Es erhält einen eigenen «Cache», der nur aus dem
+// geprüften Modellspeicher liest (Dateiname → Katalogeintrag). transformers.js verlangt formal eine
+// entfernte Quelle; sie zeigt auf eine Domain, die es nicht gibt (.invalid, zudem von der CSP
+// verboten). Ob alle Dateien im Speicher sind, prüft initialize() vorher.
+function useVerifiedModelStore() {
+    env.allowLocalModels = false;
+    env.allowRemoteModels = true;
+    env.remoteHost = 'https://kein-netz.invalid/';
+    env.useBrowserCache = false;
+    env.useFSCache = false;
+    env.useCustomCache = true;
+    env.customCache = {
+        async match(key) {
+            const name = String(key).split('/').pop();
+            const file = MODEL.files.find(f => f.name === name);
+            if (!file) return undefined;
+            const data = await readModelFile(file);
+            return data ? new Response(data) : undefined;
+        },
+        async put() { /* der Modellspeicher wird nur auf der Seite «Modell/Programmupdate» beschrieben */ },
+    };
+}
+
 /**
  * Initialize GLiNER
  */
@@ -31,55 +55,37 @@ async function initialize() {
     try {
         updateStatus('Initializing...');
 
-        // Load model with caching
-        // We reuse the modelCache utility which uses IndexedDB
-        // This allows sharing the model cache between main thread and iframes
-        let modelData = await modelCache.getOrDownloadModel(
-            MODEL_PATH,
-            'quantized',
-            (progress) => {
-                // Optional: Report download progress
-            }
-        );
+        if ((await getStatus(MODEL)) !== 'installiert') {
+            throw new Error('Das Modell ist nicht vollständig installiert. Bitte unter «Modell/Programmupdate» laden.');
+        }
+        const weights = MODEL.files.find(f => f.name.endsWith('.onnx'));
+        let modelData = await readModelFile(weights);
 
-        // Create blob URL for model
-        const modelBlob = new Blob([modelData], { type: 'application/octet-stream' });
-        const modelUrl = URL.createObjectURL(modelBlob);
+        // WebGPU, wo vorhanden, sonst WebAssembly auf dem Prozessor
+        const executionProvider = 'gpu' in navigator ? 'webgpu' : 'wasm';
+        const wasmFile = executionProvider === 'webgpu' ? 'ort-wasm-simd-threaded.jsep.wasm' : 'ort-wasm-simd-threaded.wasm';
+        console.log('[Worker] Execution provider:', executionProvider);
 
-        // Detect execution providers
-        // For now, force WASM only to avoid WebGPU instability and memory issues
-        const executionProviders = ['wasm'];
-        console.log('[Worker] Execution providers:', executionProviders);
-
-        // Initialize Gliner
         console.log('[Worker] Creating Gliner instance...');
         gliner = new Gliner({
-            tokenizerPath: TOKENIZER_PATH,
+            tokenizerPath: TOKENIZER_REPO,
             onnxSettings: {
-                modelPath: modelUrl,
-                wasmPaths: WASM_PATHS,
-                executionProviders: executionProviders,
-                sessionOptions: {
-                    enableCpuMemArena: false,
-                    enableMemPattern: false,
-                    graphOptimizationLevel: 'basic',
-                    executionMode: 'sequential', // Force sequential execution
-                    interOpNumThreads: 1,
-                    intraOpNumThreads: 1
-                }
+                // Die Modelldaten direkt, ohne Umweg über eine Blob-URL
+                modelPath: modelData,
+                executionProvider,
+                wasmPaths: { wasm: `${ORT_DIR}${wasmFile}` },
             },
             transformersSettings: {
-                useBrowserCache: true,
-                allowLocalModels: true,
-                allowRemoteModels: false,
+                useBrowserCache: false,
+                allowLocalModels: false,
             },
             maxWidth: 12,
         });
+        // Der Gliner-Konstruktor setzt env neu; danach den eigenen Speicher einhängen
+        useVerifiedModelStore();
 
         await gliner.initialize();
-
-        // Clean up blob URL
-        URL.revokeObjectURL(modelUrl);
+        modelData = null; // Free memory
 
         isInitialized = true;
         updateStatus('Ready');

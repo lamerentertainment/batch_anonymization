@@ -6,11 +6,36 @@ testen auf: http://batch-anon.einfuegen.ch
 
 ## 🛡️ Datenschutz & Sicherheit
 
-Der Schutz Ihrer Daten steht an erster Stelle. Im Gegensatz zu vielen anderen KI-Tools arbeitet diese Anwendung nach dem **Local-First-Prinzip**:
+Ihre Dokumente verlassen den Browser nie. Die Erkennung (GLiNER) läuft lokal mit der ONNX Runtime
+(WebGPU, sonst WebAssembly).
 
-- **Kein Datentransfer**: Ihre Dokumente werden niemals auf einen Server hochgeladen.
-- **Lokale Verarbeitung**: Die KI-Modelle (GLiNER) laufen direkt in Ihrem Browser mittels ONNX Runtime (WebGPU/WASM).
-- **Offline-Fähigkeit**: Nach dem initialen Laden des Modells kann die Anwendung vollständig offline genutzt werden.
+### Wann die App ins Internet geht
+
+| Modus | Netzwerk | Wofür |
+|---|---|---|
+| **Lokal** (Standard, nach jedem Start) | keine einzige Anfrage | Anonymisieren |
+| **Verbunden** (nur auf Knopfdruck, endet automatisch) | nur Abrufe, nur zu dieser Website und zu Hugging Face | App-Update, Modell laden |
+
+- **Torwächter** ([`public/sw.js`](public/sw.js)): Ein Service Worker beantwortet jede Anfrage aus dem
+  Browser-Speicher oder entscheidet nach den Regeln in [`public/sw-policy.js`](public/sw-policy.js).
+  Im Modus Lokal wird alles blockiert, im Modus Verbunden sind nur `GET`-Abrufe zu freigegebenen Zielen erlaubt.
+- **Content Security Policy** ([`csp.js`](csp.js)): Der Browser verbietet Verbindungen zu allen anderen
+  Servern, unabhängig vom Code der App. Kein CDN: ONNX Runtime und pdf.js-Worker kommen aus `/vendor`.
+- **Verbindungsprotokoll**: Jede Netzwerkanfrage, ob erlaubt oder blockiert, erscheint unter *Internetverbindung*.
+- **Updates nur auf Wunsch**: Die App sucht nicht selbst nach Updates. Eine neue Version, die der Browser
+  von sich aus findet, wird verworfen und protokolliert.
+- **Modell direkt von Hugging Face** ([`models/catalog.json`](models/catalog.json)):
+  [`onnx-community/gliner_multi_pii-v1`](https://huggingface.co/onnx-community/gliner_multi_pii-v1)
+  (Apache-2.0, Basis [`urchade/gliner_multi_pii-v1`](https://huggingface.co/urchade/gliner_multi_pii-v1))
+  mit fester Revision, Grösse und SHA-256 jeder Datei (festgelegt mit
+  [`scripts/models/pin-gliner.mjs`](scripts/models/pin-gliner.mjs)). Die Prüfsumme wird beim Herunterladen
+  laufend berechnet; stimmt sie nicht, wird die Datei verworfen. Der Website-Server liefert kein Modell aus.
+- **Tokenizer ohne Netz** ([`src/worker/worker.js`](src/worker/worker.js)): transformers.js erhält einen
+  eigenen Cache, der nur aus dem geprüften Modellspeicher liest.
+
+Grenzen: Der Browser prüft `sw.js` gelegentlich von sich aus (höchstens etwa einmal pro Tag; eine so
+gefundene Version wird nicht installiert). Ein erzwungenes Neuladen (Shift + Neu laden) umgeht den Service
+Worker für diesen einen Aufruf. Der erste Besuch lädt die App naturgemäss aus dem Netz.
 
 ## ✨ Kernfunktionen
 
@@ -41,205 +66,28 @@ Nutzt modernste **GLiNER (Generalist Model for Information Extraction)** Technol
 - **Markdown-Export**: Konvertiert Word-Dokumente in Markdown, um Formatierungen (Fett, Listen) bei gleichzeitiger Textbasiertheit beizubehalten.
 - **Dateinamen-Anonymisierung**: Option zur automatischen Generierung neutraler Dateinamen (`anon-text-########`).
 
-## ️ Installation & Setup
-
-```bash
-# Abhängigkeiten installieren und PDF-Worker einrichten
-npm install
-
-# Entwicklungsserver starten
-npm run dev
-
-# Produktions-Build erstellen
-npm run build
-```
-
-### ⚠️ Wichtiger Hinweis zum PDF-Worker & Modellen
-Sie müssen die Modelle und den PDF.js-Worker manuell zum Projekt hinzufügen (oder den Setup-Script nutzen). Siehe `Readme.md` im Ordner `/public` für genaue Anweisungen.
-
-```bash
-# Manueller Setup des PDF-Workers (falls nötig)
-cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
-```
-
-### Important
-You need to add the models and the pdfjs worker to the project manually. See Readme.md in /public for precise instructions.
-
-### Server Configuration
-
-#### ONNX Model Caching (.htaccess)
-To improve performance and prevent redownloading models on each visit, add proper cache headers for ONNX files:
-
-```apache
-# Cache ONNX model files for 1 year
-<FilesMatch "\.(onnx)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 year"
-    Header set Cache-Control "public, max-age=31536000"
-</FilesMatch>
-
-# Cache WASM files for 1 year
-<FilesMatch "\.(wasm)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 year"
-    Header set Cache-Control "public, max-age=31536000"
-</FilesMatch>
-
-# Cache tokenizer files for 1 year
-<FilesMatch "\.(json|txt)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 year"
-    Header set Cache-Control "public, max-age=31536000"
-</FilesMatch>
-```
-
-#### PDF.js Worker MIME Type (.htaccess)
-When deploying to production, you may encounter MIME type errors with the PDF.js worker file (`pdf.worker.min.mjs`). The server must serve `.mjs` files with the correct MIME type for ES6 module loading.
-
-Add this to your `.htaccess` file in the web root:
-
-```apache
-# Fix MIME type for .mjs files (ES6 modules)
-AddType application/javascript .mjs
-
-# Alternative approach if the above doesn't work
-<FilesMatch "\.mjs$">
-    ForceType application/javascript
-</FilesMatch>
-
-# Or use text/javascript (also acceptable)
-# AddType text/javascript .mjs
-```
-
-#### Nginx
-Add this to your Nginx server configuration:
-
-```nginx
-location ~* \.mjs$ {
-    add_header Content-Type application/javascript;
-}
-
-# Or in the http block:
-# http {
-#     include /etc/nginx/mime.types;
-#     types {
-#         application/javascript mjs;
-#     }
-# }
-```
-
-#### Express.js / Node.js
-If using Express.js, add this middleware:
-
-```javascript
-app.use(express.static('public', {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.mjs')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    }
-  }
-}));
-```
-
-#### Firebase Hosting
-For Firebase Hosting deployments, the application automatically uses intelligent fallback logic:
-- **First**: Tries to load the PDF.js worker from a local file (offline mode)
-- **Fallback**: Uses CDN if local file is not available
-
-The `firebase.json` file already includes the necessary MIME type configuration for `.mjs` files:
-
-```json
-{
-  "hosting": {
-    "public": "dist",
-    "headers": [
-      {
-        "source": "**/*.mjs",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/javascript"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**For complete offline functionality (recommended for privacy/security):**
-
-1. Run the setup script after installing dependencies:
-   ```bash
-   npm install
-   npm run setup
-   ```
-
-   The `postinstall` script automatically copies the PDF.js worker to `public/`, enabling offline mode.
-
-2. The Service Worker automatically caches the `.mjs` file for persistent offline access.
-
-**Manual setup (if npm install fails):**
-   ```bash
-   cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
-   ```
-
-The application will detect the local worker file and use it automatically. Check the browser console for confirmation:
-- ✅ "Using local PDF.js worker (offline mode)" - Fully offline
-- ⚠️ "Local PDF.js worker not found, using CDN fallback" - Requires internet
-
-#### Vite Development Server
-For development, the Vite config should handle this automatically, but if issues persist, you can add:
-
-```javascript
-// vite.config.js
-export default defineConfig({
-  server: {
-    middlewareMode: false,
-    configure: (app) => {
-      app.use((req, res, next) => {
-        if (req.url.endsWith('.mjs')) {
-          res.setHeader('Content-Type', 'application/javascript');
-        }
-        next();
-      });
-    }
-  }
-});
-```
-
-The error occurs because browsers require ES6 modules (`.mjs` files) to be served with `application/javascript` or `text/javascript` MIME type, not `text/plain`.
-
-### Project Setup
+## Entwicklung
 
 ```bash
 npm install
+npm run dev       # Entwicklungsserver (ohne Torwächter)
+npm test          # Regeln des Torwächters, CSP und Modellkatalog
+npm run build && npm run preview   # mit Torwächter, wie in Produktion
 ```
 
-### Development Server
+`scripts/copy-vendor.js` kopiert vor `dev` und `build` die ONNX Runtime (Version von gliner) und den
+pdf.js-Worker nach `public/vendor/`. Modelldateien gehören nicht mehr nach `public/`: Der Build bricht ab,
+wenn noch ein Ordner `public/models/gliner_multi_pii-v1` vorhanden ist.
 
-```bash
-npm run dev
-```
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Preview Production Build
-
-```bash
-npm run preview
-```
+Neue Modellrevision festlegen: `node scripts/models/pin-gliner.mjs [revision]`.
 
 ## Dependencies and Licenses
 
 ### Runtime Dependencies
 - **Vue** (^3.4.21) - MIT License - Progressive JavaScript framework
 - **Gliner** (^0.0.19) - Apache-2.0 License - Named Entity Recognition library
-- **@huggingface/transformers** (^3.5.1) - Apache-2.0 License - Machine learning transformers library
+- **@xenova/transformers** (2.17.2, über gliner) - Apache-2.0 License - Tokenizer
+- **@noble/hashes** (2.4.0) - MIT License - SHA-256 im Datenstrom
 - **pdfjs-dist** (^5.2.133) - Apache-2.0 License - PDF parsing and rendering
 - **mammoth** (^1.9.0) - BSD-2-Clause License - DOCX to HTML converter
 - **@heroicons/vue** (^2.1.5) - MIT License - SVG icon library
