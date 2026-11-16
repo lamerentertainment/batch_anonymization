@@ -188,17 +188,28 @@ self.addEventListener('install', event => {
     })());
 });
 
+// Modellspeicher der alten App (IndexedDB, bis 600 MB). Ist noch ein Tab der alten Version offen,
+// meldet der Browser «blocked» und löscht, sobald er zu ist; darauf wird nicht gewartet.
+// Die App versucht es bei jedem Start erneut (src/legacyCleanup.js).
+function deleteLegacyDb() {
+    return new Promise(resolve => {
+        try {
+            const request = indexedDB.deleteDatabase(LEGACY_DB);
+            request.onsuccess = request.onerror = request.onblocked = () => resolve();
+        } catch (err) {
+            console.warn('Alter Modellspeicher nicht gelöscht:', err);
+            resolve();
+        }
+    });
+}
+
 self.addEventListener('activate', event => {
     event.waitUntil((async () => {
         // Alte App-Versionen und Speicher früherer Versionen (ungeprüfte Modellkopien) entfernen
         for (const key of await caches.keys()) {
             if (key !== APP_CACHE && key !== MODEL_CACHE) await caches.delete(key);
         }
-        try {
-            indexedDB.deleteDatabase(LEGACY_DB);
-        } catch (err) {
-            console.warn('Alter Modellspeicher nicht gelöscht:', err);
-        }
+        await deleteLegacyDb();
         await self.clients.claim();
         await broadcast({ type: 'ACTIVATED', build: BUILD });
     })());
