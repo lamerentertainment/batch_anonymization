@@ -131,7 +131,7 @@ export async function download(model, { onProgress, signal } = {}) {
         }
         // no-store: das Modell soll nicht ein zweites Mal im HTTP-Cache des Browsers liegen
         const response = await fetch(file.url, { signal, cache: 'no-store' });
-        if (isBlocked(response)) throw new Error('Die App ist im Modus «lokal». Bitte zuerst verbinden.');
+        if (isBlocked(response)) throw new Error('Die App ist im Modus «lokal». Bitte zuerst oben «Internetverbindung herstellen» wählen.');
         if (!response.ok) throw new Error(`${file.name}: Server antwortet mit ${response.status}.`);
         // Ein Strom geht direkt in den Speicher, der andere durch die Prüfsumme
         const [toCache, toHash] = response.body.tee();

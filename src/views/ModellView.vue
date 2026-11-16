@@ -102,7 +102,7 @@ async function persist() {
           >
             Nach Updates suchen
           </button>
-          <span v-if="!connected" class="text-xs opacity-60">Dafür oben zuerst «Verbinden» wählen.</span>
+          <span v-if="!connected" class="text-xs opacity-60">Dafür oben zuerst «Internetverbindung herstellen» wählen.</span>
           <span v-if="update.status === 'pruefen'" class="loading loading-spinner loading-sm" />
           <span v-if="update.status === 'aktuell'" class="text-success">Die App ist auf dem neuesten Stand.</span>
           <span v-if="update.status === 'fehler'" class="text-error">{{ update.error }}</span>
@@ -230,7 +230,7 @@ async function persist() {
               v-if="rows[model.id].status !== 'installiert'"
               class="btn btn-sm btn-primary"
               :disabled="!connected || rows[model.id].busy"
-              :title="connected ? '' : 'Zuerst oben «Verbinden» wählen'"
+              :title="connected ? '' : 'Zuerst oben «Internetverbindung herstellen» wählen'"
               @click="load(model)"
             >
               Laden ({{ formatBytes(rows[model.id].missing || modelSize(model)) }})
@@ -252,7 +252,7 @@ async function persist() {
               Löschen
             </button>
             <span v-if="!connected && rows[model.id].status !== 'installiert'" class="self-center text-xs opacity-60">
-              Zum Laden zuerst oben «Verbinden» wählen.
+              Zum Laden zuerst oben «Internetverbindung herstellen» wählen.
             </span>
           </template>
         </div>

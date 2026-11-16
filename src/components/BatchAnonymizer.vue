@@ -38,7 +38,7 @@
                     </template>
                     <template v-else-if="modelStatus === 'missing'">
                         <strong>Das Modell zur Entitätserkennung ist in diesem Browser nicht installiert.</strong>
-                        Oben «Verbinden» wählen und das Modell unter «Modell/Programmupdate» laden (einmalig, {{ modelDownloadSize }}).
+                        Oben «Internetverbindung herstellen» wählen und das Modell unter «Modell/Programmupdate» laden (einmalig, {{ modelDownloadSize }}).
                     </template>
                     <template v-else-if="modelStatus === 'error'">
                         <strong>Fehler:</strong> {{ modelError }}

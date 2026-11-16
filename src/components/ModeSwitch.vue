@@ -51,7 +51,7 @@ async function disconnect() {
     </div>
 
     <button v-if="!connected" class="btn btn-sm" :disabled="unavailable" @click="dialog.showModal()">
-      Verbinden
+      Internetverbindung herstellen
     </button>
     <button v-else class="btn btn-sm btn-neutral" @click="disconnect">Trennen</button>
 
@@ -79,7 +79,7 @@ async function disconnect() {
         <p v-if="error" class="mt-3 text-sm text-error">{{ error }}</p>
         <div class="modal-action">
           <button class="btn btn-ghost" @click="dialog.close()">Abbrechen</button>
-          <button class="btn btn-warning" @click="connect">Verbinden</button>
+          <button class="btn btn-warning" @click="connect">Internetverbindung herstellen</button>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button>schliessen</button></form>

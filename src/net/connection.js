@@ -120,7 +120,7 @@ export function isBlocked(response) {
 }
 
 function requireConnected() {
-    if (state.mode !== 'verbunden') throw new Error('Dafür muss die App zuerst verbunden werden.');
+    if (state.mode !== 'verbunden') throw new Error('Dafür zuerst oben «Internetverbindung herstellen» wählen.');
 }
 
 // --- Updates: nur auf Knopfdruck --------------------------------------------------------------
