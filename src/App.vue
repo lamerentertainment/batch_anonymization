@@ -6,8 +6,8 @@ import ModellView from './views/ModellView.vue';
 import VerbindungView from './views/VerbindungView.vue';
 import { BUILD, connection } from './net/connection.js';
 
-const tabs = [
-    { id: 'anonymisieren', label: 'Anonymisieren' },
+// Hauptbereich; die Nebenbereiche (Modell, Verbindung) sind bewusst zurückhaltend gestaltet
+const sideTabs = [
     { id: 'modell', label: 'Modell/Programmupdate' },
     { id: 'verbindung', label: 'Internetverbindung' },
 ];
@@ -24,12 +24,23 @@ function onModelsChanged() {
 <template>
   <div class="flex h-screen flex-col bg-base-200">
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-base-300 bg-base-100 px-6 py-2">
-      <nav class="flex flex-wrap items-center gap-1" aria-label="Bereiche">
+      <nav class="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Bereiche">
         <button
-          v-for="tab in tabs"
+          class="btn gap-2"
+          :class="active === 'anonymisieren' ? 'btn-primary' : 'btn-outline btn-primary'"
+          :aria-current="active === 'anonymisieren' ? 'page' : undefined"
+          @click="active = 'anonymisieren'"
+        >
+          <img src="/icon.svg" alt="" class="size-6" /> Lokal anonymisieren
+        </button>
+        <span class="h-5 border-l border-base-300" aria-hidden="true"></span>
+        <button
+          v-for="tab in sideTabs"
           :key="tab.id"
-          class="btn btn-sm"
-          :class="active === tab.id ? 'btn-neutral' : 'btn-ghost'"
+          class="btn btn-ghost btn-xs font-normal"
+          :class="active === tab.id
+            ? 'text-base-content underline underline-offset-4'
+            : 'text-base-content/60 hover:text-base-content'"
           :aria-current="active === tab.id ? 'page' : undefined"
           @click="active = tab.id"
         >

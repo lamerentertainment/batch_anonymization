@@ -546,6 +546,16 @@
                     <span class="text-sm truncate" :class="testPreviewFile ? 'text-base-content' : 'text-base-content/50'">
                         {{ testPreviewFile ? testPreviewFile.name : 'Datei hochladen oder hierher ziehen (docx, pdf, txt, md)' }}
                     </span>
+                    <span v-if="!testPreviewFile" class="text-xs text-base-content/50 flex-shrink-0">
+                        Anspruchsvolles PDF? →
+                        <a
+                            href="https://pdf.einfuegen.ch"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="link"
+                            @click.stop
+                        >lokale Texterkennung auf pdf.einfuegen.ch</a>
+                    </span>
                     <span v-if="testPreviewResult" class="ml-auto text-xs text-base-content/40 flex-shrink-0">
                         {{ testPreviewResult.wordCount }} Wörter
                     </span>
@@ -703,11 +713,28 @@
                     </div>
 
                     <!-- No file selected -->
-                    <div v-else-if="!testPreviewFile" class="flex-1 flex items-center justify-center">
+                    <div
+                        v-else-if="!testPreviewFile"
+                        tabindex="0"
+                        aria-label="Datei hierher ziehen oder Text mit Ctrl+V einfügen"
+                        class="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed transition-colors outline-none"
+                        :class="singleFileDragOver ? 'border-primary bg-primary/10' : 'border-transparent focus:border-primary/40'"
+                        @paste.prevent="handleSinglePaste"
+                        @drop.prevent="handleSingleFileDrop"
+                        @dragover.prevent="singleFileDragOver = true"
+                        @dragleave.prevent="singleFileDragOver = false"
+                    >
                         <div class="text-center text-base-content/40">
                             <DocumentIcon class="w-20 h-20 mx-auto mb-4 opacity-20" />
                             <p class="text-xl font-medium">Datei hochladen um zu beginnen</p>
                             <p class="text-sm mt-2 opacity-70">Unterstützte Formate: .docx, .pdf, .txt, .md</p>
+                            <p class="text-sm mt-1 opacity-70">
+                                oder hier klicken und Text mit <kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">V</kbd> einfügen
+                            </p>
+                            <p class="text-xs mt-4 text-base-content/50">
+                                Anspruchsvolles PDF? →
+                                <a href="https://pdf.einfuegen.ch" target="_blank" rel="noopener noreferrer" class="link">lokale Texterkennung auf pdf.einfuegen.ch</a>
+                            </p>
                         </div>
                     </div>
 
@@ -3519,6 +3546,19 @@ export default {
             } catch (e) {
                 console.warn('Zwischenablage konnte nicht gelesen werden:', e);
             }
+        },
+
+        // Ctrl+V / Cmd+V im leeren Vorschaufeld: eingefügte Datei oder Text übernehmen
+        handleSinglePaste(event) {
+            const data = event.clipboardData;
+            if (!data) return;
+            if (data.files && data.files.length > 0) {
+                this.setSingleFile(data.files[0]);
+                return;
+            }
+            const text = data.getData('text/plain');
+            if (!text || !text.trim()) return;
+            this.setSingleFile(new File([text], 'clipboard.txt', { type: 'text/plain' }));
         },
 
         async pasteClipboardToSingle() {
