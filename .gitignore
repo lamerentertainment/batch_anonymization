@@ -40,3 +40,6 @@ src/assets/pdf.worker.min.mjs
 # Laufzeitdateien aus node_modules (scripts/copy-vendor.js)
 public/vendor/
 .legacy-models/
+
+# Firebase-Deploy-Zwischenspeicher (lokal, wird beim Deploy geschrieben)
+.firebase/
