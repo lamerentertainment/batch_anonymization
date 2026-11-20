@@ -87,7 +87,7 @@ async function persist() {
 
 <template>
   <div class="mx-auto max-w-4xl space-y-4 p-6">
-    <section class="card bg-base-100 shadow-sm">
+    <section class="card bg-base-100 shadow-xs">
       <div class="card-body gap-3 text-sm">
         <h2 class="card-title">Programmupdate</h2>
         <p>
@@ -131,7 +131,7 @@ async function persist() {
       </div>
     </section>
 
-    <section class="card bg-base-100 shadow-sm">
+    <section class="card bg-base-100 shadow-xs">
       <div class="card-body gap-3">
         <h2 class="card-title">Modell in diesem Browser</h2>
         <p class="text-sm opacity-80">
@@ -176,7 +176,7 @@ async function persist() {
       </div>
     </section>
 
-    <section v-for="model in models" :key="model.id" class="card bg-base-100 shadow-sm" :data-model="model.id">
+    <section v-for="model in models" :key="model.id" class="card bg-base-100 shadow-xs" :data-model="model.id">
       <div class="card-body gap-3">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div>

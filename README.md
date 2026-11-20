@@ -103,10 +103,8 @@ Neue Modellrevision festlegen: `node scripts/models/pin-gliner.mjs [revision]`.
 ### Development Dependencies
 - **Vite** (^8.3.8) - MIT License - Build tool and development server
 - **@vitejs/plugin-vue** (^6.0.11) - MIT License - Vue plugin for Vite
-- **Tailwind CSS** (^3.4.4) - MIT License - Utility-first CSS framework
-- **DaisyUI** (^4.12.2) - MIT License - Tailwind CSS component library
-- **PostCSS** (^8.4.38) - MIT License - CSS post-processor
-- **Autoprefixer** (^10.4.19) - MIT License - CSS vendor prefix automation
+- **Tailwind CSS** (^4.3.5, mit `@tailwindcss/vite`) - MIT License - Utility-first CSS framework
+- **DaisyUI** (^5.8.1) - MIT License - Tailwind CSS component library
 
 ## Recommended IDE Setup
 

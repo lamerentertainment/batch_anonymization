@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -103,7 +104,7 @@ function offlineApp() {
 }
 
 export default defineConfig({
-    plugins: [vue(), offlineApp()],
+    plugins: [vue(), tailwindcss(), offlineApp()],
     define: {
         __BUILD__: JSON.stringify(BUILD),
         __ORT_VERSION__: JSON.stringify(ORT_VERSION),

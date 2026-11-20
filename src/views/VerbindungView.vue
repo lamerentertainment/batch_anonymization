@@ -29,7 +29,7 @@ function target(entry) {
 
 <template>
   <div class="space-y-4">
-    <section class="card bg-base-100 shadow-sm">
+    <section class="card bg-base-100 shadow-xs">
       <div class="card-body gap-3 text-sm">
         <h2 class="card-title">So geht die App mit dem Internet um</h2>
         <div class="grid gap-4 md:grid-cols-2">
@@ -67,7 +67,7 @@ function target(entry) {
       </div>
     </section>
 
-    <section class="card bg-base-100 shadow-sm">
+    <section class="card bg-base-100 shadow-xs">
       <div class="card-body gap-3 text-sm">
         <div class="flex flex-wrap items-center gap-3">
           <h2 class="card-title">Verbindungsprotokoll</h2>

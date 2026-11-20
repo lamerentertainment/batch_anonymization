@@ -1,6 +1,6 @@
 <template>
     <!-- Privacy Modal -->
-    <div v-if="show" class="fixed inset-0 bg-base-300 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div v-if="show" class="fixed inset-0 bg-base-300/50 flex items-center justify-center z-50 p-4">
         <div class="bg-base-100 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <!-- Modal Header -->
             <div class="flex justify-between items-center p-6 border-b border-base-200">

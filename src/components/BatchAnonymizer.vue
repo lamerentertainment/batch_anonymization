@@ -14,14 +14,14 @@
                 <button
                     @click="viewMode = 'single'"
                     class="btn btn-sm rounded-md transition-all"
-                    :class="viewMode === 'single' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
+                    :class="viewMode === 'single' ? 'btn-primary shadow-xs' : 'btn-ghost text-base-content/60'"
                 >
                     Einzeldatei
                 </button>
                 <button
                     @click="viewMode = 'batch'"
                     class="btn btn-sm rounded-md transition-all"
-                    :class="viewMode === 'batch' ? 'btn-primary shadow-sm' : 'btn-ghost text-base-content/60'"
+                    :class="viewMode === 'batch' ? 'btn-primary shadow-xs' : 'btn-ghost text-base-content/60'"
                 >
                     Batch
                 </button>
@@ -61,7 +61,7 @@
         <main v-if="viewMode === 'batch'" class="flex-1 flex overflow-hidden">
             <!-- LEFT: File Input -->
             <section
-                class="border-r border-base-300 bg-base-100 flex flex-col flex-shrink-0"
+                class="border-r border-base-300 bg-base-100 flex flex-col shrink-0"
                 :style="{ width: leftPanelWidth + 'px' }"
             >
                 <div class="p-4 border-b border-base-300">
@@ -133,8 +133,8 @@
                             @mouseenter="hoveredFileIndex = index"
                             @mouseleave="hoveredFileIndex = null"
                         >
-                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded text-sm min-h-[40px]">
-                                <DocumentIcon class="w-4 h-4 flex-shrink-0 text-base-content/60" />
+                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded-sm text-sm min-h-[40px]">
+                                <DocumentIcon class="w-4 h-4 shrink-0 text-base-content/60" />
                                 <span class="flex-1 truncate select-none" :title="file.relativePath || file.name">
                                     {{ file.relativePath || file.name }}
                                 </span>
@@ -187,30 +187,30 @@
                         <DocumentIcon class="w-4 h-4 text-base-content/60" />
                         <h3 class="font-bold text-xs uppercase tracking-wider text-base-content/60">Datei-Optionen</h3>
                     </div>
-                    <div class="form-control space-y-2">
-                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                    <div class="flex flex-col space-y-2">
+                        <label class="flex select-none items-center p-0 cursor-pointer justify-start gap-2">
                             <input
                                 type="checkbox"
                                 v-model="anonymizeFilenames"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
-                            <span class="label-text text-xs font-semibold">Dateinamen der Output-Dateien anonymisieren (anon-text-########)</span>
+                            <span class="text-base-content text-xs font-semibold">Dateinamen der Output-Dateien anonymisieren (anon-text-########)</span>
                         </label>
-                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                        <label class="flex select-none items-center p-0 cursor-pointer justify-start gap-2">
                             <input
                                 type="checkbox"
                                 v-model="courtStyle"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
-                            <span class="label-text text-xs font-semibold">gerichtsübliche Anonymisierung (A.________) vornehmen</span>
+                            <span class="text-base-content text-xs font-semibold">gerichtsübliche Anonymisierung (A.________) vornehmen</span>
                         </label>
-                        <label class="label cursor-pointer justify-start gap-2 p-0">
+                        <label class="flex select-none items-center p-0 cursor-pointer justify-start gap-2">
                             <input
                                 type="checkbox"
                                 v-model="convertWordToMarkdown"
                                 class="checkbox checkbox-xs checkbox-primary"
                             >
-                            <span class="label-text text-xs font-semibold">importierte Word-Dateien (.docx) als Markdown-Dateien ausgeben</span>
+                            <span class="text-base-content text-xs font-semibold">importierte Word-Dateien (.docx) als Markdown-Dateien ausgeben</span>
                         </label>
                         <p class="text-[10px] leading-tight text-base-content/50 ml-5 mt-1">
                             Behält Formatierung (Fett, Listen, etc.) bei.
@@ -228,13 +228,13 @@
 
             <!-- Resize Handle Left -->
             <div
-                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors flex-shrink-0"
+                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors shrink-0"
                 @mousedown="startResizeLeft"
             ></div>
 
             <!-- CENTER: Entity Selection -->
             <section
-                class="border-r border-base-300 bg-base-100 flex flex-col flex-shrink-0"
+                class="border-r border-base-300 bg-base-100 flex flex-col shrink-0"
                 :style="{ width: centerPanelWidth + 'px' }"
             >
                 <div class="p-4 border-b border-base-300">
@@ -256,12 +256,12 @@
                     <div class="border border-base-300 rounded-lg overflow-hidden">
                         <!-- Threshold Control -->
                         <div class="px-4 pt-4 pb-2 bg-base-100/50">
-                            <label class="label pb-1 cursor-pointer">
+                            <label class="flex select-none items-center justify-between pt-2 pb-1 px-1 cursor-pointer">
                                 <div class="flex items-center gap-2">
                                     <SignalIcon class="w-4 h-4" />
-                                    <span class="label-text text-xs font-semibold">Anonymisierungsstärke (1 - Threshold)</span>
+                                    <span class="text-base-content text-xs font-semibold">Anonymisierungsstärke (1 - Threshold)</span>
                                 </div>
-                                <span class="label-text-alt font-mono">{{ anonymizationStrength }}</span>
+                                <span class="text-xs text-base-content font-mono">{{ anonymizationStrength }}</span>
                             </label>
                             <input
                                 type="range"
@@ -285,7 +285,7 @@
                         <div class="px-4 pt-4 pb-1">
                         <div class="flex items-center gap-2 mb-2">
                             <TagIcon class="w-3 h-3" />
-                            <span class="label-text text-xs font-semibold">zu anonymisierende Kategorien</span>
+                            <span class="text-base-content text-xs font-semibold">zu anonymisierende Kategorien</span>
                         </div>
                             
                             <!-- Quick Select Buttons -->
@@ -302,7 +302,7 @@
                                 <label
                                     v-for="label in availableLabels"
                                     :key="label"
-                                    class="flex items-center gap-2 p-2 rounded hover:bg-base-200 cursor-pointer"
+                                    class="flex items-center gap-2 p-2 rounded-sm hover:bg-base-200 cursor-pointer"
                                 >
                                     <input
                                         type="checkbox"
@@ -327,30 +327,30 @@
                             </p>
                 <div class="px-4 pb-4">
                      <div class="border border-base-300 rounded-lg p-3 space-y-2">
-                        <div class="form-control">
-                            <label class="label cursor-pointer justify-start gap-2 p-0">
+                        <div class="flex flex-col">
+                            <label class="flex select-none items-center p-0 cursor-pointer justify-start gap-2">
                                 <input
                                     type="checkbox"
                                     v-model="anonymizePartialWords"
                                     class="checkbox checkbox-sm checkbox-primary"
                                 >
-                                <span class="label-text text-sm font-semibold">Einzelne Wörter (Entitätsbestandteile) anonymisieren</span>
+                                <span class="text-base-content text-sm font-semibold">Einzelne Wörter (Entitätsbestandteile) anonymisieren</span>
                             </label>
                             <p class="text-xs text-base-content/50 ml-6 mt-1">
                                 Wenn deaktiviert, werden nur vollständige Entitäten ersetzt
                             </p>
                         </div>
 
-                        <div class="form-control">
-                            <label class="label p-0 py-1">
-                                <span class="label-text text-sm">Minimale Zeichenlänge für die Anonymisierung von alleinstehenden Entitätsbestandteilen</span>
+                        <div class="flex flex-col">
+                            <label class="flex select-none items-center justify-between py-1 px-0">
+                                <span class="text-base-content text-sm">Minimale Zeichenlänge für die Anonymisierung von alleinstehenden Entitätsbestandteilen</span>
                             </label>
                             <input
                                 type="number"
                                 v-model.number="minCharacterThreshold"
                                 min="0"
                                 max="50"
-                                class="input input-sm input-bordered w-full"
+                                class="input input-sm w-full"
                                 placeholder="0 = keine Beschränkung"
                                 :disabled="!anonymizePartialWords"
                                 :class="{ 'opacity-50': !anonymizePartialWords }"
@@ -369,11 +369,11 @@
                 </div>
                 <div class="px-4 pb-4">
                     <div class="border border-base-300 rounded-lg p-3">
-                        <div class="form-control">
+                        <div class="flex flex-col">
                             <textarea
                                 v-model="exclusionList"
                                 @input="saveExclusionList"
-                                class="textarea textarea-sm textarea-bordered w-full h-24 text-xs leading-relaxed"
+                                class="textarea textarea-sm w-full h-24 text-xs leading-relaxed"
                                 placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland; Max"
                             ></textarea>
                             <div class="flex flex-wrap justify-between items-center mt-1 gap-2">
@@ -429,7 +429,7 @@
 
             <!-- Resize Handle Center -->
             <div
-                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors flex-shrink-0"
+                class="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors shrink-0"
                 @mousedown="startResizeCenter"
             ></div>
 
@@ -482,7 +482,7 @@
                             :class="file.status === 'completed' ? 'bg-success/10' : file.status === 'error' ? 'bg-error/10' : 'bg-base-200'"
                         >
                             <!-- Status Icon -->
-                            <div class="flex-shrink-0">
+                            <div class="shrink-0">
                                 <CheckCircleIcon v-if="file.status === 'completed'" class="w-6 h-6 text-success" />
                                 <ExclamationCircleIcon v-else-if="file.status === 'error'" class="w-6 h-6 text-error" />
                                 <span v-else-if="file.status === 'processing'" class="loading loading-spinner loading-sm"></span>
@@ -541,12 +541,12 @@
                     @dragover.prevent="singleFileDragOver = true"
                     @dragleave.prevent="singleFileDragOver = false"
                 >
-                    <ArrowUpTrayIcon v-if="!testPreviewFile" class="w-5 h-5 text-base-content/40 flex-shrink-0" />
-                    <DocumentCheckIcon v-else class="w-5 h-5 text-success flex-shrink-0" />
+                    <ArrowUpTrayIcon v-if="!testPreviewFile" class="w-5 h-5 text-base-content/40 shrink-0" />
+                    <DocumentCheckIcon v-else class="w-5 h-5 text-success shrink-0" />
                     <span class="text-sm truncate" :class="testPreviewFile ? 'text-base-content' : 'text-base-content/50'">
                         {{ testPreviewFile ? testPreviewFile.name : 'Datei hochladen oder hierher ziehen (docx, pdf, txt, md)' }}
                     </span>
-                    <span v-if="!testPreviewFile" class="text-xs text-base-content/50 flex-shrink-0">
+                    <span v-if="!testPreviewFile" class="text-xs text-base-content/50 shrink-0">
                         Anspruchsvolles PDF? →
                         <a
                             href="https://pdf.einfuegen.ch"
@@ -556,18 +556,18 @@
                             @click.stop
                         >lokale Texterkennung auf pdf.einfuegen.ch</a>
                     </span>
-                    <span v-if="testPreviewResult" class="ml-auto text-xs text-base-content/40 flex-shrink-0">
+                    <span v-if="testPreviewResult" class="ml-auto text-xs text-base-content/40 shrink-0">
                         {{ testPreviewResult.wordCount }} Wörter
                     </span>
                 </div>
 
                 <!-- Paste from Clipboard -->
-                <button @click="pasteClipboardToSingle" class="btn btn-sm btn-outline gap-1 flex-shrink-0">
+                <button @click="pasteClipboardToSingle" class="btn btn-sm btn-outline gap-1 shrink-0">
                     Text aus der Zwischenablage einfügen
                 </button>
 
                 <!-- Dateinamen anonymisieren -->
-                <div class="tooltip tooltip-bottom flex-shrink-0" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
+                <div class="tooltip tooltip-bottom shrink-0" data-tip="Output-Dateinamen anonymisieren: anon-text-########">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" v-model="anonymizeFilenames" class="toggle toggle-xs toggle-primary">
                         <span class="text-xs font-semibold text-base-content/70">Dateinamen anonymisieren</span>
@@ -575,7 +575,7 @@
                 </div>
 
                 <!-- DOCX → MD -->
-                <div class="tooltip tooltip-bottom flex-shrink-0" data-tip="Word-Dateien (.docx) als Markdown ausgeben – behält Formatierung (Fett, Listen, etc.) bei">
+                <div class="tooltip tooltip-bottom shrink-0" data-tip="Word-Dateien (.docx) als Markdown ausgeben – behält Formatierung (Fett, Listen, etc.) bei">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" v-model="convertWordToMarkdown" class="toggle toggle-xs toggle-primary">
                         <span class="text-xs font-semibold text-base-content/70">DOCX → MD</span>
@@ -583,7 +583,7 @@
                 </div>
 
                 <!-- Download Button(s) -->
-                <div class="flex items-center gap-1 flex-shrink-0">
+                <div class="flex items-center gap-1 shrink-0">
                     <template v-if="testPreviewResult && (isDocxFile || isMdFile)">
                         <button @click="downloadSingleResult('txt')" class="btn btn-sm btn-ghost gap-1" title="Als TXT herunterladen">
                             <ArrowDownTrayIcon class="w-4 h-4" /> TXT
@@ -617,14 +617,14 @@
                         PII-Kategorien ({{ selectedLabels.length }}/{{ availableLabels.length }})
                         <ChevronDownIcon class="w-3 h-3" />
                     </label>
-                    <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-64 border border-base-300">
+                    <div tabindex="0" class="dropdown-content z-50 p-3 shadow-lg bg-base-100 rounded-lg w-64 border border-base-300">
                         <div class="flex gap-1 mb-2">
                             <button @click="selectAllLabels" class="btn btn-xs">Alle</button>
                             <button @click="selectCommonLabels" class="btn btn-xs">Häufige</button>
                             <button @click="deselectAllLabels" class="btn btn-xs">Keine</button>
                         </div>
                         <div class="max-h-48 overflow-y-auto">
-                            <label v-for="label in availableLabels" :key="label" class="flex items-center gap-2 py-1 cursor-pointer hover:bg-base-200 px-2 rounded">
+                            <label v-for="label in availableLabels" :key="label" class="flex items-center gap-2 py-1 cursor-pointer hover:bg-base-200 px-2 rounded-sm">
                                 <input type="checkbox" v-model="selectedLabels" :value="label" class="checkbox checkbox-xs checkbox-primary">
                                 <span class="text-xs">{{ formatLabel(label) }}</span>
                             </label>
@@ -645,7 +645,7 @@
                 <div class="tooltip tooltip-bottom" data-tip="Entitätsbestandteile mit weniger als N Zeichen werden nicht anonymisiert (z.B. eine alleinstehende «5» aus «Landenbergstrasse 5»)">
                     <div v-show="anonymizePartialWords" class="flex items-center gap-1">
                         <label class="text-xs text-base-content/70 whitespace-nowrap">Min. Zeichen:</label>
-                        <input type="number" v-model.number="minCharacterThreshold" min="0" max="50" class="input input-xs input-bordered w-14">
+                        <input type="number" v-model.number="minCharacterThreshold" min="0" max="50" class="input input-xs w-14">
                     </div>
                 </div>
 
@@ -664,7 +664,7 @@
                             Negativliste
                             <ChevronDownIcon class="w-3 h-3" />
                         </label>
-                        <div tabindex="0" class="dropdown-content z-[50] p-3 shadow-lg bg-base-100 rounded-lg w-80 border border-base-300">
+                        <div tabindex="0" class="dropdown-content z-50 p-3 shadow-lg bg-base-100 rounded-lg w-80 border border-base-300">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-semibold">Negativliste</span>
                                 <div class="flex gap-1">
@@ -675,7 +675,7 @@
                             <textarea
                                 v-model="exclusionList"
                                 @input="saveExclusionList"
-                                class="textarea textarea-bordered textarea-xs w-full h-24 font-mono text-xs"
+                                class="textarea textarea-xs w-full h-24 font-mono text-xs"
                                 placeholder="Wörter durch Semikolon trennen, z.B.: Berlin; Deutschland"
                             ></textarea>
                         </div>
@@ -717,7 +717,7 @@
                         v-else-if="!testPreviewFile"
                         tabindex="0"
                         aria-label="Datei hierher ziehen oder Text mit Ctrl+V einfügen"
-                        class="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed transition-colors outline-none"
+                        class="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed transition-colors outline-hidden"
                         :class="singleFileDragOver ? 'border-primary bg-primary/10' : 'border-transparent focus:border-primary/40'"
                         @paste.prevent="handleSinglePaste"
                         @drop.prevent="handleSingleFileDrop"
@@ -748,13 +748,13 @@
                                 <p class="text-sm mt-3">Einstellungen prüfen und auf <strong class="text-primary opacity-80">Anonymisieren</strong> klicken</p>
                             </div>
                         </div>
-                        <div class="mt-2 text-center text-xs text-base-content/30 italic flex-shrink-0">Vorschau – auf <strong class="not-italic">Anonymisieren</strong> klicken um zu beginnen</div>
+                        <div class="mt-2 text-center text-xs text-base-content/30 italic shrink-0">Vorschau – auf <strong class="not-italic">Anonymisieren</strong> klicken um zu beginnen</div>
                     </div>
 
                     <!-- Result -->
                     <template v-else>
                         <!-- Statistics -->
-                        <div class="mb-3 p-3 bg-base-200 rounded-lg flex flex-wrap gap-4 text-sm flex-shrink-0">
+                        <div class="mb-3 p-3 bg-base-200 rounded-lg flex flex-wrap gap-4 text-sm shrink-0">
                             <span><strong class="text-primary">{{ testPreviewResult.entities.length }}</strong> Entitäten gefunden</span>
                             <span class="text-base-content/40">|</span>
                             <span>Labels: <strong>{{ selectedLabels.length }}</strong></span>
@@ -785,24 +785,24 @@
                         ></div>
 
                         <!-- Legend -->
-                        <div class="mt-3 flex gap-2 flex-wrap text-xs items-center flex-shrink-0">
+                        <div class="mt-3 flex gap-2 flex-wrap text-xs items-center shrink-0">
                             <span class="font-medium text-base-content/60 mr-2">Legende:</span>
-                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded">person</span>
-                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded">email</span>
-                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded">phone</span>
-                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded">address</span>
-                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded">iban/kreditkarte</span>
-                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
-                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
-                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
-                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded border border-gray-400">manuell</span>
+                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded-sm">person</span>
+                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded-sm">email</span>
+                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded-sm">phone</span>
+                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded-sm">address</span>
+                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded-sm">iban/kreditkarte</span>
+                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded-sm">organisation</span>
+                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded-sm">ort</span>
+                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded-sm">andere</span>
+                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded-sm border border-gray-400">manuell</span>
                             <span class="text-base-content/40 ml-2 italic">Hover zeigt Original, Markieren zum Anonymisieren</span>
                         </div>
                     </template>
                 </div>
 
                 <!-- Right: Panel Toggle Tabs + Panels -->
-                <div v-if="testPreviewResult && !panelsInFooter" class="flex flex-shrink-0" :class="isResizingSidebar ? 'select-none' : ''">
+                <div v-if="testPreviewResult && !panelsInFooter" class="flex shrink-0" :class="isResizingSidebar ? 'select-none' : ''">
 
                     <!-- Vertical toggle tabs (always on the left edge of the sidebar group) -->
                     <div class="flex flex-col bg-base-100 border-l border-base-300 z-10">
@@ -834,7 +834,7 @@
                     <!-- Resizer handle -->
                     <div 
                         v-if="showEntityPanel || showWordsPanel"
-                        class="w-1.5 hover:w-2 bg-transparent hover:bg-primary/50 cursor-col-resize transition-all duration-300 flex-shrink-0 active:bg-primary z-20 -ml-[0.75px]"
+                        class="w-1.5 hover:w-2 bg-transparent hover:bg-primary/50 cursor-col-resize transition-all duration-300 shrink-0 active:bg-primary z-20 ml-[-0.75px]"
                         @mousedown="startResizingSidebar"
                         title="Ziehen zum Vergrössern/Verkleinern"
                     ></div>
@@ -868,7 +868,7 @@
                                         <td class="font-medium max-w-[150px] truncate cursor-pointer hover:text-primary" :title="entity.name + ' – klicken um im Text zu scrollen'" v-html="formatEntityName(entity)" @click.stop="scrollToNextTokenForEntity(entity.name)"></td>
                                         <td>
                                             <select
-                                                class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
+                                                class="select select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
                                                 :value="entity.type"
                                                 @change="changeEntityCategory(entity.name, $event.target.value)"
                                             >
@@ -881,7 +881,7 @@
                                                     <input 
                                                         type="text" 
                                                         v-model="editingPlaceholderValue" 
-                                                        class="input input-xs input-bordered w-full min-w-[100px]"
+                                                        class="input input-xs w-full min-w-[100px]"
                                                         @keyup.enter="saveCustomPlaceholder(entity)"
                                                         @keyup.esc="cancelEditingPlaceholder"
                                                         @click.stop="showPlaceholderSuggestions = true"
@@ -890,7 +890,7 @@
                                                     <!-- Custom Dropdown List -->
                                                     <ul 
                                                         v-if="showPlaceholderSuggestions" 
-                                                        class="absolute left-0 top-full mt-1 z-[200] w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
+                                                        class="absolute left-0 top-full mt-1 z-200 w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
                                                         @mousedown.stop
                                                     >
                                                         <li 
@@ -909,9 +909,9 @@
                                                 <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                                 <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                             </div>
-                                            <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                            <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded-sm flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
                                                 <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
-                                                <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                                <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                         </td>
                                         <td>
@@ -973,7 +973,7 @@
                 <!-- Tooltip (fixed positioned, works in single-file mode) -->
                 <div
                     v-if="hoverTooltip.visible"
-                    class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl flex flex-col gap-2 min-w-[220px]"
+                    class="fixed z-100 px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded-sm shadow-xl flex flex-col gap-2 min-w-[220px]"
                     :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                     :style="tooltipStyle"
                     @mouseenter="handleTooltipMouseEnter"
@@ -993,7 +993,7 @@
                         </button>
                     </div>
                     <div v-else-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
-                        <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                        <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded-sm text-xs text-base-content border border-base-300 mb-2">
                             <div class="font-bold mb-1">Zusammengelegt auf:</div>
                             <div class="flex justify-between items-center gap-2">
                                 <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
@@ -1002,7 +1002,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                        <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded-sm text-xs text-base-content border border-base-300 mb-2">
                             <div class="font-bold mb-1">Hiermit zusammengelegt:</div>
                             <div class="flex flex-col gap-1">
                                 <div v-for="source in getMappedToThis(hoverTooltip.entityName)" :key="source" class="flex justify-between items-center gap-2">
@@ -1013,14 +1013,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="form-control w-full">
-                            <label class="label p-0 pb-1">
-                                <span class="label-text-alt text-base-content/70">
+                        <div class="flex flex-col w-full">
+                            <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                <span class="text-xs text-base-content/70">
                                     {{ courtEntityMappings[hoverTooltip.entityName] || getMappedToThis(hoverTooltip.entityName).length > 0 ? 'Weitere Entität zusammenlegen:' : 'Entität hiermit zusammenlegen:' }}
                                 </span>
                             </label>
                             <select
-                                class="select select-bordered select-xs w-full text-base-content"
+                                class="select select-xs w-full text-base-content"
                                 @change="mergeEntity($event.target.value, hoverTooltip.entityName); $event.target.value = ''"
                             >
                                 <option value="" disabled selected>Entität auswählen...</option>
@@ -1034,12 +1034,12 @@
                             </select>
                         </div>
                         <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-base-content/20 my-1"></div>
-                        <div class="form-control w-full my-1">
-                            <label class="label p-0 pb-1">
-                                <span class="label-text-alt text-base-content/70">Kategorie ändern:</span>
+                        <div class="flex flex-col w-full my-1">
+                            <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                <span class="text-xs text-base-content/70">Kategorie ändern:</span>
                             </label>
                             <select
-                                class="select select-bordered select-xs w-full text-base-content"
+                                class="select select-xs w-full text-base-content"
                                 :value="hoverTooltip.entityType"
                                 @change="changeEntityCategory(hoverTooltip.entityName, $event.target.value)"
                             >
@@ -1049,21 +1049,21 @@
                                 </option>
                             </select>
                         </div>
-                        <div class="form-control w-full mt-1">
-                            <label class="label p-0 pb-1">
-                                <span class="label-text-alt text-base-content/70">Platzhalter ändern / tauschen:</span>
+                        <div class="flex flex-col w-full mt-1">
+                            <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                <span class="text-xs text-base-content/70">Platzhalter ändern / tauschen:</span>
                             </label>
                             <div class="flex gap-1">
                                 <input 
                                     type="text" 
-                                    class="input input-xs input-bordered flex-1 font-mono" 
+                                    class="input input-xs flex-1 font-mono" 
                                     placeholder="Neu/Tauschen..."
                                     :value="getActualPlaceholder(findEntityByName(hoverTooltip.entityName))"
                                     @keyup.enter="(e) => { const entity = findEntityByName(hoverTooltip.entityName); if(entity) { editingPlaceholderValue = e.target.value; saveCustomPlaceholder(entity); } }"
                                     @click.stop
                                 >
                                 <select
-                                    class="select select-bordered select-xs w-28 text-base-content font-mono"
+                                    class="select select-xs w-28 text-base-content font-mono"
                                     @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
                                 >
                                     <option value="" disabled selected>Wählen...</option>
@@ -1110,7 +1110,7 @@
                 <!-- Selection Menu (single-file mode) -->
                 <div
                     v-if="selectionMenu.visible"
-                    class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
+                    class="fixed z-110 bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
                     :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min((windowObj ? windowObj.innerWidth : 1200) - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                     @mousedown.stop
                 >
@@ -1124,7 +1124,7 @@
                     </button>
                     <div v-else class="flex flex-col gap-1 p-2 min-w-[200px]">
                         <span class="text-xs font-bold text-base-content/70">Kategorie auswählen:</span>
-                        <select v-model="selectionMenu.selectedCategory" class="select select-bordered select-xs w-full">
+                        <select v-model="selectionMenu.selectedCategory" class="select select-xs w-full">
                             <option value="" disabled selected>Bitte wählen...</option>
                             <option v-for="label in availableLabels" :key="label" :value="label">
                                 {{ formatLabel(label) }}
@@ -1139,9 +1139,9 @@
             </div>
 
             <!-- Footer Panels (alternative to side panel) -->
-            <div v-if="testPreviewResult && panelsInFooter" class="border-t border-base-300 bg-base-100 flex-shrink-0 flex flex-col" :style="(showEntityPanel || showWordsPanel) ? 'height: 240px;' : 'height: auto;'">
+            <div v-if="testPreviewResult && panelsInFooter" class="border-t border-base-300 bg-base-100 shrink-0 flex flex-col" :style="(showEntityPanel || showWordsPanel) ? 'height: 240px;' : 'height: auto;'">
                 <!-- Tab bar -->
-                <div class="flex items-center border-b border-base-300 flex-shrink-0">
+                <div class="flex items-center border-b border-base-300 shrink-0">
                     <button
                         @click="showEntityPanel = !showEntityPanel"
                         class="px-4 py-2 text-xs font-semibold border-r border-base-300 hover:bg-base-200 transition-colors select-none"
@@ -1185,7 +1185,7 @@
                                     <td class="font-medium max-w-[150px] truncate cursor-pointer hover:text-primary" :title="entity.name + ' – klicken um im Text zu scrollen'" v-html="formatEntityName(entity)" @click.stop="scrollToNextTokenForEntity(entity.name)"></td>
                                     <td>
                                         <select
-                                            class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
+                                            class="select select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[100px]"
                                             :value="entity.type"
                                             @change="changeEntityCategory(entity.name, $event.target.value)"
                                         >
@@ -1198,7 +1198,7 @@
                                                 <input 
                                                     type="text" 
                                                     v-model="editingPlaceholderValue" 
-                                                    class="input input-xs input-bordered w-full min-w-[100px]"
+                                                    class="input input-xs w-full min-w-[100px]"
                                                     @keyup.enter="saveCustomPlaceholder(entity)"
                                                     @keyup.esc="cancelEditingPlaceholder"
                                                     @click.stop="showPlaceholderSuggestions = true"
@@ -1207,7 +1207,7 @@
                                                 <!-- Custom Dropdown List -->
                                                 <ul 
                                                     v-if="showPlaceholderSuggestions" 
-                                                    class="absolute left-0 bottom-full mb-1 z-[200] w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
+                                                    class="absolute left-0 bottom-full mb-1 z-200 w-[320px] max-h-80 overflow-auto bg-base-300 border border-base-100 shadow-2xl rounded-lg py-2 flex flex-col backdrop-blur-md"
                                                     @mousedown.stop
                                                 >
                                                     <li 
@@ -1225,9 +1225,9 @@
                                             <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                             <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                         </div>
-                                        <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                        <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded-sm flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
                                             <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
-                                            <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                            <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                         </div>
                                     </td>
                                     <td>
@@ -1258,7 +1258,7 @@
                         </table>
                     </div>
                     <!-- Words Panel (footer) -->
-                    <div v-if="showWordsPanel" class="w-64 flex-shrink-0 overflow-auto p-3">
+                    <div v-if="showWordsPanel" class="w-64 shrink-0 overflow-auto p-3">
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="item in uniqueAnonymizedWords"
@@ -1401,7 +1401,7 @@
                         <!-- Custom Tooltip -->
                         <div
                             v-if="hoverTooltip.visible"
-                            class="fixed z-[100] px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded shadow-xl flex flex-col gap-2 min-w-[220px]"
+                            class="fixed z-100 px-3 pt-2 pb-2 text-xs font-medium text-base-content bg-base-300 border border-base-200 rounded-sm shadow-xl flex flex-col gap-2 min-w-[220px]"
                             :class="hoverTooltip.isPinned ? 'ring-2 ring-primary border-primary shadow-2xl transition-all duration-200' : ''"
                             :style="tooltipStyle"
                             @mouseenter="handleTooltipMouseEnter"
@@ -1426,7 +1426,7 @@
                             <div v-else-if="hoverTooltip.isPinned" class="flex flex-col gap-2 pr-6 mt-1">
                                 <!-- Merge (Zusammenlegen) for court style -->
                                 <!-- Entity this one is merged WITH -->
-                                <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                                <div v-if="courtEntityMappings[hoverTooltip.entityName]" class="bg-base-200 p-2 rounded-sm text-xs text-base-content border border-base-300 mb-2">
                                     <div class="font-bold mb-1">Zusammengelegt auf:</div>
                                     <div class="flex justify-between items-center gap-2">
                                         <span class="truncate">{{ courtEntityMappings[hoverTooltip.entityName] }}</span>
@@ -1437,7 +1437,7 @@
                                 </div>
 
                                 <!-- Entities merged INTO this one -->
-                                <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded text-xs text-base-content border border-base-300 mb-2">
+                                <div v-if="getMappedToThis(hoverTooltip.entityName).length > 0" class="bg-base-200 p-2 rounded-sm text-xs text-base-content border border-base-300 mb-2">
                                     <div class="font-bold mb-1">Hiermit zusammengelegt:</div>
                                     <div class="flex flex-col gap-1">
                                         <div v-for="source in getMappedToThis(hoverTooltip.entityName)" :key="source" class="flex justify-between items-center gap-2">
@@ -1450,14 +1450,14 @@
                                 </div>
 
                                 <!-- Dropdown to pull/merge more entities here -->
-                                <div class="form-control w-full">
-                                    <label class="label p-0 pb-1">
-                                        <span class="label-text-alt text-base-content/70">
+                                <div class="flex flex-col w-full">
+                                    <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                        <span class="text-xs text-base-content/70">
                                             {{ courtEntityMappings[hoverTooltip.entityName] || getMappedToThis(hoverTooltip.entityName).length > 0 ? 'Weitere Entität zusammenlegen:' : 'Entität hiermit zusammenlegen:' }}
                                         </span>
                                     </label>
                                     <select 
-                                        class="select select-bordered select-xs w-full text-base-content" 
+                                        class="select select-xs w-full text-base-content" 
                                         @change="mergeEntity($event.target.value, hoverTooltip.entityName); $event.target.value = ''"
                                     >
                                         <option value="" disabled selected>Entität auswählen...</option>
@@ -1473,12 +1473,12 @@
                                 <div v-if="courtStyle && (hoverTooltip.entityType === 'person' || hoverTooltip.entityType === 'organization')" class="border-t border-base-content/20 my-1"></div>
 
                                 <!-- Change Category -->
-                                <div class="form-control w-full my-1">
-                                    <label class="label p-0 pb-1">
-                                        <span class="label-text-alt text-base-content/70">Kategorie ändern:</span>
+                                <div class="flex flex-col w-full my-1">
+                                    <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                        <span class="text-xs text-base-content/70">Kategorie ändern:</span>
                                     </label>
                                     <select 
-                                        class="select select-bordered select-xs w-full text-base-content" 
+                                        class="select select-xs w-full text-base-content" 
                                         :value="hoverTooltip.entityType"
                                         @change="changeEntityCategory(hoverTooltip.entityName, $event.target.value)"
                                     >
@@ -1488,21 +1488,21 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div class="form-control w-full mt-1">
-                                    <label class="label p-0 pb-1">
-                                        <span class="label-text-alt text-base-content/70">Platzhalter ändern / tauschen:</span>
+                                <div class="flex flex-col w-full mt-1">
+                                    <label class="flex select-none items-center justify-between pt-0 pb-1 px-0">
+                                        <span class="text-xs text-base-content/70">Platzhalter ändern / tauschen:</span>
                                     </label>
                                     <div class="flex gap-1">
                                         <input 
                                             type="text" 
-                                            class="input input-xs input-bordered flex-1 font-mono" 
+                                            class="input input-xs flex-1 font-mono" 
                                             placeholder="Neu/Tauschen..."
                                             :value="getActualPlaceholder(findEntityByName(hoverTooltip.entityName))"
                                             @keyup.enter="(e) => { const entity = findEntityByName(hoverTooltip.entityName); if(entity) { editingPlaceholderValue = e.target.value; saveCustomPlaceholder(entity); } }"
                                             @click.stop
                                         >
                                         <select
-                                            class="select select-bordered select-xs w-28 text-base-content font-mono"
+                                            class="select select-xs w-28 text-base-content font-mono"
                                             @change="(e) => { const val = e.target.value; const entity = findEntityByName(hoverTooltip.entityName); if(entity && val) { editingPlaceholderValue = val; saveCustomPlaceholder(entity); } e.target.value = ''; }"
                                         >
                                             <option value="" disabled selected>Wählen...</option>
@@ -1557,22 +1557,22 @@
                         <!-- Legend -->
                         <div class="mt-4 flex gap-2 flex-wrap text-xs items-center">
                             <span class="font-medium text-base-content/60 mr-2">Legende:</span>
-                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded">person</span>
-                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded">email</span>
-                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded">phone</span>
-                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded">address</span>
-                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded">iban/kreditkarte</span>
-                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded">organisation</span>
-                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded">ort</span>
-                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded">andere</span>
-                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded border border-gray-400">manuell</span>
+                            <span class="px-2 py-1 bg-yellow-200 text-yellow-900 rounded-sm">person</span>
+                            <span class="px-2 py-1 bg-blue-200 text-blue-900 rounded-sm">email</span>
+                            <span class="px-2 py-1 bg-green-200 text-green-900 rounded-sm">phone</span>
+                            <span class="px-2 py-1 bg-purple-200 text-purple-900 rounded-sm">address</span>
+                            <span class="px-2 py-1 bg-red-200 text-red-900 rounded-sm">iban/kreditkarte</span>
+                            <span class="px-2 py-1 bg-pink-200 text-pink-900 rounded-sm">organisation</span>
+                            <span class="px-2 py-1 bg-teal-200 text-teal-900 rounded-sm">ort</span>
+                            <span class="px-2 py-1 bg-orange-200 text-orange-900 rounded-sm">andere</span>
+                            <span class="px-2 py-1 bg-gray-200 text-gray-900 rounded-sm border border-gray-400">manuell</span>
                             <span class="text-base-content/40 ml-2 italic">Hover zeigt Original, Markieren zum Anonymisieren</span>
                         </div>
 
                         <!-- Selection Hover Menu -->
                         <div
                             v-if="selectionMenu.visible"
-                            class="fixed z-[110] bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
+                            class="fixed z-110 bg-base-100 rounded-lg shadow-2xl border border-primary/20 p-1 flex items-center gap-1 animate-in fade-in zoom-in duration-150"
                             :style="{ top: selectionMenu.y + 'px', left: Math.max(108, Math.min((windowObj ? windowObj.innerWidth : 1200) - 108, selectionMenu.x)) + 'px', transform: 'translate(-50%, -120%)' }"
                             @mousedown.stop
                         >
@@ -1586,7 +1586,7 @@
                             </button>
                             <div v-else class="flex flex-col gap-1 p-2 min-w-[200px]">
                                 <span class="text-xs font-bold text-base-content/70">Kategorie auswählen:</span>
-                                <select v-model="selectionMenu.selectedCategory" class="select select-bordered select-xs w-full">
+                                <select v-model="selectionMenu.selectedCategory" class="select select-xs w-full">
                                     <option value="" disabled selected>Bitte wählen...</option>
                                     <option v-for="label in availableLabels" :key="label" :value="label">
                                         {{ formatLabel(label) }}
@@ -1668,7 +1668,7 @@
                                             <td class="font-medium max-w-[200px] truncate" :title="entity.name" v-html="formatEntityName(entity)"></td>
                                             <td>
                                                 <select 
-                                                    class="select select-bordered select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[120px]" 
+                                                    class="select select-xs text-[10px] h-6 min-h-6 px-2 w-full max-w-[120px]" 
                                                     :value="entity.type"
                                                     @change="changeEntityCategory(entity.name, $event.target.value)"
                                                 >
@@ -1682,7 +1682,7 @@
                                                     <input 
                                                         type="text" 
                                                         v-model="editingPlaceholderValue" 
-                                                        class="input input-xs input-bordered w-full min-w-[100px]"
+                                                        class="input input-xs w-full min-w-[100px]"
                                                         list="placeholder-suggestions"
                                                         @keyup.enter="saveCustomPlaceholder(entity)"
                                                         @keyup.esc="cancelEditingPlaceholder"
@@ -1691,9 +1691,9 @@
                                                     <button @click.stop="saveCustomPlaceholder(entity)" class="btn btn-xs btn-square btn-outline btn-success" title="Speichern"><CheckIcon class="w-3 h-3" /></button>
                                                     <button @click.stop="cancelEditingPlaceholder" class="btn btn-xs btn-square btn-outline btn-error" title="Abbrechen"><XMarkIcon class="w-3 h-3" /></button>
                                                 </div>
-                                                <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
+                                                <div v-else @click.stop="startEditingPlaceholder(entity)" class="cursor-pointer hover:bg-base-200 hover:text-primary p-0.5 rounded-sm flex items-center justify-between group select-all" title="Klicken zum Bearbeiten">
                                                     <span class="truncate" :title="getActualPlaceholder(entity)">{{ getActualPlaceholder(entity) }}</span>
-                                                    <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                                    <PencilIcon class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                                 </div>
                                             </td>
                                             <td>

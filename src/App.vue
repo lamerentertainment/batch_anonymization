@@ -39,7 +39,7 @@ function onModelsChanged() {
           :key="tab.id"
           class="btn btn-ghost btn-xs font-normal"
           :class="active === tab.id
-            ? 'text-base-content underline underline-offset-4'
+            ? 'bg-transparent text-base-content underline underline-offset-4'
             : 'text-base-content/60 hover:text-base-content'"
           :aria-current="active === tab.id ? 'page' : undefined"
           @click="active = tab.id"

@@ -1,6 +1,6 @@
 <template>
     <!-- License Modal -->
-    <div v-if="show" class="fixed inset-0 bg-base-300 bg-opacity-60 flex items-center justify-center z-50 p-4">
+    <div v-if="show" class="fixed inset-0 bg-base-300/60 flex items-center justify-center z-50 p-4">
         <div class="bg-base-100 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <!-- Modal Header -->
             <div class="flex justify-between items-center p-6 border-b border-base-200">
@@ -164,7 +164,7 @@
 
                             <div class="border border-base-200 rounded-lg p-4 bg-warning/10">
                                 <h4 class="font-medium text-base-content mb-2">Model Citation</h4>
-                                <div class="bg-base-200 rounded p-3 text-sm font-mono text-base-content mb-2">
+                                <div class="bg-base-200 rounded-sm p-3 text-sm font-mono text-base-content mb-2">
                                     @misc{zaratiana2023gliner,<br>
                                     &nbsp;&nbsp;title={GLiNER: Generalist Model for Named Entity Recognition using Bidirectional Transformer},<br>
                                     &nbsp;&nbsp;author={Urchade Zaratiana and Nadi Tomeh and Pierre Holat and Thierry Charnois},<br>
