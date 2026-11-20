@@ -56,8 +56,8 @@ describe('Modellkatalog', () => {
 });
 
 describe('Tokenizer aus dem Modellspeicher', () => {
-    it('findet jede Datei, die transformers.js verlangt, über ihren Dateinamen', () => {
-        // src/worker/worker.js ordnet Anfragen von transformers.js über den Dateinamen dem Katalog zu
+    it('findet Modell und Tokenizer-Dateien über ihren Dateinamen', () => {
+        // src/worker/worker.js liest die Dateien über ihren Namen aus dem Modellspeicher
         const model = catalog.models.find(m => m.id === 'gliner-multi-pii');
         const names = model.files.map(f => f.name);
         expect(new Set(names).size).toBe(names.length);

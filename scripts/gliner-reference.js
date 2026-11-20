@@ -7,8 +7,8 @@
  *   node scripts/gliner-reference.js            vergleicht mit der Referenz
  *   node scripts/gliner-reference.js --write    schreibt die Referenz neu
  *
- * Läuft unter Node mit onnxruntime-node (Prozessor), also nicht im Browser-Backend der App. Die
- * Vorverarbeitung (Tokenizer, Spannen) und die Auswertung sind dieselben wie in der App.
+ * Läuft unter Node mit derselben onnxruntime-web (WebAssembly) und demselben Code (src/gliner/) wie
+ * die App im Browser.
  *
  * Das Modell (model_fp16.onnx, tokenizer.json, tokenizer_config.json) wird in GLINER_MODEL_DIR
  * erwartet, sonst in .legacy-models/gliner_multi_pii-v1 (mit onnx/model_fp16.onnx). Die Dateien
@@ -16,9 +16,10 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
-import { Gliner } from 'gliner/node';
-import { env } from '@xenova/transformers';
+import { join } from 'node:path';
+import * as ort from 'onnxruntime-web';
+import { Gliner } from '../src/gliner/gliner.js';
+import { createTokenizer } from '../src/gliner/tokenizer.js';
 import { DEFAULT_SELECTED_LABELS } from '../src/utils/anonymizer.js';
 
 const root = join(import.meta.dirname, '..');
@@ -52,29 +53,31 @@ function findModelDir() {
 
 async function run() {
     const { dir, model } = findModelDir();
+    ort.env.logLevel = 'error';
+    const json = name => JSON.parse(readFileSync(join(dir, name), 'utf8'));
+    const session = await ort.InferenceSession.create(readFileSync(model), { executionProviders: ['wasm'], logSeverityLevel: 3 });
     const gliner = new Gliner({
-        tokenizerPath: basename(dir),
-        onnxSettings: { modelPath: model, executionProvider: 'cpu' },
-        transformersSettings: { allowLocalModels: true, useBrowserCache: false },
+        session,
+        Tensor: ort.Tensor,
+        tokenizer: createTokenizer(json('tokenizer.json'), json('tokenizer_config.json')),
         maxWidth: 12, // wie src/worker/worker.js
     });
-    env.localModelPath = dirname(dir) + '/';
-    env.allowRemoteModels = false;
-    await gliner.initialize();
 
     const results = [];
     for (const text of TEXTS) {
-        const [entities] = await gliner.inference({ texts: [text], entities: DEFAULT_SELECTED_LABELS, threshold: THRESHOLD });
+        const entities = await gliner.inference({ text, labels: DEFAULT_SELECTED_LABELS, threshold: THRESHOLD });
         results.push({
             text,
             entities: entities.map(e => ({ text: e.spanText, label: e.label, start: e.start, end: e.end, score: Number(e.score.toFixed(4)) })),
         });
     }
+    await gliner.release();
     return { labels: DEFAULT_SELECTED_LABELS, threshold: THRESHOLD, results };
 }
 
 function compare(reference, actual) {
     const problems = [];
+    let maxDelta = 0;
     if (JSON.stringify(reference.labels) !== JSON.stringify(actual.labels) || reference.threshold !== actual.threshold) {
         problems.push('Labels oder Schwelle haben sich geändert: Referenz mit --write neu schreiben');
     }
@@ -85,13 +88,14 @@ function compare(reference, actual) {
         const actByKey = new Map(act.entities.map(e => [key(e), e]));
         for (const e of ref.entities) {
             const a = actByKey.get(key(e));
+            if (a) maxDelta = Math.max(maxDelta, Math.abs(a.score - e.score));
             if (!a) problems.push(`Text ${i + 1}: «${e.text}» (${e.label}) wird nicht mehr gefunden`);
             else if (Math.abs(a.score - e.score) > SCORE_TOLERANCE) problems.push(`Text ${i + 1}: «${e.text}» (${e.label}) Wert ${e.score} → ${a.score}`);
             actByKey.delete(key(e));
         }
         for (const a of actByKey.values()) problems.push(`Text ${i + 1}: neu gefunden «${a.text}» (${a.label}, ${a.score})`);
     });
-    return problems;
+    return { problems, maxDelta };
 }
 
 const actual = await run();
@@ -99,10 +103,10 @@ if (process.argv.includes('--write')) {
     writeFileSync(referencePath, JSON.stringify(actual, null, 2) + '\n');
     console.log(`gliner-reference: geschrieben (${actual.results.reduce((n, r) => n + r.entities.length, 0)} Entitäten)`);
 } else {
-    const problems = compare(JSON.parse(readFileSync(referencePath, 'utf8')), actual);
+    const { problems, maxDelta } = compare(JSON.parse(readFileSync(referencePath, 'utf8')), actual);
     if (problems.length) {
         console.error(`gliner-reference: ${problems.length} Abweichung(en)\n- ${problems.join('\n- ')}`);
         process.exit(1);
     }
-    console.log('gliner-reference: ok, Erkennung unverändert');
+    console.log(`gliner-reference: ok, Erkennung unverändert (grösste Abweichung eines Werts: ${maxDelta.toFixed(4)})`);
 }

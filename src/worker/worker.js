@@ -1,20 +1,23 @@
-import { Gliner } from 'gliner';
-import { env } from '@xenova/transformers';
+import * as ort from 'onnxruntime-web';
+import { Gliner } from '../gliner/gliner.js';
+import { createTokenizer } from '../gliner/tokenizer.js';
 import { getStatus, models, readModelFile } from '../models/modelStore.js';
 
 // Configuration
 const MAX_CHUNK_LENGTH = 2000;
+const MAX_WIDTH = 12; // max_width aus gliner_config.json des Modells
 const MODEL = models.find(m => m.id === 'gliner-multi-pii');
-// Muss zu dem repo-Namen passen, den transformers.js in seinen Anfragen verwendet (siehe unten)
-const TOKENIZER_REPO = MODEL.repo;
-// ONNX Runtime von gliner, von der eigenen Website (scripts/copy-vendor.js), nie vom CDN
-/* global __GLINER_ORT_VERSION__ */
-const ORT_DIR = `/vendor/ort-${__GLINER_ORT_VERSION__}/`;
+
+// WebAssembly der ONNX Runtime von der eigenen Website (scripts/copy-vendor.js), nie vom CDN.
+// Eine Datei für beide Backends: Sie rechnet auf dem Prozessor und steuert WebGPU an.
+/* global __ORT_VERSION__ */
+ort.env.wasm.wasmPaths = { wasm: `/vendor/ort-${__ORT_VERSION__}/ort-wasm-simd-threaded.jsep.wasm` };
 
 /**
  * Worker state
  */
 let gliner = null;
+let tokenizer = null;
 let isInitialized = false;
 // Aktuelles Backend: { id: 'webgpu'|'wasm', label, fallbackReason }
 let currentBackend = null;
@@ -25,27 +28,17 @@ function updateStatus(status) {
     if (el) el.textContent = status;
 }
 
-// Der Tokenizer wird von transformers.js geladen. Es erhält einen eigenen «Cache», der nur aus dem
-// geprüften Modellspeicher liest (Dateiname → Katalogeintrag). transformers.js verlangt formal eine
-// entfernte Quelle; sie zeigt auf eine Domain, die es nicht gibt (.invalid, zudem von der CSP
-// verboten). Ob alle Dateien im Speicher sind, prüft initialize() vorher.
-function useVerifiedModelStore() {
-    env.allowLocalModels = false;
-    env.allowRemoteModels = true;
-    env.remoteHost = 'https://kein-netz.invalid/';
-    env.useBrowserCache = false;
-    env.useFSCache = false;
-    env.useCustomCache = true;
-    env.customCache = {
-        async match(key) {
-            const name = String(key).split('/').pop();
-            const file = MODEL.files.find(f => f.name === name);
-            if (!file) return undefined;
-            const data = await readModelFile(file);
-            return data ? new Response(data) : undefined;
-        },
-        async put() { /* der Modellspeicher wird nur auf der Seite «Modell/Programmupdate» beschrieben */ },
-    };
+/** Liest eine Datei des Modells aus dem geprüften Modellspeicher. */
+async function readRequiredFile(name) {
+    const file = MODEL.files.find(f => f.name === name);
+    const data = file && await readModelFile(file);
+    if (!data) throw new Error(`${name} fehlt im Modellspeicher. Bitte unter «Modell/Programmupdate» neu laden.`);
+    return data;
+}
+
+async function loadTokenizer() {
+    const json = async name => JSON.parse(new TextDecoder().decode(await readRequiredFile(name)));
+    return createTokenizer(await json('tokenizer.json'), await json('tokenizer_config.json'));
 }
 
 // Wohin die Rechnung geht: WebGPU (Grafikkarte, schnell) oder WebAssembly (Prozessor, langsamer,
@@ -55,8 +48,8 @@ const BACKEND_KEY = 'gliner-backend-fallback';
 // WebGPU hat in diesem Tab schon einmal eine Proberechnung bestanden: keine weitere Probe nötig
 const WEBGPU_OK_KEY = 'gliner-webgpu-ok';
 const BACKENDS = {
-    webgpu: { wasm: 'ort-wasm-simd-threaded.jsep.wasm', label: 'Grafikkarte (WebGPU)' },
-    wasm: { wasm: 'ort-wasm-simd-threaded.wasm', label: 'Prozessor (WebAssembly)' },
+    webgpu: { label: 'Grafikkarte (WebGPU)' },
+    wasm: { label: 'Prozessor (WebAssembly)' },
 };
 
 function readFallback() {
@@ -106,27 +99,13 @@ async function webgpuUnavailable() {
  * Erstellt GLiNER für ein Backend. WebGPU wird beim ersten Mal im Tab mit einer kurzen
  * Proberechnung geprüft, weil sich manche Fehler (Shader, Treiber) erst beim Rechnen zeigen.
  */
-async function createGliner(backend, modelData) {
-    const instance = new Gliner({
-        tokenizerPath: TOKENIZER_REPO,
-        onnxSettings: {
-            // Die Modelldaten direkt, ohne Umweg über eine Blob-URL
-            modelPath: modelData,
-            executionProvider: backend,
-            wasmPaths: { wasm: `${ORT_DIR}${BACKENDS[backend].wasm}` },
-        },
-        transformersSettings: {
-            useBrowserCache: false,
-            allowLocalModels: false,
-        },
-        maxWidth: 12,
-    });
-    // Der Gliner-Konstruktor setzt env neu; danach den eigenen Speicher einhängen
-    useVerifiedModelStore();
+async function createGliner(backend, modelData, tokenizer) {
+    // Die Modelldaten direkt, ohne Umweg über eine Blob-URL
+    const session = await ort.InferenceSession.create(modelData, { executionProviders: [backend] });
+    const instance = new Gliner({ session, Tensor: ort.Tensor, tokenizer, maxWidth: MAX_WIDTH });
     try {
-        await instance.initialize();
         if (backend === 'webgpu' && !webgpuProven()) {
-            await instance.inference({ texts: ['Peter wohnt in Bern.'], entities: ['person'], threshold: 0.5 });
+            await instance.inference({ text: 'Peter wohnt in Bern.', labels: ['person'], threshold: 0.5 });
             try {
                 sessionStorage.setItem(WEBGPU_OK_KEY, '1');
             } catch { /* dann wird beim nächsten Mal erneut geprüft */ }
@@ -140,7 +119,7 @@ async function createGliner(backend, modelData) {
 
 async function releaseGliner(instance) {
     try {
-        await instance?.model?.onnxWrapper?.session?.release();
+        await instance?.release();
     } catch { /* bereits freigegeben */ }
 }
 
@@ -157,7 +136,8 @@ async function initialize() {
             throw new Error('Das Modell ist nicht vollständig installiert. Bitte unter «Modell/Programmupdate» laden.');
         }
         const weights = MODEL.files.find(f => f.name.endsWith('.onnx'));
-        let modelData = await readModelFile(weights);
+        let modelData = await readRequiredFile(weights.name);
+        tokenizer = await loadTokenizer();
 
         let backend = 'webgpu';
         let fallbackReason = await webgpuUnavailable();
@@ -165,7 +145,7 @@ async function initialize() {
 
         if (backend === 'webgpu') {
             try {
-                gliner = await createGliner('webgpu', modelData);
+                gliner = await createGliner('webgpu', modelData, tokenizer);
             } catch (err) {
                 console.warn('[Worker] WebGPU fehlgeschlagen, weiter auf dem Prozessor:', err);
                 fallbackReason = `WebGPU fehlgeschlagen: ${err.message}`;
@@ -173,7 +153,7 @@ async function initialize() {
                 backend = 'wasm';
             }
         }
-        if (backend === 'wasm') gliner = await createGliner('wasm', modelData);
+        if (backend === 'wasm') gliner = await createGliner('wasm', modelData, tokenizer);
         modelData = null; // Free memory
 
         isInitialized = true;
@@ -241,7 +221,7 @@ async function inferWithFallback(input) {
         rememberFallback(fallbackReason);
         await releaseGliner(gliner);
         const weights = MODEL.files.find(f => f.name.endsWith('.onnx'));
-        gliner = await createGliner('wasm', await readModelFile(weights));
+        gliner = await createGliner('wasm', await readRequiredFile(weights.name), tokenizer);
         currentBackend = { id: 'wasm', label: BACKENDS.wasm.label, fallbackReason };
         return await gliner.inference(input);
     }
@@ -266,9 +246,9 @@ async function detectEntities(text, labels, threshold) {
     let entityId = 1;
 
     for (const chunk of chunks) {
-        const results = await inferWithFallback({ texts: [chunk], entities: labels, threshold });
+        const results = await inferWithFallback({ text: chunk, labels, threshold });
 
-        const chunkEntities = results[0].map((ent) => ({
+        const chunkEntities = results.map((ent) => ({
             id: entityId++,
             name: ent.spanText,
             type: ent.label,

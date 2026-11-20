@@ -4,7 +4,7 @@
  * So kommen sie von der eigenen Website (kein CDN) und werden vom Torwächter zusammen mit der
  * App gespeichert:
  *
- * - ONNX Runtime (WebAssembly) in der Version, die gliner mitbringt
+ * - ONNX Runtime (WebAssembly, für die GLiNER-Erkennung)
  * - pdf.js-Worker
  *
  * Die Ordnernamen tragen die Paketversion: Eine gespeicherte Datei gerät so nach einem Upgrade nie
@@ -12,7 +12,7 @@
  */
 import { copyFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { glinerOrtDir, packageVersion, pdfjsDir } from './packages.js';
+import { ORT_WASM_FILE, ortDir, packageVersion, pdfjsDir } from './packages.js';
 
 const root = join(import.meta.dirname, '..');
 const vendor = join(root, 'public/vendor');
@@ -24,15 +24,10 @@ async function copy(from, toDir, names) {
 
 await rm(vendor, { recursive: true, force: true });
 
-// gliner bringt eine eigene onnxruntime-web mit (nicht die im Projekt installierte)
-const ortDir = glinerOrtDir();
-const ort = packageVersion(ortDir);
-await copy(join(ortDir, 'dist'), join(vendor, `ort-${ort}`), [
-    'ort-wasm-simd-threaded.wasm',
-    'ort-wasm-simd-threaded.jsep.wasm',
-]);
+const ort = packageVersion(ortDir());
+await copy(join(ortDir(), 'dist'), join(vendor, `ort-${ort}`), [ORT_WASM_FILE]);
 
 const pdfjs = packageVersion(pdfjsDir());
 await copy(join(pdfjsDir(), 'build'), join(vendor, `pdfjs-${pdfjs}`), ['pdf.worker.min.mjs']);
 
-console.log(`vendor: onnxruntime-web ${ort} (gliner), pdfjs-dist ${pdfjs} → public/vendor/`);
+console.log(`vendor: onnxruntime-web ${ort}, pdfjs-dist ${pdfjs} → public/vendor/`);

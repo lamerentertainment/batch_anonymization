@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { CSP } from '../csp.js';
-import { glinerOrtDir, packageVersion, pdfjsDir } from './packages.js';
+import { ORT_WASM_FILE, ortDir, packageVersion, pdfjsDir } from './packages.js';
 
 const root = join(import.meta.dirname, '..');
 const dist = join(root, 'dist');
@@ -61,11 +61,10 @@ if (precacheMatch) {
     errors.push('sw.js: Precache-Liste nicht gefunden');
 }
 
-const ort = packageVersion(glinerOrtDir());
+const ort = packageVersion(ortDir());
 const pdfjs = packageVersion(pdfjsDir());
 for (const file of [
-    `vendor/ort-${ort}/ort-wasm-simd-threaded.wasm`,
-    `vendor/ort-${ort}/ort-wasm-simd-threaded.jsep.wasm`,
+    `vendor/ort-${ort}/${ORT_WASM_FILE}`,
     `vendor/pdfjs-${pdfjs}/pdf.worker.min.mjs`,
 ]) check(files.includes(file), `${file} fehlt`);
 check(files.every(f => !f.startsWith('vendor/') || f.startsWith(`vendor/ort-${ort}/`) || f.startsWith(`vendor/pdfjs-${pdfjs}/`)),

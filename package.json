@@ -15,10 +15,11 @@
   },
   "dependencies": {
     "@heroicons/vue": "^2.1.5",
+    "@huggingface/tokenizers": "^0.2.0",
     "@noble/hashes": "2.4.0",
-    "gliner": "^0.0.19",
     "jszip": "^3.10.1",
     "mammoth": "^1.9.0",
+    "onnxruntime-web": "^1.31.1",
     "pdfjs-dist": "^6.5.438",
     "turndown": "^7.2.2",
     "vue": "^3.4.21"

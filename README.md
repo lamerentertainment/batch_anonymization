@@ -30,8 +30,8 @@ Ihre Dokumente verlassen den Browser nie. Die Erkennung (GLiNER) läuft lokal mi
   mit fester Revision, Grösse und SHA-256 jeder Datei (festgelegt mit
   [`scripts/models/pin-gliner.mjs`](scripts/models/pin-gliner.mjs)). Die Prüfsumme wird beim Herunterladen
   laufend berechnet; stimmt sie nicht, wird die Datei verworfen. Der Website-Server liefert kein Modell aus.
-- **Tokenizer ohne Netz** ([`src/worker/worker.js`](src/worker/worker.js)): transformers.js erhält einen
-  eigenen Cache, der nur aus dem geprüften Modellspeicher liest.
+- **Tokenizer ohne Netz** ([`src/worker/worker.js`](src/worker/worker.js)): `tokenizer.json` und
+  `tokenizer_config.json` kommen aus dem geprüften Modellspeicher, wie das Modell selbst.
 
 Grenzen: Der Browser prüft `sw.js` gelegentlich von sich aus (höchstens etwa einmal pro Tag; eine so
 gefundene Version wird nicht installiert). Ein erzwungenes Neuladen (Shift + Neu laden) umgeht den Service
@@ -78,10 +78,11 @@ npm run build && npm run preview   # mit Torwächter, wie in Produktion
 
 Nach jedem Build prüft `scripts/check-build.js`, ob `dist/` eine vollständige Offline-App ist (CSP,
 `version.json`, Precache-Liste in `sw.js`, Dateien in `/vendor`). `npm run test:gliner` sucht das Modell in
-`GLINER_MODEL_DIR` oder `.legacy-models/gliner_multi_pii-v1` und gehört zu jedem Update von gliner,
-ONNX Runtime oder Tokenizer; mit `--write` wird die Referenz neu geschrieben.
+`GLINER_MODEL_DIR` oder `.legacy-models/gliner_multi_pii-v1` und gehört zu jedem Update der
+ONNX Runtime oder Tokenizer; mit `--write` wird die Referenz neu geschrieben. Die Erkennung selbst
+(Eingabe aufbereiten, Spannen auswerten) steht in [`src/gliner/`](src/gliner/), übernommen aus GLiNER.js.
 
-`scripts/copy-vendor.js` kopiert vor `dev` und `build` die ONNX Runtime (Version von gliner) und den
+`scripts/copy-vendor.js` kopiert vor `dev` und `build` das WebAssembly der ONNX Runtime und den
 pdf.js-Worker nach `public/vendor/`. Modelldateien gehören nicht mehr nach `public/`: Der Build bricht ab,
 wenn noch ein Ordner `public/models/gliner_multi_pii-v1` vorhanden ist.
 
@@ -91,8 +92,9 @@ Neue Modellrevision festlegen: `node scripts/models/pin-gliner.mjs [revision]`.
 
 ### Runtime Dependencies
 - **Vue** (^3.4.21) - MIT License - Progressive JavaScript framework
-- **Gliner** (^0.0.19) - Apache-2.0 License - Named Entity Recognition library
-- **@xenova/transformers** (2.17.2, über gliner) - Apache-2.0 License - Tokenizer
+- **onnxruntime-web** (^1.31.1) - MIT License - Modell im Browser rechnen (WebAssembly, WebGPU)
+- **@huggingface/tokenizers** (^0.2.0) - Apache-2.0 License - Tokenizer
+- **GLiNER.js** (0.0.19, übernommen in `src/gliner/`) - MIT License - GLiNER-Inferenz
 - **@noble/hashes** (2.4.0) - MIT License - SHA-256 im Datenstrom
 - **pdfjs-dist** (^6.5.438) - Apache-2.0 License - PDF parsing and rendering
 - **mammoth** (^1.9.0) - BSD-2-Clause License - DOCX to HTML converter
