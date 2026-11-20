@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { CSP } from '../csp.js';
+import { glinerOrtDir, packageVersion, pdfjsDir } from './packages.js';
 
 const root = join(import.meta.dirname, '..');
 const dist = join(root, 'dist');
@@ -23,7 +24,6 @@ const files = readdirSync(dist, { recursive: true, withFileTypes: true })
     .filter(entry => entry.isFile())
     .map(entry => relative(dist, join(entry.parentPath, entry.name)).split(sep).join('/'));
 const read = file => readFileSync(join(dist, file), 'utf8');
-const version = dir => JSON.parse(readFileSync(join(root, 'node_modules', dir, 'package.json'), 'utf8')).version;
 
 for (const page of ['index.html', 'gliner-worker.html']) {
     if (!files.includes(page)) {
@@ -58,8 +58,8 @@ if (precacheMatch) {
     errors.push('sw.js: Precache-Liste nicht gefunden');
 }
 
-const ort = version('gliner/node_modules/onnxruntime-web');
-const pdfjs = version('pdfjs-dist');
+const ort = packageVersion(glinerOrtDir());
+const pdfjs = packageVersion(pdfjsDir());
 for (const file of [
     `vendor/ort-${ort}/ort-wasm-simd-threaded.wasm`,
     `vendor/ort-${ort}/ort-wasm-simd-threaded.jsep.wasm`,

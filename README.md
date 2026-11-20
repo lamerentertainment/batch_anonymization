@@ -71,9 +71,15 @@ Nutzt modernste **GLiNER (Generalist Model for Information Extraction)** Technol
 ```bash
 npm install
 npm run dev       # Entwicklungsserver (ohne Torwächter)
-npm test          # Regeln des Torwächters, CSP und Modellkatalog
+npm test          # Torwächter-Regeln, CSP, Modellkatalog, Text aus TXT/PDF/DOCX
+npm run test:gliner   # Erkennung gegen tests/fixtures/gliner-reference.json (braucht das Modell lokal)
 npm run build && npm run preview   # mit Torwächter, wie in Produktion
 ```
+
+Nach jedem Build prüft `scripts/check-build.js`, ob `dist/` eine vollständige Offline-App ist (CSP,
+`version.json`, Precache-Liste in `sw.js`, Dateien in `/vendor`). `npm run test:gliner` sucht das Modell in
+`GLINER_MODEL_DIR` oder `.legacy-models/gliner_multi_pii-v1` und gehört zu jedem Update von gliner,
+ONNX Runtime oder Tokenizer; mit `--write` wird die Referenz neu geschrieben.
 
 `scripts/copy-vendor.js` kopiert vor `dev` und `build` die ONNX Runtime (Version von gliner) und den
 pdf.js-Worker nach `public/vendor/`. Modelldateien gehören nicht mehr nach `public/`: Der Build bricht ab,
@@ -88,7 +94,7 @@ Neue Modellrevision festlegen: `node scripts/models/pin-gliner.mjs [revision]`.
 - **Gliner** (^0.0.19) - Apache-2.0 License - Named Entity Recognition library
 - **@xenova/transformers** (2.17.2, über gliner) - Apache-2.0 License - Tokenizer
 - **@noble/hashes** (2.4.0) - MIT License - SHA-256 im Datenstrom
-- **pdfjs-dist** (^5.2.133) - Apache-2.0 License - PDF parsing and rendering
+- **pdfjs-dist** (^6.5.438) - Apache-2.0 License - PDF parsing and rendering
 - **mammoth** (^1.9.0) - BSD-2-Clause License - DOCX to HTML converter
 - **@heroicons/vue** (^2.1.5) - MIT License - SVG icon library
 

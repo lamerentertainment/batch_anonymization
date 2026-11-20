@@ -4,13 +4,12 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { CSP } from './csp.js';
+import { glinerOrtDir, packageVersion } from './scripts/packages.js';
 
 const root = import.meta.dirname;
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 // ONNX Runtime, die gliner mitbringt (scripts/copy-vendor.js legt sie unter /vendor ab)
-const GLINER_ORT_VERSION = JSON.parse(
-    readFileSync(join(root, 'node_modules/gliner/node_modules/onnxruntime-web/package.json'), 'utf8'),
-).version;
+const GLINER_ORT_VERSION = packageVersion(glinerOrtDir());
 
 function git(args) {
     try {
@@ -110,7 +109,7 @@ export default defineConfig({
         __GLINER_ORT_VERSION__: JSON.stringify(GLINER_ORT_VERSION),
     },
     optimizeDeps: {
-        include: ['onnxruntime-web'],
+        include: ['gliner > onnxruntime-web'],
         exclude: ['gliner', 'onnxruntime-node'],
     },
     build: {

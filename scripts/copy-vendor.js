@@ -10,14 +10,12 @@
  * Die Ordnernamen tragen die Paketversion: Eine gespeicherte Datei gerät so nach einem Upgrade nie
  * an das JavaScript einer anderen Version. Läuft vor dev, build und test.
  */
-import { copyFile, mkdir, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { glinerOrtDir, packageVersion, pdfjsDir } from './packages.js';
 
 const root = join(import.meta.dirname, '..');
-const modules = join(root, 'node_modules');
 const vendor = join(root, 'public/vendor');
-
-const version = async dir => JSON.parse(await readFile(join(dir, 'package.json'), 'utf8')).version;
 
 async function copy(from, toDir, names) {
     await mkdir(toDir, { recursive: true });
@@ -27,15 +25,14 @@ async function copy(from, toDir, names) {
 await rm(vendor, { recursive: true, force: true });
 
 // gliner bringt eine eigene onnxruntime-web mit (nicht die im Projekt installierte)
-const ortDir = join(modules, 'gliner/node_modules/onnxruntime-web');
-const ort = await version(ortDir);
+const ortDir = glinerOrtDir();
+const ort = packageVersion(ortDir);
 await copy(join(ortDir, 'dist'), join(vendor, `ort-${ort}`), [
     'ort-wasm-simd-threaded.wasm',
     'ort-wasm-simd-threaded.jsep.wasm',
 ]);
 
-const pdfjsDir = join(modules, 'pdfjs-dist');
-const pdfjs = await version(pdfjsDir);
-await copy(join(pdfjsDir, 'build'), join(vendor, `pdfjs-${pdfjs}`), ['pdf.worker.min.mjs']);
+const pdfjs = packageVersion(pdfjsDir());
+await copy(join(pdfjsDir(), 'build'), join(vendor, `pdfjs-${pdfjs}`), ['pdf.worker.min.mjs']);
 
 console.log(`vendor: onnxruntime-web ${ort} (gliner), pdfjs-dist ${pdfjs} → public/vendor/`);
