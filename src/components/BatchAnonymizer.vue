@@ -510,6 +510,20 @@
                                 </p>
                             </div>
 
+                            <!-- Copy Button -->
+                            <button
+                                v-if="file.status === 'completed'"
+                                @click="copyToClipboard(file.content, 'out-' + index)"
+                                class="btn btn-ghost btn-sm btn-square"
+                                :title="clipboardState('out-' + index) === 'copied' ? 'Kopiert'
+                                    : clipboardState('out-' + index) === 'failed' ? 'Zwischenablage nicht verfügbar'
+                                    : 'In die Zwischenablage kopieren'"
+                            >
+                                <ClipboardDocumentCheckIcon v-if="clipboardState('out-' + index) === 'copied'" class="w-5 h-5 text-success" />
+                                <ExclamationCircleIcon v-else-if="clipboardState('out-' + index) === 'failed'" class="w-5 h-5 text-error" />
+                                <DocumentDuplicateIcon v-else class="w-5 h-5" />
+                            </button>
+
                             <!-- Download Button -->
                             <button
                                 v-if="file.status === 'completed'"
@@ -582,8 +596,19 @@
                     </label>
                 </div>
 
-                <!-- Download Button(s) -->
+                <!-- Copy + Download Button(s) -->
                 <div class="flex items-center gap-1 flex-shrink-0">
+                    <button
+                        @click="copyToClipboard(testPreviewResult?.anonymizedText, 'single')"
+                        class="btn btn-sm btn-ghost gap-1"
+                        :disabled="!testPreviewResult"
+                        :title="clipboardState('single') === 'failed' ? 'Zwischenablage nicht verfügbar' : 'Anonymisierten Text in die Zwischenablage kopieren'"
+                    >
+                        <ClipboardDocumentCheckIcon v-if="clipboardState('single') === 'copied'" class="w-4 h-4 text-success" />
+                        <ExclamationCircleIcon v-else-if="clipboardState('single') === 'failed'" class="w-4 h-4 text-error" />
+                        <DocumentDuplicateIcon v-else class="w-4 h-4" />
+                        <span class="hidden sm:inline">{{ clipboardState('single') === 'copied' ? 'Kopiert' : clipboardState('single') === 'failed' ? 'Fehlgeschlagen' : 'Kopieren' }}</span>
+                    </button>
                     <template v-if="testPreviewResult && (isDocxFile || isMdFile)">
                         <button @click="downloadSingleResult('txt')" class="btn btn-sm btn-ghost gap-1" title="Als TXT herunterladen">
                             <ArrowDownTrayIcon class="w-4 h-4" /> TXT
@@ -1311,6 +1336,17 @@
                             >
                         </label>
                         <div class="flex items-center gap-2">
+                            <button
+                                v-if="testPreviewResult"
+                                @click="copyToClipboard(testPreviewResult.anonymizedText, 'modal')"
+                                class="btn btn-ghost btn-sm"
+                                :title="clipboardState('modal') === 'failed' ? 'Zwischenablage nicht verfügbar' : 'Anonymisierten Text in die Zwischenablage kopieren'"
+                            >
+                                <ClipboardDocumentCheckIcon v-if="clipboardState('modal') === 'copied'" class="w-5 h-5 sm:mr-2 text-success" />
+                                <ExclamationCircleIcon v-else-if="clipboardState('modal') === 'failed'" class="w-5 h-5 sm:mr-2 text-error" />
+                                <DocumentDuplicateIcon v-else class="w-5 h-5 sm:mr-2" />
+                                <span class="hidden sm:inline">{{ clipboardState('modal') === 'copied' ? 'Kopiert' : clipboardState('modal') === 'failed' ? 'Fehlgeschlagen' : 'Kopieren' }}</span>
+                            </button>
                              <button
                                 v-if="testPreviewResult"
                                 @click="downloadTestResult"
@@ -1763,7 +1799,9 @@ import {
     ArrowPathIcon,
     ChevronDownIcon,
     PencilIcon,
-    ClipboardDocumentIcon
+    ClipboardDocumentIcon,
+    ClipboardDocumentCheckIcon,
+    DocumentDuplicateIcon
 } from '@heroicons/vue/24/outline';
 
 import JSZip from 'jszip';
@@ -1798,7 +1836,10 @@ export default {
         SignalIcon,
         ArrowPathIcon,
         ChevronDownIcon,
-        PencilIcon
+        PencilIcon,
+        ClipboardDocumentIcon,
+        ClipboardDocumentCheckIcon,
+        DocumentDuplicateIcon
     },
     data() {
         return {
@@ -1807,6 +1848,9 @@ export default {
             centerPanelWidth: 320,
             isDraggingLeft: false,
             isDraggingCenter: false,
+            // Kopieren in die Zwischenablage: welcher Knopf gerade «Kopiert» bzw. einen Fehler zeigt
+            clipboardFeedback: { key: null, ok: true },
+            clipboardFeedbackTimer: null,
             // Input files
             inputFiles: [],
             dragOver: false,
@@ -2234,6 +2278,7 @@ export default {
     beforeUnmount() {
         window.removeEventListener('mouseup', this.stopResize);
         window.removeEventListener('mousemove', this.handleMouseMove);
+        clearTimeout(this.clipboardFeedbackTimer);
     },
     methods: {
         sortBy(column) {
@@ -3632,6 +3677,30 @@ export default {
             a.download = fileName;
             a.click();
             URL.revokeObjectURL(url);
+        },
+
+        /**
+         * Kopiert den anonymisierten Text in die Zwischenablage. `key` bezeichnet den Knopf, der
+         * danach kurz «Kopiert» (oder den Fehler) anzeigt.
+         */
+        async copyToClipboard(text, key) {
+            if (!text) return;
+            let ok = true;
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (e) {
+                console.warn('Zwischenablage konnte nicht beschrieben werden:', e);
+                ok = false;
+            }
+            clearTimeout(this.clipboardFeedbackTimer);
+            this.clipboardFeedback = { key, ok };
+            this.clipboardFeedbackTimer = setTimeout(() => {
+                this.clipboardFeedback = { key: null, ok: true };
+            }, 2000);
+        },
+        clipboardState(key) {
+            if (this.clipboardFeedback.key !== key) return 'idle';
+            return this.clipboardFeedback.ok ? 'copied' : 'failed';
         }
     }
 };
