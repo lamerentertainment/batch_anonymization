@@ -125,5 +125,11 @@ export default defineConfig({
     },
     test: {
         environment: 'node',
+        // pdf.js verlangt unter Node die «legacy»-Fassung (gleicher Code, mit Ergänzungen für Node)
+        // mammoth: siehe tests/support/mammoth-node.js
+        alias: [
+            { find: /^pdfjs-dist$/, replacement: 'pdfjs-dist/legacy/build/pdf.mjs' },
+            { find: /^mammoth$/, replacement: resolve(root, 'tests/support/mammoth-node.js') },
+        ],
     },
 });

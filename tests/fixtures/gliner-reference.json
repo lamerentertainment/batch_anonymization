@@ -1,0 +1,139 @@
+{
+  "labels": [
+    "person",
+    "location",
+    "street",
+    "organization",
+    "phone number",
+    "email",
+    "address",
+    "iban",
+    "credit card number"
+  ],
+  "threshold": 0.3,
+  "results": [
+    {
+      "text": "Max Muster, geboren am 3. Mai 1980, wohnt an der Pilatusstrasse 1, 6003 Luzern.",
+      "entities": [
+        {
+          "text": "Max Muster",
+          "label": "person",
+          "start": 0,
+          "end": 10,
+          "score": 0.9999
+        },
+        {
+          "text": "Pilatusstrasse 1, 6003 Luzern",
+          "label": "address",
+          "start": 49,
+          "end": 78,
+          "score": 0.6883
+        }
+      ]
+    },
+    {
+      "text": "Die Beschuldigte Anna Beispiel arbeitet bei der Credit Suisse AG in Zürich. Sie ist unter 041 123 45 67 oder anna.beispiel@example.ch erreichbar.",
+      "entities": [
+        {
+          "text": "Anna Beispiel",
+          "label": "person",
+          "start": 17,
+          "end": 30,
+          "score": 0.9978
+        },
+        {
+          "text": "Credit Suisse AG",
+          "label": "organization",
+          "start": 48,
+          "end": 64,
+          "score": 0.9959
+        },
+        {
+          "text": "Zürich",
+          "label": "location",
+          "start": 68,
+          "end": 74,
+          "score": 0.9412
+        },
+        {
+          "text": "041 123 45 67",
+          "label": "phone number",
+          "start": 90,
+          "end": 103,
+          "score": 0.9984
+        },
+        {
+          "text": "anna.beispiel@example.ch",
+          "label": "email",
+          "start": 109,
+          "end": 133,
+          "score": 0.9964
+        }
+      ]
+    },
+    {
+      "text": "Der Betrag wurde auf das Konto CH93 0076 2011 6238 5295 7 der Raiffeisenbank Bern überwiesen.",
+      "entities": [
+        {
+          "text": "CH93 0076 2011 6238 5295 7",
+          "label": "credit card number",
+          "start": 31,
+          "end": 57,
+          "score": 0.3865
+        },
+        {
+          "text": "Raiffeisenbank Bern",
+          "label": "organization",
+          "start": 62,
+          "end": 81,
+          "score": 0.9922
+        }
+      ]
+    },
+    {
+      "text": "Le prévenu Jean Dupont, domicilié à la Rue du Lac 12, 1003 Lausanne, a été entendu par la police cantonale vaudoise.",
+      "entities": [
+        {
+          "text": "Jean Dupont",
+          "label": "person",
+          "start": 11,
+          "end": 22,
+          "score": 0.9989
+        },
+        {
+          "text": "Rue du Lac 12",
+          "label": "street",
+          "start": 39,
+          "end": 52,
+          "score": 0.483
+        },
+        {
+          "text": "police cantonale vaudoise",
+          "label": "organization",
+          "start": 90,
+          "end": 115,
+          "score": 0.9651
+        }
+      ]
+    },
+    {
+      "text": "Gemäss Gutachten von Dr. med. Peter Keller vom Kantonsspital Aarau leidet der Kläger an einer Depression.",
+      "entities": [
+        {
+          "text": "Dr. med. Peter Keller",
+          "label": "person",
+          "start": 21,
+          "end": 42,
+          "score": 0.9979
+        },
+        {
+          "text": "Kantonsspital Aarau",
+          "label": "organization",
+          "start": 47,
+          "end": 66,
+          "score": 0.9794
+        }
+      ]
+    }
+  ]
+}

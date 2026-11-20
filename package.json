@@ -9,7 +9,9 @@
     "prebuild": "node scripts/copy-vendor.js",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postbuild": "node scripts/check-build.js",
+    "test:gliner": "node scripts/gliner-reference.js"
   },
   "dependencies": {
     "@heroicons/vue": "^2.1.5",
@@ -35,5 +37,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/lamerentertainment/batch_anonymization"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
