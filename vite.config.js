@@ -115,7 +115,7 @@ export default defineConfig({
     build: {
         target: 'esnext',
         assetsDir: '', // Keep assets in root of dist
-        rollupOptions: {
+        rolldownOptions: {
             input: {
                 main: resolve(root, 'index.html'),
                 'gliner-worker': resolve(root, 'gliner-worker.html'),
