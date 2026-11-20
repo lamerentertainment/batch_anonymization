@@ -30,7 +30,10 @@ for (const page of ['index.html', 'gliner-worker.html']) {
         errors.push(`${page} fehlt`);
         continue;
     }
-    check(read(page).includes(`<meta http-equiv="Content-Security-Policy" content="${CSP}"`), `${page}: CSP-<meta> fehlt oder weicht ab`);
+    // Vite schreibt Anführungszeichen im Attribut je nach Version als Entität (&#39;)
+    const meta = read(page).match(/<meta http-equiv="Content-Security-Policy" content="([^"]*)"/);
+    const decode = s => s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    check(meta && decode(meta[1]) === CSP, `${page}: CSP-<meta> fehlt oder weicht ab`);
 }
 
 let build = null;

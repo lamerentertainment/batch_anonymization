@@ -99,8 +99,8 @@ Neue Modellrevision festlegen: `node scripts/models/pin-gliner.mjs [revision]`.
 - **@heroicons/vue** (^2.1.5) - MIT License - SVG icon library
 
 ### Development Dependencies
-- **Vite** (^5.2.0) - MIT License - Build tool and development server
-- **@vitejs/plugin-vue** (^5.0.4) - MIT License - Vue plugin for Vite
+- **Vite** (^7.3.8) - MIT License - Build tool and development server
+- **@vitejs/plugin-vue** (^6.0.11) - MIT License - Vue plugin for Vite
 - **Tailwind CSS** (^3.4.4) - MIT License - Utility-first CSS framework
 - **DaisyUI** (^4.12.2) - MIT License - Tailwind CSS component library
 - **PostCSS** (^8.4.38) - MIT License - CSS post-processor
