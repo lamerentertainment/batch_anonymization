@@ -1,5 +1,14 @@
 {
   "projects": {
-    "default": "batch-anon"
+    "default": "pwa-pdf-einfuegen"
+  },
+  "targets": {
+    "pwa-pdf-einfuegen": {
+      "hosting": {
+        "app": [
+          "einfuegen-batch-anon"
+        ]
+      }
+    }
   }
 }
